@@ -87,10 +87,17 @@
     return `<div class="copy-field">${secret ? `<input class="mono" aria-label="Project MCP token" type="password" readonly value="${escape(value)}">` : `<code>${escape(value)}</code>`}<button class="btn small" data-action="copy" data-copy="${escape(value)}" type="button">${icon('copy')}${label}</button></div>`;
   }
 
-  function pagePayload(page = state.page) {
+  function pagePayload(page = state.page, validate = false) {
     if (!page) return {};
     const { title = '', slug = '', description = '', html = '', css = '', js = '' } = page;
-    return { title, slug, description, html, css, js };
+    const seo = { ...(page.seo || {}) };
+    if (page._seoJson !== undefined) {
+      if (validate) {
+        try { seo.structuredData = page._seoJson.trim() ? JSON.parse(page._seoJson) : null; }
+        catch { throw new Error('Structured data must be valid JSON before saving.'); }
+      } else seo.structuredData = page._seoJson;
+    }
+    return { title, slug, description, html, css, js, seo };
   }
 
   function markClean() {
@@ -257,7 +264,20 @@
     const tab = state.sourceTab;
     const tabs = ['html', 'css', 'js', 'settings'];
     const language = { html: 'HTML + Tailwind', css: 'Custom CSS', js: 'Browser JavaScript', settings: 'Page settings' };
-    return `<section class="source-pane" id="source-panel" aria-label="Page source"><div class="source-tabs" role="tablist" aria-label="Source language">${tabs.map((name) => `<button type="button" role="tab" aria-selected="${tab === name}" aria-controls="source-body" id="tab-${name}" tabindex="${tab === name ? '0' : '-1'}" data-action="source-tab" data-tab="${name}">${name === 'settings' ? 'Settings' : name.toUpperCase()}</button>`).join('')}</div><div class="source-body" id="source-body" role="tabpanel" aria-labelledby="tab-${tab}">${tab === 'settings' ? `<div class="settings-form"><label>Page title<input data-page-field="title" value="${escape(state.page.title)}" maxlength="200"></label><label>URL path<input data-page-field="slug" value="${escape(state.page.slug || '')}" spellcheck="false" placeholder="Leave empty for homepage"><small>For example: features or about. No leading slash needed.</small></label><label>Search description<textarea data-page-field="description" rows="4" maxlength="500" placeholder="Describe this page for search engines">${escape(state.page.description || '')}</textarea></label><p class="hint">The title and description are included in your page’s search and social metadata.</p></div>` : `<textarea class="source-textarea" data-page-field="${tab}" aria-label="${language[tab]} source" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" wrap="off">${escape(state.page[tab] || '')}</textarea>`}</div><footer class="source-footer"><span>${language[tab]}</span><span id="source-count">${tab === 'settings' ? 'SEO and URL' : `${String(state.page[tab] || '').split('\n').length} lines`}</span></footer></section>`;
+    return `<section class="source-pane" id="source-panel" aria-label="Page source"><div class="source-tabs" role="tablist" aria-label="Source language">${tabs.map((name) => `<button type="button" role="tab" aria-selected="${tab === name}" aria-controls="source-body" id="tab-${name}" tabindex="${tab === name ? '0' : '-1'}" data-action="source-tab" data-tab="${name}">${name === 'settings' ? 'Settings' : name.toUpperCase()}</button>`).join('')}</div><div class="source-body" id="source-body" role="tabpanel" aria-labelledby="tab-${tab}">${tab === 'settings' ? pageSettings() : `<textarea class="source-textarea" data-page-field="${tab}" aria-label="${language[tab]} source" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" wrap="off">${escape(state.page[tab] || '')}</textarea>`}</div><footer class="source-footer"><span>${language[tab]}</span><span id="source-count">${tab === 'settings' ? 'SEO and URL' : `${String(state.page[tab] || '').split('\n').length} lines`}</span></footer></section>`;
+  }
+
+  function pageSettings() {
+    const p = state.page, seo = p.seo || {};
+    const field = (key, label, placeholder = '') => `<label>${label}<input data-seo-field="${key}" value="${escape(seo[key] || '')}" placeholder="${escape(placeholder)}"></label>`;
+    const automatic = `${state.project.domain ? `https://${state.project.domain}/` : state.urls.site}${p.slug || ''}`;
+    return `<div class="settings-form"><label>Page title<input data-page-field="title" value="${escape(p.title)}" maxlength="200"></label><label>URL path<input data-page-field="slug" value="${escape(p.slug || '')}" spellcheck="false" placeholder="Leave empty for homepage"><small>Nested paths work too: blog/my-article.</small></label><label>Search description<textarea data-page-field="description" aria-label="Search description" rows="4" maxlength="500">${escape(p.description || '')}</textarea></label><fieldset><legend>Search and sharing</legend>${field('title', 'SEO title override', p.title)}${field('canonical', 'Canonical URL override', automatic)}<p class="hint">Leave overrides empty to use the page title and production domain automatically.</p>${field('image', 'Social image URL', '/media/project/image.png')}${field('imageAlt', 'Social image description')}<label class="checkbox-label"><input type="checkbox" data-seo-field="noindex" ${seo.noindex ? 'checked' : ''}>Keep this page out of search results</label><p class="hint">Page settings are drafts until published. Preview URLs always stay noindex.</p></fieldset><fieldset><legend>Blog article</legend><label>Page type<select data-seo-field="type" aria-label="Page type"><option value="website" ${seo.type !== 'article' ? 'selected' : ''}>Website page</option><option value="article" ${seo.type === 'article' ? 'selected' : ''}>Blog article</option></select></label>${field('headline', 'Article headline', p.title)}${field('author', 'Author organization', state.project.name)}${field('publishedTime', 'Publication time', '2026-10-22T12:00:00.000Z')}${field('modifiedTime', 'Modified time override', 'Automatic from the published revision')}<p class="hint">Use ISO dates with a timezone. Published articles appear in the blog list and RSS feed automatically.</p></fieldset><fieldset><legend>Additional structured data</legend><label>Structured data (JSON-LD)<textarea data-seo-json aria-label="Structured data (JSON-LD)" rows="8" spellcheck="false">${escape(p._seoJson ?? (seo.structuredData ? JSON.stringify(seo.structuredData, null, 2) : ''))}</textarea></label><p class="hint">Optional JSON object or array. Organization, WebSite, WebPage, breadcrumbs, and BlogPosting are already generated. Add only information supported by the page.</p></fieldset></div>`;
+  }
+
+  function projectSeoForm() {
+    const seo = state.project.seo || {};
+    const field = (key, label, placeholder = '') => `<label>${label}<input name="${key}" value="${escape(seo[key] || '')}" placeholder="${escape(placeholder)}"></label>`;
+    return `<section class="surface"><div class="surface-header"><div><h2>SEO and branding</h2><p>Shared defaults for this website.</p></div></div><form class="stack" data-form="project-seo">${field('siteName', 'Site name', state.project.name)}<label>Site description<textarea name="description" aria-label="Site description" rows="3">${escape(seo.description || '')}</textarea></label>${field('language', 'Website language', 'en')}${field('image', 'Default social image URL')}${field('imageAlt', 'Default social image description')}${field('logo', 'Organization logo URL')}${field('favicon', 'Favicon URL')}${field('appleTouchIcon', 'Apple touch icon URL')}<label class="checkbox-label"><input name="noindex" type="checkbox" ${seo.noindex ? 'checked' : ''}>Keep the whole website out of search results</label><p class="hint">Shared defaults apply immediately. Production indexing requires the configured domain; project-path and draft previews remain noindex.</p><div class="row"><button class="btn" type="submit">Save SEO settings</button>${external(`${state.urls.site}sitemap.xml`, 'View sitemap')}${external(`${state.urls.site}feed.xml`, 'View RSS')}</div></form></section>`;
   }
 
   function mediaType(asset) {
@@ -299,7 +319,7 @@
   function connectionsView() {
     const urls = state.urls || {};
     const token = state.projectTokens.get(state.project.id);
-    return `<div class="page-heading"><div><h1>Your website, connected.</h1><p>All the addresses and access details for ${escape(state.project.name)}.</p></div><div class="heading-actions"><button class="btn" type="button" data-action="project-export-zip">${icon('download')}Export ZIP</button>${external(urls.site, 'Open website', 'btn')}</div></div><div class="view-columns"><div><section class="surface"><div class="surface-header"><div><h2>MCP connection</h2><p>Connect your agent to create, edit, and publish this website.</p></div><span class="pill violet">${icon('connect')}MCP</span></div><div class="stack"><div class="field-group"><span>Server URL</span>${copyField(urls.mcp || '')}</div><div class="field-group"><span>Project access token</span>${token ? `${copyField(token, 'Copy', true)}<p class="hint">Saved privately on your server. Keep this token with your MCP client credentials.</p>` : '<p class="hint">For security, tokens are only shown when created or rotated. Use the server credentials command to retrieve the saved token, or generate a new one below.</p>'}</div><div><button class="btn small" type="button" data-action="rotate-token">${icon('refresh')}Generate new token</button></div><div class="info-note">${icon('info')}<span>Use the server URL with a <strong>Bearer token</strong> in clients that support Streamable HTTP. This token is limited to this website.</span></div></div></section><section class="surface"><div class="surface-header"><div><h2>Website settings</h2><p>The name and domain used by this project.</p></div></div><form class="stack" data-form="project-settings"><label>Website name<input name="name" required maxlength="100" value="${escape(state.project.name)}"></label><label>Production domain<input name="domain" value="${escape(state.project.domain || '')}" placeholder="sendmailos.com" spellcheck="false"><small>Point the domain’s DNS to your server, then configure HTTPS with the CLI proxy command.</small></label><div><button class="btn" type="submit">Save settings</button></div></form></section></div><div><section class="surface"><div class="surface-header"><h2>Website addresses</h2></div><div class="stack"><div class="field-group"><span>Website studio</span>${copyField(urls.admin || '')}</div><div class="field-group"><span>Local website</span>${copyField(urls.site || '')}</div>${urls.production ? `<div class="field-group"><span>Production website</span>${copyField(urls.production)}</div>` : '<p class="hint">Add a domain in Website settings to prepare your production address.</p>'}</div></section><section class="surface"><div class="surface-header"><h2>Two ports. One studio.</h2></div><div class="stack"><div class="check-row"><span>Admin, API, and MCP</span><code>${escape(state.port)}</code></div><div class="check-row"><span>Website and media</span><code>${escape(state.sitePort)}</code></div><p class="hint">Separate listeners keep website scripts away from your administration session. A reverse proxy routes your public domains to these ports.</p><button class="btn small" type="button" data-action="navigate" data-view="runtime">${icon('pulse')}Open runtime and commands</button></div></section></div></div>`;
+    return `<div class="page-heading"><div><h1>Your website, connected.</h1><p>All the addresses and access details for ${escape(state.project.name)}.</p></div><div class="heading-actions"><button class="btn" type="button" data-action="project-export-zip">${icon('download')}Export ZIP</button>${external(urls.site, 'Open website', 'btn')}</div></div><div class="view-columns"><div><section class="surface"><div class="surface-header"><div><h2>MCP connection</h2><p>Connect your agent to create, edit, and publish this website.</p></div><span class="pill violet">${icon('connect')}MCP</span></div><div class="stack"><div class="field-group"><span>Server URL</span>${copyField(urls.mcp || '')}</div><div class="field-group"><span>Project access token</span>${token ? `${copyField(token, 'Copy', true)}<p class="hint">Saved privately on your server. Keep this token with your MCP client credentials.</p>` : '<p class="hint">For security, tokens are only shown when created or rotated. Use the server credentials command to retrieve the saved token, or generate a new one below.</p>'}</div><div><button class="btn small" type="button" data-action="rotate-token">${icon('refresh')}Generate new token</button></div><div class="info-note">${icon('info')}<span>Use the server URL with a <strong>Bearer token</strong> in clients that support Streamable HTTP. This token is limited to this website.</span></div></div></section><section class="surface"><div class="surface-header"><div><h2>Website settings</h2><p>The name and domain used by this project.</p></div></div><form class="stack" data-form="project-settings"><label>Website name<input name="name" required maxlength="100" value="${escape(state.project.name)}"></label><label>Production domain<input name="domain" value="${escape(state.project.domain || '')}" placeholder="sendmailos.com" spellcheck="false"><small>Point the domain’s DNS to your server, then configure HTTPS with the CLI proxy command.</small></label><div><button class="btn" type="submit">Save settings</button></div></form></section>${projectSeoForm()}</div><div><section class="surface"><div class="surface-header"><h2>Website addresses</h2></div><div class="stack"><div class="field-group"><span>Website studio</span>${copyField(urls.admin || '')}</div><div class="field-group"><span>Local website</span>${copyField(urls.site || '')}</div>${urls.production ? `<div class="field-group"><span>Production website</span>${copyField(urls.production)}</div>` : '<p class="hint">Add a domain in Website settings to prepare your production address.</p>'}</div></section><section class="surface"><div class="surface-header"><h2>Two ports. One studio.</h2></div><div class="stack"><div class="check-row"><span>Admin, API, and MCP</span><code>${escape(state.port)}</code></div><div class="check-row"><span>Website and media</span><code>${escape(state.sitePort)}</code></div><p class="hint">Separate listeners keep website scripts away from your administration session. A reverse proxy routes your public domains to these ports.</p><button class="btn small" type="button" data-action="navigate" data-view="runtime">${icon('pulse')}Open runtime and commands</button></div></section></div></div>`;
   }
 
   function runtimeValue(value, fallback = 'Unavailable') {
@@ -433,7 +453,7 @@
 
   async function persistDraft({ notify = true } = {}) {
     if (!state.page) return;
-    const result = await api(pagePath(), { method: 'PUT', body: { ...pagePayload(), revision: state.page.revision } });
+    const result = await api(pagePath(), { method: 'PUT', body: { ...pagePayload(state.page, true), revision: state.page.revision } });
     state.page = result.page;
     updatePageCollection();
     markClean();
@@ -706,6 +726,16 @@
         toast('Page created. Start writing or add a section from the library.');
         return;
       }
+      if (form.dataset.form === 'project-seo') {
+        values.noindex = form.elements.noindex.checked;
+        if (!values.language.trim()) values.language = 'en';
+        const response = await api(projectPath(), { method: 'PATCH', body: { seo: values } });
+        state.project = response.project;
+        state.urls = response.urls;
+        updateProjectCollection();
+        render();
+        toast('SEO defaults saved.');
+      }
       if (form.dataset.form === 'project-settings') {
         const response = await api(projectPath(), { method: 'PATCH', body: values });
         state.project = response.project;
@@ -720,6 +750,9 @@
   app.addEventListener('input', (event) => {
     const field = event.target.dataset.pageField;
     if (field && state.page) { state.page[field] = event.target.value; updateDirty(); }
+    const seoField = event.target.dataset.seoField;
+    if (seoField && state.page) { state.page.seo ||= {}; state.page.seo[seoField] = event.target.type === 'checkbox' ? event.target.checked : event.target.value; updateDirty(); }
+    if (event.target.hasAttribute('data-seo-json') && state.page) { state.page._seoJson = event.target.value; updateDirty(); }
     if (event.target.closest('[data-form="import-zip"]') && event.target.type !== 'file') updateImportSummary();
   });
 

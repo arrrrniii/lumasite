@@ -1,0 +1,19 @@
+{
+  "source": "https://dash.sendmailos.com/favicon.ico",
+  "reference": "dashboard-favicon-reference.png",
+  "method": "Native SVG wordmark extending the existing paper-plane identity; PNG and social derivatives rendered in Chromium.",
+  "indigo": "#0e007a",
+  "font": "Sora (SIL Open Font License; see ../fonts/Sora-OFL.txt)",
+  "files": [
+    "sendmailos-logo-preview.png",
+    "sendmailos-mark.svg",
+    "sendmailos-wordmark-dark.svg",
+    "sendmailos-wordmark-light.svg",
+    "sendmailos-wordmark-dark.png",
+    "sendmailos-wordmark-light.png",
+    "sendmailos-icon-64.png",
+    "sendmailos-icon-180.png",
+    "sendmailos-icon-512.png",
+    "sendmailos-social-1200x630.png"
+  ]
+}

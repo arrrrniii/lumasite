@@ -1,6 +1,6 @@
 {
   "name": "lumasite",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "An independent, self-hosted website studio with native LumaFX and MCP authoring.",
   "private": true,
   "type": "module",
@@ -16,7 +16,8 @@
     "test": "node --test tests/*.test.mjs",
     "test:browser": "node tests/browser.mjs",
     "test:marketing": "node tests/marketing-browser.mjs",
-    "publish:marketing": "node marketing/publish.mjs"
+    "publish:marketing": "node marketing/publish.mjs",
+    "test:seo": "node tests/seo-browser.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.30.0",

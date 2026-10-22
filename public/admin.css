@@ -288,3 +288,8 @@
     .import-review dl > div { grid-template-columns: 78px minmax(0, 1fr); gap: 9px; }
   }
 }
+/* SEO controls use the same readable form layout as the source settings. */
+.settings-form fieldset { display: grid; gap: 18px; min-width: 0; margin: 6px 0 0; padding: 20px 0 0; border: 0; border-top: 1px solid var(--line, #e5e7eb); }
+.settings-form legend { padding: 0 8px 0 0; font-weight: 650; }
+.checkbox-label { display: flex; align-items: center; gap: 10px; min-height: 44px; }
+.checkbox-label input[type="checkbox"] { width: 16px; height: 16px; min-height: 16px; padding: 0; flex: 0 0 auto; accent-color: var(--cobalt); }

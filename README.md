@@ -98,6 +98,12 @@ The studio and MCP use the same project/page operations. Draft HTML, CSS, and br
 
 Browser-ready JavaScript runs on the public website. Editing arbitrary TypeScript, JSX, Node.js code, or bundler-specific packages is not supported by this release. LumaFX is vendored and served by this application; its presets are available from the studio library. Media uploads support images, audio, and video. This release stores originals locally; it does not implement a video transcoding service.
 
+## SEO and blogs
+
+LumaSite 0.2 generates canonical URLs, search descriptions, Open Graph/Twitter cards, icons, language and robots metadata, and safe JSON-LD. Each project has an automatic published-only sitemap, robots file, and RSS feed. Shared defaults are editable in **Connections → SEO and branding**; page and article metadata are editable in **Settings** and through MCP. Drafts and project-path previews remain noindex. Blog articles are native pages with `seo.type: "article"`, and blog-list markers update automatically when articles are published.
+
+The optional SendMailOS example includes a blog index, three noindex sample guides, and favicon-based SVG/PNG logos. See [SEO, articles, branding, and migration](docs/seo-and-blog.md) for the fields, MCP examples, production checks, and editing workflow.
+
 ## Move a website with a ZIP
 
 In the studio, choose **Connections → Export ZIP**. On another installed LumaSite instance, choose **Import ZIP**, select the archive, enter its destination name/slug and optional domain, then import. Published pages stay published, drafts stay drafts, and media links are remapped automatically. The imported project receives a new MCP token; local administrator passwords and project credentials are excluded from the archive.
@@ -136,6 +142,7 @@ See [operations and deployment](docs/operations.md), [Sitewright comparison](doc
 ```sh
 npm test
 npm run test:browser
+npm run test:seo
 ```
 
 The CLI tests initialize temporary instances on ephemeral ports, start both listeners, check live project creation, snapshot data, restart and stop the process, follow logs, and verify that unrelated processes cannot be stopped. Browser tests require Playwright's Chromium runtime.

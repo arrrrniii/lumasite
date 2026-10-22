@@ -8,6 +8,8 @@ The homepage uses original cobalt-blue email artwork: satin metal, smoked glass,
 
 - `home.mjs`: homepage content and feature sections.
 - `pages.mjs`: product, campaigns, automations, Pixel, Inbox, developers, pricing, resources.
+- `blog.mjs` / `blog.css`: the automatic blog index, three editable noindex sample articles, and responsive reading layouts.
+- `assets/brand/`: favicon-based vector logos, PNG icons, and the default social-sharing image.
 - `shared.mjs`: navigation, footer, page shell, and the shared illustration export.
 - `visuals.mjs`: six original inline SVG product illustrations, including their labels and accessible descriptions.
 - `styles.css`: shared responsive styling and transition states.

@@ -6,6 +6,7 @@ import {inflateRaw,crc32} from 'node:zlib';
 import {promisify} from 'node:util';
 import {zip} from 'fflate';
 import {z} from 'zod';
+import {pageSeoSchema,projectSeoSchema,siteBase} from './seo.mjs';
 import {fail,tokenHash,publicProject,getProjectUrls,getPreviewUrl,rememberProjectToken} from './service.mjs';
 
 export const MIGRATION_LIMITS=Object.freeze({archive:100*1024*1024,expanded:250*1024*1024,media:50*1024*1024,json:128*1024*1024,entries:2000});
@@ -18,10 +19,10 @@ const name=n=>z.string().min(1).max(n).refine(v=>!!v.trim()),code=n=>z.string().
 const theme=z.record(z.string(),z.string()).refine(v=>Object.keys(v).length<=128&&Object.entries(v).every(([k,s])=>/^--[a-z][a-z0-9-]{0,60}$/.test(k)&&s.length<=200&&!/[;{}<>]/.test(s)));
 const reserved=new Set(['health','runtime','media','release-assets','content-assets','preview-assets','preview','sites','admin','api','mcp']);
 const route=z.string().max(300).refine(v=>!v||(/^[a-z0-9]+(?:[/-][a-z0-9]+)*$/.test(v)&&!reserved.has(v.split('/')[0])));
-const pageSchema=z.object({id,projectId:id,slug:route,title:name(200),description:z.string().max(500),html:source,css:source,js:source,updatedAt:stamp,revision:z.number().int().min(1).max(2147483647),publishedRevisionId:id.nullable()}).strict();
+const pageSchema=z.object({id,projectId:id,slug:route,title:name(200),description:z.string().max(500),seo:pageSeoSchema.optional(),html:source,css:source,js:source,updatedAt:stamp,revision:z.number().int().min(1).max(2147483647),publishedRevisionId:id.nullable()}).strict();
 const revisionSchema=z.object({id,projectId:id,pageId:id,createdAt:stamp,number:z.number().int().min(1).max(2147483647),page:pageSchema,theme,compiledCss:code(8*1024*1024)}).strict();
 const assetSchema=z.object({id,projectId:id,name:z.string().max(200),filename:z.string().max(45),mime:z.string().refine(v=>extensions.has(v)),size:z.number().int().min(1).max(MIGRATION_LIMITS.media),createdAt:stamp,url:z.string().max(100)}).strict();
-const projectSchema=z.object({id,name:name(100),slug,domain,theme,createdAt:stamp,updatedAt:stamp}).strict();
+const projectSchema=z.object({id,name:name(100),slug,domain,theme,seo:projectSeoSchema.optional(),createdAt:stamp,updatedAt:stamp}).strict();
 const payloadSchema=z.object({schemaVersion:z.literal(1),project:projectSchema,pages:z.array(pageSchema).max(1000),revisions:z.array(revisionSchema).max(5000),assets:z.array(assetSchema).max(MIGRATION_LIMITS.entries-2)}).strict();
 const fileSchema=z.object({path:z.string().max(100),size:z.number().int().min(0).max(MIGRATION_LIMITS.json),sha256:z.string().regex(/^[a-f0-9]{64}$/)}).strict();
 const manifestSchema=z.object({format:z.literal('lumasite-project'),version:z.literal(1),createdAt:stamp,projectFile:z.literal('project.json'),files:z.array(fileSchema).min(1).max(MIGRATION_LIMITS.entries-1)}).strict();
@@ -29,7 +30,7 @@ const optionsSchema=z.object({name:name(100).optional(),slug:slug.optional(),dom
 function parsed(schema,value,label){const r=schema.safeParse(value);if(!r.success)fail(400,`Invalid ${label}: ${r.error.issues[0]?.path.join('.')||'schema'}.`);return r.data;}
 function json(bytes,label){try{return JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(bytes));}catch{fail(400,`Invalid ${label} JSON.`);}}
 const pick=(object,keys)=>Object.fromEntries(keys.map(key=>[key,object[key]]));
-const pageKeys=['id','projectId','slug','title','description','html','css','js','updatedAt','revision','publishedRevisionId'];
+const pageKeys=['id','projectId','slug','title','description','seo','html','css','js','updatedAt','revision','publishedRevisionId'];
 function graph(data){
  const {project,pages,revisions,assets}=data,all=new Set([project.id]),pageIds=new Set(pages.map(p=>p.id)),byRevision=new Map(revisions.map(r=>[r.id,r]));
  const unique=(items,key,label)=>{const seen=new Set();for(const item of items){const v=key(item);if(seen.has(v))fail(400,`Duplicate ${label} in project archive.`);seen.add(v);}};
@@ -79,7 +80,7 @@ function rejectTokens(content){if(/\bls_(?:admin|project)_[A-Za-z0-9_-]{40,}\b/.
 async function readMedia(store,a){const file=await open(path.join(store.dataDir,'media',a.projectId,a.filename),constants.O_RDONLY|constants.O_NOFOLLOW);try{const s=await file.stat();if(!s.isFile()||s.size!==a.size||s.size>MIGRATION_LIMITS.media)fail(400,'Project media is missing, changed or exceeds the supported size.');return await file.readFile();}finally{await file.close();}}
 export async function exportProject(store,projectId){
  const state=store.read(),p=state.projects.find(p=>p.id===projectId);if(!p)fail(404,'Project not found.');
- const payload=graph(parsed(payloadSchema,{schemaVersion:1,project:pick(p,['id','name','slug','domain','theme','createdAt','updatedAt']),pages:state.pages.filter(p=>p.projectId===projectId).map(p=>pick(p,pageKeys)),revisions:state.revisions.filter(r=>r.projectId===projectId).map(r=>({...pick(r,['id','projectId','pageId','createdAt','number','theme','compiledCss']),page:pick(r.page,pageKeys)})),assets:state.assets.filter(a=>a.projectId===projectId).map(a=>pick(a,['id','projectId','name','filename','mime','size','createdAt','url']))},'project data'));
+ const payload=graph(parsed(payloadSchema,{schemaVersion:1,project:pick(p,['id','name','slug','domain','theme','seo','createdAt','updatedAt']),pages:state.pages.filter(p=>p.projectId===projectId).map(p=>pick(p,pageKeys)),revisions:state.revisions.filter(r=>r.projectId===projectId).map(r=>({...pick(r,['id','projectId','pageId','createdAt','number','theme','compiledCss']),page:pick(r.page,pageKeys)})),assets:state.assets.filter(a=>a.projectId===projectId).map(a=>pick(a,['id','projectId','name','filename','mime','size','createdAt','url']))},'project data'));
  const content=Buffer.from(JSON.stringify(payload));rejectTokens(content.toString());if(content.length>MIGRATION_LIMITS.json)fail(413,'Project content exceeds the 128 MiB JSON limit.');
  let credentials={};try{credentials=JSON.parse(await readFile(path.join(store.dataDir,'credentials.json'),'utf8'));}catch(e){if(e.code!=='ENOENT')throw e;}
  for(const secret of [credentials.adminPassword,credentials.adminToken,...Object.values(credentials.projectTokens||{}),state.instance?.passwordHash,state.instance?.adminTokenHash,p.tokenHash])if(typeof secret==='string'&&secret.length>=12&&content.includes(Buffer.from(secret)))fail(400,'Project source contains an instance credential. Remove it before exporting.');
@@ -115,6 +116,21 @@ export async function importProject(store,buffer,options={}){
  const remapPage=p=>({...p,id:ids.get(p.id),projectId:project.id,publishedRevisionId:p.publishedRevisionId?ids.get(p.publishedRevisionId):null}),pages=payload.pages.map(remapPage),revisions=payload.revisions.map(r=>({...r,id:ids.get(r.id),projectId:project.id,pageId:ids.get(r.pageId),page:remapPage(r.page)})),assets=payload.assets.map(a=>({...a,id:ids.get(a.id),projectId:project.id,filename:`${ids.get(a.id)}.${extensions.get(a.mime)}`,url:`/media/${project.id}/${ids.get(a.id)}.${extensions.get(a.mime)}`}));
  const virtual={...state,projects:[...state.projects,project],pages:[...state.pages,...pages]},rewrite=rewriter(payload,virtual,{...project,linkMode:options.linkMode??'project'},ids);
  for(const p of [...pages,...revisions.map(r=>r.page)])for(const field of['html','css','js'])p[field]=rewrite(p[field]);for(const r of revisions)r.compiledCss=rewrite(r.compiledCss);
+ const rewriteSeo=(value,key='')=>{
+  if(typeof value==='string'){
+   let internal=value.startsWith(`/sites/${payload.project.slug}/`);
+   try{const url=new URL(value);internal=!!payload.project.domain&&url.hostname===payload.project.domain||url.pathname.startsWith(`/sites/${payload.project.slug}/`);}catch{}
+   if(key==='canonical'&&internal)return '';
+   const result=rewrite(value);
+   return key!=='canonical'&&internal&&(result===''||result.startsWith('/'))?new URL(result,siteBase(project,state.instance)).href:result;
+  }
+  if(Array.isArray(value))return value.map(item=>rewriteSeo(item));
+  if(value&&typeof value==='object')return Object.fromEntries(Object.entries(value).map(([k,v])=>[k,rewriteSeo(v,k)]));
+  return value;
+ };
+ if(project.seo)project.seo=rewriteSeo(project.seo);
+ for(const p of [...pages,...revisions.map(r=>r.page)])if(p.seo)p.seo=rewriteSeo(p.seo);
+
  graph(parsed(payloadSchema,{schemaVersion:1,project:publicProject(project),pages,revisions,assets},'remapped project'));
  const stage=path.join(store.dataDir,'.imports',randomUUID()),media=path.join(stage,'media'),target=path.join(store.dataDir,'media',project.id);let attemptedToken=false,moved=false,committed=false;
  try{

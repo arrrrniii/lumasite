@@ -1,0 +1,48 @@
+import assert from 'node:assert/strict';
+import {mkdtemp,rm,mkdir} from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
+import net from 'node:net';
+import {chromium} from 'playwright';
+import {openStore} from '../src/store.mjs';
+import {initializeInstance,createProject} from '../src/service.mjs';
+import {startServers} from '../src/server.mjs';
+const dataDir=await mkdtemp(path.join(os.tmpdir(),'lumasite-seo-browser-'));
+const results=path.resolve('test-results');await mkdir(results,{recursive:true});
+async function freePort(){const server=net.createServer();await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));const port=server.address().port;await new Promise(resolve=>server.close(resolve));return port;}
+const port=await freePort(),sitePort=await freePort(),store=await openStore(dataDir);
+await initializeInstance(store,{password:'SEO-Browser-Test-123!',port,sitePort,publicUrl:`http://localhost:${port}`,sitePublicUrl:`http://localhost:${sitePort}`});
+const {project}=await createProject(store,{name:'SEO browser fixture',domain:'seo-ui.example.com'});
+const servers=await startServers({dataDir,store});let browser;
+try{
+ browser=await chromium.launch({headless:true});
+ const page=await browser.newPage({viewport:{width:1512,height:1000},reducedMotion:'reduce'}),errors=[];page.on('pageerror',e=>errors.push(e.message));page.on('dialog',d=>d.accept());
+ await page.goto(`http://localhost:${port}/admin`);
+ await page.getByLabel('Admin password',{exact:true}).fill('SEO-Browser-Test-123!');
+ await page.getByRole('button',{name:'Open studio',exact:true}).click();
+ await page.getByRole('button',{name:/SEO browser fixture/}).click();
+ await page.getByRole('tab',{name:'Settings',exact:true}).click();
+ await page.getByLabel('SEO title override',{exact:true}).fill('A verified search title');
+ await page.getByLabel('Canonical URL override',{exact:true}).fill('https://seo-ui.example.com/');
+ await page.getByLabel('Page type',{exact:true}).selectOption('article');
+ await page.getByLabel('Article headline',{exact:true}).fill('A verified article');
+ await page.getByLabel('Author organization',{exact:true}).fill('The example team');
+ await page.getByLabel('Publication time',{exact:true}).fill('2026-10-22T12:00:00.000Z');
+ await page.getByLabel('Keep this page out of search results',{exact:true}).check();
+ const json=page.getByLabel('Structured data (JSON-LD)',{exact:true});
+ await json.fill('{"@type":"Thing","name":"Extra context"}');
+ await page.getByRole('button',{name:'Save draft',exact:true}).click();
+ await page.getByText('Draft saved. Your live website is unchanged.',{exact:true}).waitFor().catch(async()=>{await page.waitForFunction(()=>!document.querySelector('#draft-status')?.classList.contains('dirty'));});
+ const saved=store.read().pages.find(p=>p.projectId===project.id);assert.equal(saved.seo.title,'A verified search title');assert.equal(saved.seo.type,'article');assert.equal(saved.seo.noindex,true);assert.equal(saved.seo.structuredData.name,'Extra context');
+ await page.screenshot({path:path.join(results,'studio-page-seo.png')});
+ const revision=saved.revision;await json.fill('{');await page.getByRole('button',{name:'Save draft',exact:true}).click();await page.getByText('Structured data must be valid JSON before saving.',{exact:true}).waitFor();assert.equal(store.read().pages.find(p=>p.id===saved.id).revision,revision);
+ await json.fill('{"@type":"Thing","name":"Extra context"}');await page.getByRole('button',{name:'Save draft',exact:true}).click();await page.waitForFunction(()=>!document.querySelector('#draft-status')?.classList.contains('dirty'));
+ console.log('PASS page SEO controls save structured metadata and reject invalid JSON without changing the draft');
+ await page.getByRole('button',{name:'Connections',exact:true}).click();
+ const form=page.locator('[data-form="project-seo"]');await form.getByLabel('Site name',{exact:true}).fill('A verified website');await form.getByLabel('Website language',{exact:true}).fill('sq-AL');
+ await form.getByRole('button',{name:'Save SEO settings',exact:true}).click();await page.getByText('SEO defaults saved.',{exact:true}).waitFor();assert.equal(store.read().projects.find(p=>p.id===project.id).seo.siteName,'A verified website');assert.equal(store.read().projects.find(p=>p.id===project.id).seo.language,'sq-AL');
+ await page.screenshot({path:path.join(results,'studio-project-seo.png'),fullPage:true});
+ await page.setViewportSize({width:390,height:844});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true);
+ console.log('PASS shared website SEO/branding controls save and remain usable on mobile');
+ assert.deepEqual(errors,[]);console.log(JSON.stringify({passed:2,browserErrors:0}));
+}finally{await browser?.close();await servers.close();await rm(dataDir,{recursive:true,force:true});}

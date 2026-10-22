@@ -14,6 +14,8 @@ const routes = [
   ['', /SendMailOS/], ['product', /SendMailOS/], ['campaigns', /SendMailOS/],
   ['automations', /SendMailOS/], ['pixel', /SendMailOS/], ['inbox', /SendMailOS/],
   ['developers', /SendMailOS/], ['pricing', /SendMailOS/], ['resources', /SendMailOS/],
+  ['blog', /SendMailOS/], ['blog/first-email-campaign-checklist', /SendMailOS/],
+  ['blog/welcome-email-workflow', /SendMailOS/], ['blog/email-api-or-smtp', /SendMailOS/],
 ];
 const errors = [];
 const completed = [];
@@ -133,7 +135,7 @@ try {
   browser = await chromium.launch({ headless: true });
   const desktopContext = await browser.newContext({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' });
   const desktop = await desktopContext.newPage(); observe(desktop);
-  await step('All nine published routes load at desktop width with working images and no overflow', async () => {
+  await step('All thirteen published routes load at desktop width with working images and no overflow', async () => {
     for (const [slug] of routes) await verifyPage(desktop, slug);
     await verifyPage(desktop, '');
     await revealForScreenshot(desktop);
@@ -142,7 +144,7 @@ try {
 
   const mobileContext = await browser.newContext({ viewport: { width: 390, height: 844 }, reducedMotion: 'no-preference', isMobile: true, hasTouch: true });
   const mobile = await mobileContext.newPage(); observe(mobile);
-  await step('All nine published routes work at 390px with normal motion and no overflow', async () => {
+  await step('All thirteen published routes work at 390px with normal motion and no overflow', async () => {
     for (const [slug] of routes) await verifyPage(mobile, slug);
     await verifyPage(mobile, '');
     await revealForScreenshot(mobile);

@@ -9,6 +9,7 @@ import { openStore } from './store.mjs';
 import { compilePageCss, compilerHealth } from './compiler.mjs';
 import { handleMcp } from './mcp.mjs';
 import { exportProject, importProject } from './migration.mjs';
+import { productionHost, pageNoindex, sitemapXml, robotsTxt, feedXml, renderBlogBlocks } from './seo.mjs';
 import { VERSION, fail, tokenMatches, passwordMatches, publicInstance, publicProject, initializeInstance, createProject, requireProject, requirePage, getProjectUrls, updateProject, createPage, updatePage, publishPage, restorePage, rotateProjectToken, uploadAsset, getLibrary, getPreviewUrl, verifyPreviewToken, renderDocument } from './service.mjs';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
@@ -58,7 +59,7 @@ export async function startServers({ dataDir, store: suppliedStore } = {}) {
   const health = () => ({ status: 'ok', version: VERSION, instanceId: store.read().instance?.id || null, pid: process.pid, port: config.port, sitePort: config.sitePort, uptime: Math.floor(process.uptime()) });
   const allowedOrigins = () => new Set([config.publicUrl, `http://localhost:${config.port}`, `http://127.0.0.1:${config.port}`]);
   admin.use((req, res, next) => {
-    res.set({ 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'same-origin', 'Cache-Control': 'no-store' });
+    res.set({ 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'same-origin', 'Cache-Control': 'no-store', 'X-Robots-Tag': 'noindex,nofollow' });
     const hostname = req.hostname;
     if (!new Set(['localhost', '127.0.0.1', '[::1]', new URL(config.publicUrl).hostname]).has(hostname)) return res.status(403).json({ error: 'Unrecognized admin hostname. Configure the instance public URL.' });
     if (req.headers.origin && !allowedOrigins().has(req.headers.origin)) return res.status(403).json({ error: 'This origin cannot access the admin or MCP API.' });
@@ -68,6 +69,7 @@ export async function startServers({ dataDir, store: suppliedStore } = {}) {
   });
   admin.get('/health', (_req, res) => res.json(health()));
   admin.get('/ready', async (_req, res) => { await access(store.dataDir, constants.W_OK); res.status(ready ? 200 : 503).json({ status: ready ? 'ready' : 'starting' }); });
+  admin.get('/robots.txt', (_req, res) => res.type('text').send('User-agent: *\nDisallow: /\n'));
   admin.use(express.json({ limit: '72mb' }));
   function setSession(res) {
     const token = randomBytes(32).toString('base64url');
@@ -173,8 +175,11 @@ export async function startServers({ dataDir, store: suppliedStore } = {}) {
   publicApp.get('/health', (_req, res) => res.json(health()));
   publicApp.use('/runtime/lumafx', express.static(path.join(root, 'vendor/lumafx'), { index: false, maxAge: '1h' }));
   function media(req, res, next) {
-    const asset = store.read().assets.find(a => a.projectId === req.params.projectId && a.filename === req.params.filename);
+    const snapshot = store.read();
+    const asset = snapshot.assets.find(a => a.projectId === req.params.projectId && a.filename === req.params.filename);
     if (!asset) return res.status(404).end();
+    const project = snapshot.projects.find(p => p.id === asset.projectId);
+    if (asset.mime.startsWith('image/') && project && productionHost(project, req.hostname) && !project.seo?.noindex) res.removeHeader('X-Robots-Tag');
     res.type(asset.mime).set({ 'Cache-Control': 'public,max-age=31536000,immutable', 'Content-Disposition': `inline; filename*=UTF-8''${encodeURIComponent(asset.name)}` });
     // Sandboxed studio previews have an opaque origin. Public fonts need CORS
     // permission there even though the same asset is same-origin on live pages.
@@ -212,22 +217,41 @@ export async function startServers({ dataDir, store: suppliedStore } = {}) {
     const state = store.read();
     if (!verifyPreviewToken(state, req.query.token, req.params.projectId, req.params.pageId)) fail(403, 'This preview link is invalid or expired. Refresh the preview in the studio.');
     const page = requirePage(state, req.params.projectId, req.params.pageId), project = requireProject(state, req.params.projectId);
-    res.set('Cache-Control', 'no-store').type('html').send(renderDocument(page, { preview: true, theme: project.theme, token: req.query.token }));
+    const html = renderBlogBlocks(page.html, state, project, `/sites/${project.slug}/`, page.slug);
+    res.set('Cache-Control', 'no-store').type('html').send(renderDocument(page, { preview: true, theme: project.theme, token: req.query.token, project, instance: state.instance, html }));
   });
   function servePublished(req, res, project, slug) {
     const state = store.read();
     const current = state.pages.find(p => p.projectId === project.id && p.publishedRevisionId && state.revisions.find(r => r.id === p.publishedRevisionId)?.page.slug === slug);
     const revision = current && state.revisions.find(r => r.id === current.publishedRevisionId);
     if (!revision) return res.status(404).type('html').send('<!doctype html><html><head><title>Not published yet</title><meta name="viewport" content="width=device-width,initial-scale=1"></head><body style="font:16px system-ui;padding:60px;max-width:600px;margin:auto"><h1>This page is not published yet.</h1><p>Open the page in LumaSite and choose Publish. Draft changes stay private until you publish them.</p></body></html>');
-    res.removeHeader('X-Robots-Tag');
-    res.set('Cache-Control', 'no-cache').type('html').send(renderDocument(revision.page, { revisionId: revision.id, theme: revision.theme, assetUrls: publishedAssetUrls(revision) }));
+    const localPath = req.path.startsWith(`/sites/${project.slug}/`) || req.path === `/sites/${project.slug}`;
+    const noindex = localPath || !productionHost(project, req.hostname);
+    if (pageNoindex(revision.page, project, noindex)) res.set('X-Robots-Tag', 'noindex,follow');
+    else res.removeHeader('X-Robots-Tag');
+    const basePath = localPath ? `/sites/${project.slug}/` : '/';
+    const html = renderBlogBlocks(revision.page.html, state, project, basePath, revision.page.slug);
+    res.set('Cache-Control', 'no-cache').type('html').send(renderDocument(revision.page, { revisionId: revision.id, theme: revision.theme, assetUrls: publishedAssetUrls(revision), project, instance: state.instance, noindex, html }));
   }
+  function seoResource(req, res, project, resource, localPath = false) {
+    const state = store.read(), production = !localPath && productionHost(project, req.hostname);
+    res.set('Cache-Control', 'no-cache');
+    if (resource === 'robots.txt') return res.type('text').send(robotsTxt(project, state.instance, production));
+    if (production && !project.seo?.noindex) res.removeHeader('X-Robots-Tag');
+    return res.type(resource === 'feed.xml' ? 'application/rss+xml' : 'application/xml').send(resource === 'feed.xml' ? feedXml(state, project) : sitemapXml(state, project));
+  }
+  publicApp.get(['/robots.txt', '/sitemap.xml', '/feed.xml'], (req, res) => {
+    const project = store.read().projects.find(p => p.domain === req.hostname);
+    if (!project) return req.path === '/robots.txt' ? res.type('text').send('User-agent: *\nDisallow: /\n') : res.status(404).end();
+    return seoResource(req, res, project, req.path.slice(1));
+  });
   publicApp.use((req, res, next) => {
     if (req.method !== 'GET' && req.method !== 'HEAD') return res.status(405).end();
     const localMatch = req.path.match(/^\/sites\/([^/]+)(?:\/(.*))?$/);
     if (localMatch) {
       const project = store.read().projects.find(p => p.slug === localMatch[1]);
       if (!project) fail(404, 'Project not found.');
+      if (['robots.txt', 'sitemap.xml', 'feed.xml'].includes(localMatch[2])) return seoResource(req, res, project, localMatch[2], true);
       return servePublished(req, res, project, (localMatch[2] || '').replace(/\/$/, ''));
     }
     const project = store.read().projects.find(p => p.domain && p.domain === req.hostname);

@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { home } from './home.mjs';
 import { pages } from './pages.mjs';
 import { layout } from './shared.mjs';
+import { blogPages } from './blog.mjs';
 
 const directory = path.dirname(fileURLToPath(import.meta.url));
 const instanceDirectory = process.env.LUMASITE_DATA_DIR ? path.resolve(process.env.LUMASITE_DATA_DIR) : path.resolve(directory, '..', '.lumasite');
@@ -27,10 +28,10 @@ async function api(route, { method = 'GET', body, headers = {} } = {}) {
 
 const before = await api('/health');
 const { projects } = await api('/api/projects');
-const project = projects.find(item => item.slug === 'sendmailos');
+let project = projects.find(item => item.slug === 'sendmailos');
 if (!project) throw new Error('Create the SendMailOS project before publishing the marketing site.');
 if (urlMode === 'domain' && !project.domain) throw new Error('Set the project domain before publishing domain URLs.');
-const publicURL = urlMode === 'domain' ? project.urls.production : project.urls.site;
+let publicURL = urlMode === 'domain' ? project.urls.production : project.urls.site;
 const projectRoute = `/api/projects/${project.id}`;
 const { assets } = await api(`${projectRoute}/assets`);
 const { pages: existingPages } = await api(`${projectRoute}/pages`);
@@ -44,6 +45,10 @@ for (const tracked of previousReport?.pages || []) {
   if (!current || current.publishedRevisionId !== tracked.revisionId || (tracked.draftRevision !== undefined && current.revision !== tracked.draftRevision)) {
     throw new Error(`/${tracked.slug} changed outside the marketing source. Sync the studio/MCP edits into source before publishing.`);
   }
+}
+
+if (previousReport?.projectSettings && JSON.stringify(previousReport.projectSettings) !== JSON.stringify({ domain: project.domain, seo: project.seo || {} })) {
+  throw new Error('Shared SEO or domain settings changed outside the marketing source. Sync those accepted edits into source before publishing.');
 }
 
 async function uploadFile(filename, mime, label = path.basename(filename)) {
@@ -83,7 +88,16 @@ for (const [key, basename] of Object.entries({
 }
 const sora = await uploadFile('assets/fonts/soravariable.woff2', 'font/woff2', 'Sora variable font');
 const dmSans = await uploadFile('assets/fonts/dmsansvariable.woff2', 'font/woff2', 'DM Sans variable font');
-const [baseCss, darkCss, sceneCss, typographyCss, cardCss, artCss, effectCss, sectionArtCss, navigationCss, js] = await Promise.all([
+const branding = {};
+for (const [key, file] of Object.entries({ logo: 'sendmailos-icon-512.png', favicon: 'sendmailos-icon-64.png', appleTouchIcon: 'sendmailos-icon-180.png', image: 'sendmailos-social-1200x630.png' })) branding[key] = await uploadFile(`assets/brand/${file}`, 'image/png', file);
+const projectSeo = { siteName: 'SendMailOS', language: 'en', description: home.description, image: branding.image.url, imageAlt: 'SendMailOS — Good emails. Better connections.', logo: branding.logo.url, favicon: branding.favicon.url, appleTouchIcon: branding.appleTouchIcon.url, noindex: false };
+const settings = { seo: projectSeo };
+if (project.domain === 'sendmailos.local') settings.domain = 'sendmailos.com';
+const updatedProject = await api(projectRoute, { method: 'PATCH', body: settings });
+project = { ...updatedProject.project, urls: updatedProject.urls };
+publicURL = urlMode === 'domain' ? project.urls.production : project.urls.site;
+
+const [baseCss, darkCss, sceneCss, typographyCss, cardCss, artCss, effectCss, sectionArtCss, navigationCss, blogCss, js] = await Promise.all([
   readFile(path.join(directory, 'styles.css'), 'utf8'),
   readFile(path.join(directory, 'dark-theme.css'), 'utf8'),
   readFile(path.join(directory, 'visual-scenes.css'), 'utf8'),
@@ -93,9 +107,10 @@ const [baseCss, darkCss, sceneCss, typographyCss, cardCss, artCss, effectCss, se
   readFile(path.join(directory, 'effects.css'), 'utf8'),
   readFile(path.join(directory, 'section-art.css'), 'utf8'),
   readFile(path.join(directory, 'navigation.css'), 'utf8'),
+  readFile(path.join(directory, 'blog.css'), 'utf8'),
   readFile(path.join(directory, 'motion.js'), 'utf8'),
 ]);
-const css = [baseCss, darkCss, sceneCss, typographyCss, cardCss, artCss, effectCss, sectionArtCss, navigationCss].join('\n\n')
+const css = [baseCss, darkCss, sceneCss, typographyCss, cardCss, artCss, effectCss, sectionArtCss, navigationCss, blogCss].join('\n\n')
   .replaceAll('__SORA_FONT__', sora.url).replaceAll('__DM_SANS_FONT__', dmSans.url);
 
 function prepareHTML(page) {
@@ -106,23 +121,33 @@ function prepareHTML(page) {
   return urlMode === 'domain' ? html : html.replace(/href="(\/(?!\/)[^"]*)"/g, (_, href) => `href="/sites/${project.slug}${href}"`);
 }
 
+function prepareSEO(definition) {
+  const seo = { ...(definition.seo || {}) };
+  if (seo.image) {
+    seo.image = seo.image.replaceAll('__HERO_IMAGE__', hero.url);
+    for (const [key, asset] of Object.entries(sectionArt)) seo.image = seo.image.replaceAll(`__${key}__`, asset.url);
+  }
+  return seo;
+}
+
 const report = {
   publishedAt: new Date().toISOString(),
   projectId: project.id,
   project: project.name,
+  projectSettings: { domain: project.domain, seo: project.seo || {} },
   localURL: project.urls.site,
   urlMode,
   publicURL,
   runtimePid: before.pid,
-  assets: { hero: hero.url, heroMobile: heroMobile.url, founder: founder.url, sora: sora.url, dmSans: dmSans.url, sectionArt: Object.fromEntries(Object.entries(sectionArt).map(([key, asset]) => [key, asset.url])) },
+  assets: { hero: hero.url, heroMobile: heroMobile.url, founder: founder.url, branding: Object.fromEntries(Object.entries(branding).map(([key, asset]) => [key, asset.url])), sora: sora.url, dmSans: dmSans.url, sectionArt: Object.fromEntries(Object.entries(sectionArt).map(([key, asset]) => [key, asset.url])) },
   pages: [],
 };
 
 // Publish destinations before the homepage starts linking to them.
-for (const definition of [...pages, home]) {
-  const source = { title: definition.title, slug: definition.slug, description: definition.description, html: prepareHTML(definition), css, js };
+for (const definition of [...pages, ...blogPages, home]) {
+  const source = { title: definition.title, slug: definition.slug, description: definition.description, seo: prepareSEO(definition), html: prepareHTML(definition), css, js };
   let page = existingPages.find(item => item.slug === definition.slug);
-  const changed = !page || Object.entries(source).some(([key, value]) => page[key] !== value);
+  const changed = !page || Object.entries(source).some(([key, value]) => key === 'seo' ? JSON.stringify(page.seo || {}) !== JSON.stringify(value) : page[key] !== value);
   if (!page) ({ page } = await api(`${projectRoute}/pages`, { method: 'POST', body: source }));
   else if (changed) ({ page } = await api(`${projectRoute}/pages/${page.id}`, { method: 'PUT', body: { ...source, revision: page.revision } }));
   let revisionId = page.publishedRevisionId;

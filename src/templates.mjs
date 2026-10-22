@@ -23,3 +23,11 @@ export const components = [
   { id: 'video', name: 'Video section', description: 'A native, accessible video player. Replace the source with an uploaded asset.', html: '<section class="max-w-5xl mx-auto px-6 py-16"><h2 class="text-3xl font-semibold mb-6">See it in action.</h2><video controls playsinline preload="metadata" class="w-full rounded-2xl" aria-label="Product demonstration"><source src="REPLACE_WITH_MEDIA_URL" type="video/mp4">Your browser does not support video.</video></section>' },
   { id: 'faq', name: 'Frequently asked questions', description: 'Native details elements; no JavaScript needed.', html: '<section class="max-w-3xl mx-auto px-6 py-16"><h2 class="text-3xl font-semibold mb-8">Good questions.</h2><details class="border-b py-5"><summary class="cursor-pointer font-medium">How does it work?</summary><p class="mt-4 leading-relaxed opacity-70">Add your answer here.</p></details><details class="border-b py-5"><summary class="cursor-pointer font-medium">How can I get started?</summary><p class="mt-4 leading-relaxed opacity-70">Add a helpful next step.</p></details></section>' }
 ];
+
+
+components.push({
+  id: 'blog-index', name: 'Automatic blog index', description: 'A server-rendered list of this project’s published article pages. Create posts with seo.type=article through Studio or MCP.',
+  html: '<section class="blog-section"><h2>Latest articles</h2><div class="blog-grid"><!-- lumasite:blog-list --></div></section>',
+  css: '.blog-section{max-width:1100px;margin:64px auto;padding:24px}.blog-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:24px;margin-top:28px}.blog-card{display:flex;flex-direction:column;border:1px solid currentColor;border-radius:24px;overflow:hidden;color:inherit;text-decoration:none}.blog-card-image{aspect-ratio:4/3;overflow:hidden}.blog-card-image img{width:100%;height:100%;object-fit:cover}.blog-card-copy{padding:28px}.blog-card time{font-size:13px}.blog-card h2{font-size:25px;line-height:1.3;margin:18px 0}.blog-card p{line-height:1.75;margin-bottom:22px}.blog-read{font-weight:600}',
+  js: '',
+});

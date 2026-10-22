@@ -122,8 +122,9 @@ window.addEventListener('pageshow', () => {
 // No prerendering: a prefetched page does not run scripts or record a pageview.
 const siteHome = document.querySelector('.site-header .site-brand');
 const siteBase = new URL(siteHome?.href || '/', location.href);
-const publicPaths = new Set(['', 'product', 'campaigns', 'automations', 'pixel', 'inbox', 'developers', 'pricing', 'resources']
+const publicPaths = new Set(['', 'product', 'campaigns', 'automations', 'pixel', 'inbox', 'developers', 'pricing', 'resources', 'blog']
   .map(slug => new URL(slug, siteBase).pathname.replace(/\/$/, '')));
+document.querySelectorAll('a[data-blog-link]').forEach(link => { const url = new URL(link.href, location.href); if (url.origin === location.origin) publicPaths.add(url.pathname.replace(/\/$/, '')); });
 const warmedPages = new Set();
 let intentTimer;
 const reducedData = window.matchMedia('(prefers-reduced-data: reduce)');

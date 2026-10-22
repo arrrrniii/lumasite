@@ -4,8 +4,9 @@ import path from 'node:path';
 import { atomicWrite } from './store.mjs';
 import { compilePageCss } from './compiler.mjs';
 import { homePage, escapeHtml, components } from './templates.mjs';
+import { validateSeo, renderSeo } from './seo.mjs';
 
-export const VERSION = '0.1.0';
+export const VERSION = '0.2.0';
 export function fail(status, message) { throw Object.assign(new Error(message), { status }); }
 export const tokenHash = token => createHash('sha256').update(String(token)).digest('hex');
 export function tokenMatches(token, hash) {
@@ -116,7 +117,7 @@ export function getProjectUrls(state, project) {
   return { admin: `${instance.publicUrl}/admin/projects/${project.id}`, mcp: `${instance.publicUrl}/mcp/${project.id}`, site: `${publicOrigin}/sites/${project.slug}/`, production: project.domain ? `https://${project.domain}/` : null };
 }
 function newPage(projectId, data) {
-  return { id: randomUUID(), projectId, slug: pageSlug(data.slug), title: text(data.title || 'Untitled page', 'Page title'), description: String(data.description || '').slice(0, 500), html: source(data.html || '', 'HTML'), css: source(data.css || '', 'CSS'), js: source(data.js || '', 'JavaScript'), updatedAt: new Date().toISOString(), revision: 1, publishedRevisionId: null };
+  return { id: randomUUID(), projectId, slug: pageSlug(data.slug), title: text(data.title || 'Untitled page', 'Page title'), description: String(data.description || '').slice(0, 500), seo: validateSeo(data.seo), html: source(data.html || '', 'HTML'), css: source(data.css || '', 'CSS'), js: source(data.js || '', 'JavaScript'), updatedAt: new Date().toISOString(), revision: 1, publishedRevisionId: null };
 }
 export async function createProject(store, data) {
   const name = text(data.name, 'Project name', 100), domain = domainName(data.domain);
@@ -127,7 +128,7 @@ export async function createProject(store, data) {
     if (!state.instance) fail(409, 'Initialize LumaSite first.');
     if (state.projects.some(p => p.slug === slug || (domain && p.domain === domain))) fail(409, 'This project slug or domain is already in use.');
     const now = new Date().toISOString();
-    const p = { id: randomUUID(), name, domain, slug, tokenHash: tokenHash(token), theme: {}, createdAt: now, updatedAt: now };
+    const p = { id: randomUUID(), name, domain, slug, tokenHash: tokenHash(token), theme: {}, seo: validateSeo(data.seo, true), createdAt: now, updatedAt: now };
     state.projects.push(p);
     state.pages.push(newPage(p.id, homePage(name)));
     return publicProject(p);
@@ -151,6 +152,7 @@ export async function updateProject(store, projectId, data) {
       }
       p.theme = { ...data.theme };
     }
+    if ('seo' in data) p.seo = validateSeo(data.seo, true);
     p.updatedAt = new Date().toISOString();
     return publicProject(p);
   });
@@ -176,6 +178,7 @@ export async function updatePage(store, projectId, pageId, data) {
     if (data.revision !== undefined && Number(data.revision) !== p.revision) fail(409, 'This page changed in another session. Reload it before saving.');
     if ('title' in data) p.title = text(data.title, 'Page title');
     if ('description' in data) p.description = String(data.description).slice(0, 500);
+    if ('seo' in data) p.seo = validateSeo(data.seo);
     if ('slug' in data) {
       const slug = pageSlug(data.slug);
       if (state.pages.some(other => other.projectId === projectId && other.id !== pageId && other.slug === slug)) fail(409, 'A page already uses this path.');
@@ -207,6 +210,7 @@ export async function restorePage(store, projectId, pageId, revisionId) {
     if (!revision) fail(404, 'Published revision not found.');
     if (state.pages.some(other => other.projectId === projectId && other.id !== pageId && other.slug === revision.page.slug)) fail(409, 'Another draft uses the path from this revision. Change that page’s path before restoring.');
     for (const key of ['html', 'css', 'js', 'title', 'description', 'slug']) page[key] = revision.page[key];
+    page.seo = structuredClone(revision.page.seo || {});
     page.updatedAt = new Date().toISOString(); page.revision += 1;
     return page;
   });
@@ -248,13 +252,13 @@ export async function getLibrary() {
   catch (error) { if (error.code !== 'ENOENT') throw error; }
   return { components, animations, lumafx };
 }
-export function renderDocument(page, { theme = {}, revisionId, preview = false, token = '', assetUrls } = {}) {
+export function renderDocument(page, { theme = {}, revisionId, preview = false, token = '', assetUrls, project, instance, noindex = false, html = page.html } = {}) {
   const id = revisionId || `${page.id}-${page.revision}`;
   const prefix = preview ? `/preview-assets/${page.projectId}/${page.id}` : `/release-assets/${id}`;
   const themeCss = Object.entries(theme).map(([key, value]) => `${key}:${value}`).join(';');
-  const title = escapeHtml(page.title), description = escapeHtml(page.description);
+  const metadata = renderSeo(page, { project, instance, preview, noindex });
   const query = preview ? `?token=${encodeURIComponent(token)}&revision=${page.revision}` : '';
   const cssUrl = !preview && assetUrls?.css || `${prefix}.css${query}`;
   const jsUrl = !preview && assetUrls?.js || `${prefix}.js${query}`;
-  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="${description}">${preview ? '<meta name="robots" content="noindex,nofollow">' : ''}<title>${title}</title><link rel="stylesheet" href="/runtime/lumafx/lumafx.css"><link rel="stylesheet" href="${escapeHtml(cssUrl)}"><style>:root{${themeCss}}</style><script src="/runtime/lumafx/lumafx.global.js"></script></head><body>${page.html}<script type="module" src="${escapeHtml(jsUrl)}"></script></body></html>`;
+  return `<!doctype html><html lang="${escapeHtml(metadata.language)}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">${metadata.head}<link rel="stylesheet" href="/runtime/lumafx/lumafx.css"><link rel="stylesheet" href="${escapeHtml(cssUrl)}"><style>:root{${themeCss}}</style><script src="/runtime/lumafx/lumafx.global.js"></script></head><body>${html}<script type="module" src="${escapeHtml(jsUrl)}"></script></body></html>`;
 }

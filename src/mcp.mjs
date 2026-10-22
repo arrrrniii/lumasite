@@ -1,6 +1,7 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { z } from 'zod';
+import { pageSeoSchema, projectSeoSchema } from './seo.mjs';
 import { VERSION, requireProject, requirePage, publicProject, getProjectUrls, updateProject, createPage, updatePage, publishPage, restorePage, uploadAsset, getLibrary, getPreviewUrl } from './service.mjs';
 
 export async function handleMcp(req, res, store, projectId) {
@@ -16,10 +17,10 @@ export async function handleMcp(req, res, store, projectId) {
   }
   const pageId = z.string().uuid(), source = z.string().max(1024 * 1024);
   register('project_get', 'Read project settings, branding and generated URLs.', {}, () => { const state = store.read(), project = publicProject(requireProject(state, projectId)); return { project, urls: getProjectUrls(state, project) }; }, true);
-  register('project_update', 'Update this project name, domain or CSS-variable theme. Republish pages to release changed theme.', { name: z.string().optional(), domain: z.string().optional(), theme: z.record(z.string(), z.string()).optional() }, args => updateProject(store, projectId, args));
+  register('project_update', 'Update name, domain, CSS-variable theme or shared SEO/branding defaults. SEO defaults apply immediately; republish pages to release changed theme.', { name: z.string().optional(), domain: z.string().optional(), theme: z.record(z.string(), z.string()).optional(), seo: projectSeoSchema.optional() }, args => updateProject(store, projectId, args));
   register('pages_list', 'List pages, IDs, paths and draft/published revision information.', {}, () => ({ pages: store.read().pages.filter(p => p.projectId === projectId).map(({ html, css, js, ...metadata }) => metadata) }), true);
   register('page_get', 'Read full editable HTML, CSS, JavaScript and current revision.', { pageId }, args => ({ page: requirePage(store.read(), projectId, args.pageId) }), true);
-  register('page_upsert', 'Create a native page or update a draft. Supply pageId for updates and revision for conflict detection. Full visual layouts, styles and browser JavaScript are editable; no platform rebuild.', { pageId: pageId.optional(), title: z.string().optional(), slug: z.string().optional(), description: z.string().optional(), html: source.optional(), css: source.optional(), js: source.optional(), revision: z.number().int().optional() }, async ({ pageId: id, ...data }) => ({ page: id ? await updatePage(store, projectId, id, data) : await createPage(store, projectId, data) }));
+  register('page_upsert', 'Create or update a page draft, including SEO, social image and JSON-LD. Use nested slug blog/article-name and seo.type=article for blog posts; published articles populate blog-list markers, sitemap and RSS automatically. Supply pageId and latest revision to update; publish separately.', { pageId: pageId.optional(), title: z.string().optional(), slug: z.string().optional(), description: z.string().optional(), html: source.optional(), css: source.optional(), js: source.optional(), seo: pageSeoSchema.optional(), revision: z.number().int().optional() }, async ({ pageId: id, ...data }) => ({ page: id ? await updatePage(store, projectId, id, data) : await createPage(store, projectId, data) }));
   register('page_publish', 'Publish the saved draft atomically, generating Tailwind CSS. Does not restart or rebuild the platform.', { pageId }, args => publishPage(store, projectId, args.pageId));
   register('page_restore', 'Restore a prior published revision into a draft; publish separately to update the live site.', { pageId, revisionId: z.string().uuid() }, async args => ({ page: await restorePage(store, projectId, args.pageId, args.revisionId) }));
   register('assets_list', 'List this project images, audio, video and font assets.', {}, () => ({ assets: store.read().assets.filter(a => a.projectId === projectId) }), true);
