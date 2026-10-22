@@ -6,7 +6,25 @@ LumaSite runs as an independent application. The `marketing/` directory is an op
 
 ## Install from GitHub
 
-Requires Node.js 24 or later, npm, and Git. Install the CLI directly from GitHub, then run its terminal wizard:
+Requires Node.js 24 or later, npm, Git, and read access to this private repository. Create a project with one command, answer the questions, and let it install the application inside your new folder:
+
+```sh
+npx --yes "git+https://github.com/arrrrniii/lumasite.git#v0.4.0" create
+```
+
+It first asks **What is your project named?**, then walks through local/server mode, website name/domain, optional ZIP import, ports, Studio/preview URLs, and proxy configuration. After reviewing the settings, it creates the folder, installs its own runtime/dependencies, initializes credentials, and optionally starts the website. The installed application stays inside the project when npx's temporary installer goes away.
+
+```sh
+cd my-website
+npm start
+npm run status
+npm run logs
+npm stop
+```
+
+You can supply the directory directly: append `create my-website`. A generated project includes `package.json`, `package-lock.json`, a local `lumasite.mjs` launcher, README, Git ignore rules, dependencies, and persistent website data. Existing project directories are never overwritten. The future registry shorthand `npx create-lumasite@latest` requires a separate npm publication; the GitHub command above is available now.
+
+For an optional global CLI installation:
 
 ```sh
 npm install --global git+https://github.com/arrrrniii/lumasite.git
@@ -70,6 +88,7 @@ All commands accept `--data-dir /absolute/directory`. Otherwise storage defaults
 
 | Command | Purpose |
 | --- | --- |
+| `create [directory]` | Ask first-run questions and create an independent npm project |
 | `setup` | Guided terminal setup, including optional website ZIP import |
 | `init --name SendMailOS --domain example.com` | Initialize credentials, ports, and a first project |
 | `project create --name "Second website" --domain second.example` | Create a project and print its URLs and bearer token |

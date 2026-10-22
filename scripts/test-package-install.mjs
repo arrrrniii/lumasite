@@ -4,12 +4,13 @@ import { promises as fs } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import net from 'node:net';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 const exec = promisify(execFile), source = fileURLToPath(new URL('..', import.meta.url));
 const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'lumasite-package-'));
 const prefix = path.join(directory, 'installed'), dataDir = path.join(directory, 'websites');
+const app = path.join(directory, 'created website');
 const bin = path.join(prefix, process.platform === 'win32' ? 'lumasite.cmd' : 'bin/lumasite');
 const npm = process.platform === 'win32' ? 'npm.cmd' : 'npm';
 const run = (file, args, cwd = directory) => exec(file, args, { cwd, timeout: 120000, maxBuffer: 4 * 1024 * 1024 });
@@ -23,7 +24,7 @@ async function ports() {
 try {
   const [archive] = JSON.parse((await run(npm, ['pack', '--json', '--pack-destination', directory], source)).stdout);
   const files = archive.files.map(file => file.path);
-  for (const needed of ['bin/lumasite.mjs', 'src/setup.mjs', 'src/server.mjs', 'public/admin.html', 'vendor/lumafx/lumafx.global.js', 'vendor/lumafx/LICENSE']) assert.ok(files.includes(needed), `Missing package file: ${needed}`);
+  for (const needed of ['bin/lumasite.mjs', 'bin/create-lumasite.mjs', 'src/create.mjs', 'src/setup.mjs', 'src/server.mjs', 'public/admin.html', 'vendor/lumafx/lumafx.global.js', 'vendor/lumafx/LICENSE']) assert.ok(files.includes(needed), `Missing package file: ${needed}`);
   assert.equal(files.some(file => /(^|\/)(?:\.lumasite|node_modules|marketing|test-results|\.env|credentials\.json|state\.json)(?:\/|$)/.test(file) || /\.(zip|log|pem|key)$/.test(file)), false);
   await run(npm, ['install', '--global', '--prefix', prefix, '--omit=dev', '--ignore-scripts', '--no-audit', '--no-fund', path.join(directory, archive.filename)]);
   assert.match((await run(bin, ['--help'])).stdout, /Guided terminal installer/);
@@ -46,8 +47,28 @@ try {
   assert.equal(mcp.status, 200);
   await mcp.body.cancel();
   assert.equal(JSON.parse((await run(bin, ['health', '--data-dir', dataDir, '--json'])).stdout).status, 'healthy');
-  console.log(JSON.stringify({ package: archive.name, version: archive.version, files: files.length, bytes: archive.size, globalInstall: 'passed', setup: 'passed', studio: 'passed', publish: 'passed', mcp: 'passed' }));
+  const websiteZip = path.join(directory, 'website.zip');
+  await run(bin, ['export', '--project', projectId, '--output', websiteZip, '--data-dir', dataDir, '--json']);
+  await run(bin, ['stop', '--data-dir', dataDir, '--json']);
+  const packageRoot = path.join(prefix, 'lib/node_modules/lumasite');
+  const { createWebsite } = await import(pathToFileURL(path.join(packageRoot, 'src/create.mjs')));
+  const [appPort, appSitePort] = await ports();
+  const created = await createWebsite(app, { yes: true, name: 'Created website', file: websiteZip, port: String(appPort), 'site-port': String(appSitePort), 'data-dir': 'private data' }, { packageSpec: `file:${path.join(directory, archive.filename)}`, output: { write() {} }, errors: { write() {} } });
+  assert.equal(created.healthy, true); assert.equal(created.projectDir, app); assert.equal(created.commands.start, 'npm start');
+  const appPackage = JSON.parse(await fs.readFile(path.join(app, 'package.json'), 'utf8'));
+  assert.equal(appPackage.scripts.start, 'node lumasite.mjs start');
+  assert.ok(await fs.stat(path.join(app, 'package-lock.json')));
+  await assert.rejects(fs.access(path.join(app, '.setup-import.zip')), { code: 'ENOENT' });
+  const runRecord = JSON.parse(await fs.readFile(path.join(app, 'private data/run.json')));
+  assert.equal(runRecord.serverPath, await fs.realpath(path.join(app, 'node_modules/lumasite/src/server.mjs')));
+  assert.match(await fs.readFile(path.join(app, '.gitignore'), 'utf8'), /\/private\\ data\//);
+  await fs.rm(prefix, { recursive: true, force: true });
+  assert.equal(JSON.parse((await run(process.execPath, [path.join(app, 'lumasite.mjs'), 'health', '--json'])).stdout).status, 'healthy', 'Created project survives removal of temporary installer');
+  assert.equal((await fetch(`http://127.0.0.1:${appPort}/admin`)).status, 200);
+  assert.equal((await fetch(`http://127.0.0.1:${appSitePort}/sites/${created.projects[0].slug}/`)).status, 200, 'Creator imports published website revisions');
+  console.log(JSON.stringify({ package: archive.name, version: archive.version, files: files.length, bytes: archive.size, globalInstall: 'passed', setup: 'passed', studio: 'passed', publish: 'passed', mcp: 'passed', create: 'passed', independentRuntime: 'passed' }));
 } finally {
+  await run(process.execPath, [path.join(app, 'lumasite.mjs'), 'stop', '--json']).catch(() => {});
   await run(bin, ['stop', '--data-dir', dataDir, '--json']).catch(() => {});
   await fs.rm(directory, { recursive: true, force: true });
 }

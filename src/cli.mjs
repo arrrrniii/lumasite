@@ -10,6 +10,7 @@ import { generateProxyConfig } from './proxy.mjs';
 import { prepareConfiguration, applyConfiguration } from './configure.mjs';
 import { exportProject, importProject } from './migration.mjs';
 import { prepareSetup, assertSetupPorts, writeSetupFiles } from './setup.mjs';
+import { createWebsite } from './create.mjs';
 
 const serverPath = fileURLToPath(new URL('./server.mjs', import.meta.url));
 const valuedOptions = new Set(['data-dir', 'name', 'domain', 'slug', 'port', 'site-port', 'host', 'public-url', 'site-url', 'password', 'project', 'format', 'admin-domain', 'output', 'lines', 'file', 'link-mode', 'mode', 'proxy']);
@@ -19,6 +20,7 @@ const help = `LumaSite — editable websites through MCP
 Usage: lumasite <command> [options]
        lumasite --version
 
+  create [directory]    Create a project folder, answer setup questions, install and run
   setup        Guided terminal installer (new instance or website ZIP)
   init         Initialize an instance and optionally create its first project
   configure    Change a stopped instance’s URLs, listener host/ports or project domain
@@ -41,6 +43,8 @@ All commands accept --data-dir DIRECTORY and --json.
 Default data directory: $LUMASITE_DATA_DIR or ./.lumasite
 
 Examples:
+  lumasite create
+  lumasite create my-website
   lumasite setup
   lumasite setup --mode server
   lumasite setup --yes --name "My website" --no-start
@@ -508,8 +512,9 @@ export async function runCli(args, { stdin = process.stdin, stdout = process.std
     const { command, subcommand, extras } = parsed;
     if (opts.version) { stdout.write(`${VERSION}\n`); return 0; }
     if (opts.help || !command || command === 'help') { stdout.write(help); return 0; }
-    if (extras.length || (subcommand && command !== 'project')) throw new Error('Unexpected positional arguments. Run lumasite --help.');
+    if (extras.length || (subcommand && !['project', 'create'].includes(command))) throw new Error('Unexpected positional arguments. Run lumasite --help.');
     const allowed = {
+      create: ['name', 'domain', 'slug', 'port', 'site-port', 'host', 'public-url', 'site-url', 'mode', 'proxy', 'file', 'yes', 'no-start'],
       setup: ['name', 'domain', 'slug', 'port', 'site-port', 'host', 'public-url', 'site-url', 'mode', 'proxy', 'file', 'yes', 'no-start'],
       init: ['name', 'domain', 'slug', 'port', 'site-port', 'host', 'public-url', 'site-url', 'password'],
       configure: ['public-url', 'site-url', 'host', 'port', 'site-port', 'domain', 'project'],
@@ -521,6 +526,11 @@ export async function runCli(args, { stdin = process.stdin, stdout = process.std
       if (!['data-dir', 'json'].includes(key) && !allowed.includes(key)) throw new Error(`--${key} is not supported by ${command}. Run lumasite ${command} --help.`);
     }
     const dataDir = path.resolve(opts['data-dir'] || process.env.LUMASITE_DATA_DIR || path.join(process.cwd(), '.lumasite'));
+    if (command === 'create') {
+      const result = await createWebsite(subcommand, opts, { input: stdin, output: stdout, errors: stderr });
+      if (!result) { print({ status: 'cancelled', message: 'No project was created.' }, opts, stdout); return 0; }
+      print(result, opts, stdout); return result.startupError ? 1 : 0;
+    }
     if (command === 'setup') {
       const plan = await prepareSetup(opts, { input: stdin, output: stdout });
       if (!plan) { print({ status: 'cancelled', message: 'No instance was created.' }, opts, stdout); return 0; }

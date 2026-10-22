@@ -1,6 +1,58 @@
 # Install LumaSite with npm and terminal setup
 
-LumaSite 0.3 includes a packaged `lumasite` command and an interactive terminal wizard. Node.js 24 or later, npm, and Git must already be installed. The package includes Studio, the CLI, the runtime, and native LumaFX. It excludes live data, credentials, website ZIPs, development dependencies, tests, and the optional SendMailOS marketing source/assets. The full example remains in the GitHub checkout; move an existing website with its project ZIP.
+LumaSite 0.4 includes a first-run project creator, a packaged `lumasite` command, and an interactive terminal wizard. Node.js 24 or later, npm, and Git must already be installed. The package includes Studio, the CLI, the runtime, and native LumaFX. It excludes live data, credentials, website ZIPs, development dependencies, tests, and the optional SendMailOS marketing source/assets. The full example remains in the GitHub checkout; move an existing website with its project ZIP.
+
+## Create a project with one command
+
+With Git authenticated to the private repository, run:
+
+```sh
+npx --yes "git+https://github.com/arrrrniii/lumasite.git#v0.4.0" create
+```
+
+It asks **What is your project named?**, followed by the setup questions below. Review everything before it creates files. To supply a directory in advance:
+
+```sh
+npx --yes "git+https://github.com/arrrrniii/lumasite.git#v0.4.0" create my-website
+```
+
+The creator makes a new directory, installs a pinned LumaSite dependency, and initializes a website using its installed runtime. Its server is launched from that project's `node_modules/lumasite` rather than the temporary npx cache. The project continues working after the installer is removed. It does not overwrite an existing directory. Declining the settings review creates no project directory; an interrupted dependency installation retains the new folder for recovery.
+
+The generated folder has:
+
+```text
+my-website/
+  package.json
+  package-lock.json
+  lumasite.mjs
+  README.md
+  .gitignore
+  node_modules/
+  .lumasite/        private website data, media, and credentials
+```
+
+The default data directory belongs to the new project. `--data-dir` is resolved relative to that folder and can select a separate persistent path. Generated scripts retain the chosen path. A custom data directory inside the project is excluded by its Git ignore rules; the project root, its parent, and `node_modules` cannot be selected as data storage.
+
+After creation:
+
+```sh
+cd my-website
+npm start
+npm run status
+npm run health
+npm run logs
+npm run restart
+npm stop
+```
+
+For automation, supply a directory and `--yes` after `create`; add `--no-start` when preparing data for a supervisor. The outer `npx --yes` accepts npm's package download prompt; the inner `create ... --yes` accepts the creator's settings. For example:
+
+```sh
+npx --yes "git+https://github.com/arrrrniii/lumasite.git#v0.4.0" create my-website \
+  --yes --no-start --name "My website"
+```
+
+The package also includes a `create-lumasite` executable, usable with `npx --package="git+https://github.com/arrrrniii/lumasite.git#v0.4.0" create-lumasite`. The short public-registry command `npx create-lumasite@latest` is reserved for a future intentional npm publication; it has not been published.
 
 ## Install directly from the private GitHub repository
 
@@ -99,6 +151,6 @@ From the development checkout:
 npm run test:package
 ```
 
-This packs the actual allowlisted files, installs the tarball into a disposable npm prefix, runs setup, starts both listeners, opens Studio/runtime assets, publishes a page with Tailwind, and initializes an authenticated MCP connection. It removes the temporary installation/data afterward. The normal `npm test` suite also covers guided setup, cancellation/EOF, JSON automation, ZIP imports, and preservation of existing data/services.
+This packs the actual allowlisted files, installs the tarball into a disposable npm prefix, runs setup, starts both listeners, opens Studio/runtime assets, publishes a page with Tailwind, and initializes an authenticated MCP connection. It also creates a real standalone project, removes the temporary installer, and checks that its installed runtime still serves Studio and passes health checks. It removes the temporary installation/data afterward. The normal `npm test` suite also covers project naming/cancellation, guided setup, EOF, JSON automation, ZIP imports, and preservation of existing data/services.
 
 Primary npm references: [Git package specifications](https://docs.npmjs.com/cli/v11/using-npm/package-spec/), [package files and executable mappings](https://docs.npmjs.com/cli/v11/configuring-npm/package-json/), and [npm exec](https://docs.npmjs.com/cli/commands/npm-exec/).

@@ -114,7 +114,7 @@ export async function prepareSetup(options, { input = process.stdin, output = pr
       } finally { await handle.close(); }
       imported = await inspectProjectArchive(archive);
     }
-    const name = options.name || await ask('Website name', imported?.project.name || 'My website', value => { if (!value.trim() || value.length > 100) throw new Error('Use 1–100 characters.'); });
+    const name = options.name || await ask('Website name', imported?.project.name || options.defaultName || 'My website', value => { if (!value.trim() || value.length > 100) throw new Error('Use 1–100 characters.'); });
     const domain = options.domain ?? await ask('Website domain (hostname only)', mode === 'server' ? imported?.project.domain || '' : '');
     const host = options.host || '127.0.0.1';
     const defaults = await suggestedPorts(host, options);

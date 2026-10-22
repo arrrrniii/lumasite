@@ -1,6 +1,6 @@
 {
   "name": "lumasite",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "An independent, self-hosted website studio with native LumaFX and MCP authoring.",
   "private": true,
   "license": "UNLICENSED",
@@ -9,7 +9,8 @@
     "node": ">=24"
   },
   "bin": {
-    "lumasite": "./bin/lumasite.mjs"
+    "lumasite": "./bin/lumasite.mjs",
+    "create-lumasite": "./bin/create-lumasite.mjs"
   },
   "files": [
     "bin/*.mjs",
