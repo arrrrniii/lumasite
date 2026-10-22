@@ -9,6 +9,13 @@
   }
 }
 
+/* LumaFX inherits the radius, but its spotlight layers also need the card's
+   corner geometry so the warm glow and border follow the same squircle. */
+.marketing-site main [data-fx~="squircle"][data-fx~="spotlight"] > .fx-spot,
+.marketing-site main [data-fx~="squircle"][data-fx~="spotlight"] > .fx-spot::after {
+  corner-shape: inherit;
+}
+
 /* Readable native shimmer even before the runtime maps data attributes to vars. */
 .marketing-site main h2[data-fx~="shimmer"] {
   --fx-color: var(--site-accent-soft, #a7c8ff);
