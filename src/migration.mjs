@@ -77,6 +77,10 @@ async function decodeArchive(buffer){
  if(files.size!==payload.assets.length+2)fail(400,'Project media entries do not match the asset catalog.');for(const a of payload.assets)if(files.get(`media/${a.filename}`)?.length!==a.size)fail(400,'Missing media file or invalid media size.');rejectTokens(files.get('project.json').toString());return{payload,files};
 }
 function rejectTokens(content){if(/\bls_(?:admin|project)_[A-Za-z0-9_-]{40,}\b/.test(content))fail(400,'Project source contains a live access credential. Remove it before transferring the project.');}
+export async function inspectProjectArchive(buffer){
+ const {payload}=await decodeArchive(buffer);
+ return{project:pick(payload.project,['name','slug','domain']),pages:payload.pages.length,assets:payload.assets.length,revisions:payload.revisions.length};
+}
 async function readMedia(store,a){const file=await open(path.join(store.dataDir,'media',a.projectId,a.filename),constants.O_RDONLY|constants.O_NOFOLLOW);try{const s=await file.stat();if(!s.isFile()||s.size!==a.size||s.size>MIGRATION_LIMITS.media)fail(400,'Project media is missing, changed or exceeds the supported size.');return await file.readFile();}finally{await file.close();}}
 export async function exportProject(store,projectId){
  const state=store.read(),p=state.projects.find(p=>p.id===projectId);if(!p)fail(404,'Project not found.');

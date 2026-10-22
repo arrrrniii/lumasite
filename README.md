@@ -6,7 +6,22 @@ LumaSite runs as an independent application. The `marketing/` directory is an op
 
 ## Install from GitHub
 
-Requires Node.js 24 or later and npm. This repository is private; use an authenticated GitHub account or a deploy key with read access when cloning.
+Requires Node.js 24 or later, npm, and Git. Install the CLI directly from GitHub, then run its terminal wizard:
+
+```sh
+npm install --global git+https://github.com/arrrrniii/lumasite.git
+lumasite setup
+```
+
+This repository is private: Git needs an authenticated account or a read-only deploy key. For HTTPS, configure your Git credential helper first; GitHub CLI users can run `gh auth login` and `gh auth setup-git`. With an SSH deploy key, use `git+ssh://git@github.com/arrrrniii/lumasite.git` instead.
+
+The wizard asks for local/server mode, persistent data directory, optional website ZIP, project name/domain, ports, and public URLs. It selects available default ports, creates the administrator and project MCP credentials, and can start the server. Server mode generates an Apache or Caddy configuration for review; DNS, HTTPS, and automatic startup after reboot use your server's existing deployment workflow. Existing installations are never reset.
+
+For a server, start with `lumasite setup --mode server --data-dir /srv/lumasite/data`. Keep data outside the installed npm package so updating the CLI preserves websites. A non-interactive setup is also available; see [terminal setup and package installation](docs/terminal-installer.md).
+
+This is a GitHub package installation. The short command `npm install -g lumasite` requires a separate npm registry publication under a package name you own; no npm registry publication has been made. `private: true` intentionally prevents accidental registry publishing.
+
+Alternatively, clone the development repository:
 
 ```sh
 git clone https://github.com/arrrrniii/lumasite.git
@@ -55,6 +70,7 @@ All commands accept `--data-dir /absolute/directory`. Otherwise storage defaults
 
 | Command | Purpose |
 | --- | --- |
+| `setup` | Guided terminal setup, including optional website ZIP import |
 | `init --name SendMailOS --domain example.com` | Initialize credentials, ports, and a first project |
 | `project create --name "Second website" --domain second.example` | Create a project and print its URLs and bearer token |
 | `project list` | List projects and generated URLs |
@@ -143,6 +159,7 @@ See [operations and deployment](docs/operations.md), [Sitewright comparison](doc
 npm test
 npm run test:browser
 npm run test:seo
+npm run test:package
 ```
 
 The CLI tests initialize temporary instances on ephemeral ports, start both listeners, check live project creation, snapshot data, restart and stop the process, follow logs, and verify that unrelated processes cannot be stopped. Browser tests require Playwright's Chromium runtime.

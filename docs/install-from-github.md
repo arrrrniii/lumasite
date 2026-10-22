@@ -4,6 +4,15 @@ The GitHub repository contains the studio, CLI, native LumaFX runtime, tests, Do
 
 ## Install the application
 
+For a packaged command and terminal wizard, see [npm installation and guided setup](terminal-installer.md):
+
+```sh
+npm install --global git+https://github.com/arrrrniii/lumasite.git
+lumasite setup --mode server --data-dir /srv/lumasite/data
+```
+
+Git authentication with read access to this private repository must be configured first. The clone-based workflow below is also available.
+
 Use Node.js 24 or later, npm, and Git. The repository is private: authenticate Git with an account that can read it, or configure a read-only deploy key for the server. Run these commands as the operating-system user that will own the application and its data. Create the `/srv/lumasite` directory with appropriate ownership first.
 
 ```sh

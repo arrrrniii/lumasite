@@ -1,8 +1,9 @@
 {
   "name": "lumasite",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "An independent, self-hosted website studio with native LumaFX and MCP authoring.",
   "private": true,
+  "license": "UNLICENSED",
   "type": "module",
   "engines": {
     "node": ">=24"
@@ -10,6 +11,15 @@
   "bin": {
     "lumasite": "./bin/lumasite.mjs"
   },
+  "files": [
+    "bin/*.mjs",
+    "src/*.mjs",
+    "public/*.html",
+    "public/*.css",
+    "public/*.js",
+    "vendor/lumafx/",
+    "docs/*.md"
+  ],
   "scripts": {
     "start": "node bin/lumasite.mjs start",
     "dev": "node src/server.mjs",
@@ -17,7 +27,8 @@
     "test:browser": "node tests/browser.mjs",
     "test:marketing": "node tests/marketing-browser.mjs",
     "publish:marketing": "node marketing/publish.mjs",
-    "test:seo": "node tests/seo-browser.mjs"
+    "test:seo": "node tests/seo-browser.mjs",
+    "test:package": "node scripts/test-package-install.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.30.0",

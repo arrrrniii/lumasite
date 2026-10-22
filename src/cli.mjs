@@ -5,18 +5,21 @@ import { spawn } from 'node:child_process';
 import net from 'node:net';
 import { setTimeout as delay } from 'node:timers/promises';
 import { openStore } from './store.mjs';
-import { initializeInstance, createProject, getProjectUrls } from './service.mjs';
+import { initializeInstance, createProject, getProjectUrls, VERSION } from './service.mjs';
 import { generateProxyConfig } from './proxy.mjs';
 import { prepareConfiguration, applyConfiguration } from './configure.mjs';
 import { exportProject, importProject } from './migration.mjs';
+import { prepareSetup, assertSetupPorts, writeSetupFiles } from './setup.mjs';
 
 const serverPath = fileURLToPath(new URL('./server.mjs', import.meta.url));
-const valuedOptions = new Set(['data-dir', 'name', 'domain', 'slug', 'port', 'site-port', 'host', 'public-url', 'site-url', 'password', 'project', 'format', 'admin-domain', 'output', 'lines', 'file', 'link-mode']);
-const booleanOptions = new Set(['help', 'json', 'follow']);
+const valuedOptions = new Set(['data-dir', 'name', 'domain', 'slug', 'port', 'site-port', 'host', 'public-url', 'site-url', 'password', 'project', 'format', 'admin-domain', 'output', 'lines', 'file', 'link-mode', 'mode', 'proxy']);
+const booleanOptions = new Set(['help', 'version', 'json', 'follow', 'yes', 'no-start']);
 const help = `LumaSite — editable websites through MCP
 
 Usage: lumasite <command> [options]
+       lumasite --version
 
+  setup        Guided terminal installer (new instance or website ZIP)
   init         Initialize an instance and optionally create its first project
   configure    Change a stopped instance’s URLs, listener host/ports or project domain
   project create --name NAME --domain DOMAIN    Create another project
@@ -38,6 +41,9 @@ All commands accept --data-dir DIRECTORY and --json.
 Default data directory: $LUMASITE_DATA_DIR or ./.lumasite
 
 Examples:
+  lumasite setup
+  lumasite setup --mode server
+  lumasite setup --yes --name "My website" --no-start
   lumasite init --name SendMailOS --domain sendmailos.local
   lumasite start
   lumasite status
@@ -50,6 +56,13 @@ Init options: --port 4310 --site-port 4311 --host 127.0.0.1
               --public-url https://studio.example.com
               --site-url https://preview.example.com --password PASSWORD
 Use a generated password or LUMASITE_PASSWORD to avoid shell history.
+
+Setup options: --mode local|server --proxy apache|caddy|none --file website.zip
+               --name NAME --domain DOMAIN --data-dir DIRECTORY
+               --port PORT --site-port PORT --public-url ORIGIN --site-url ORIGIN
+               --yes (non-interactive) --no-start (initialize without starting)
+Setup detects available default ports and generates credentials and connection URLs.
+Server mode writes proxy configuration for review; DNS/TLS and reboot services are configured separately.
 
 Configure options (instance must be stopped):
   --public-url ORIGIN --site-url ORIGIN --host 127.0.0.1|0.0.0.0|::1
@@ -487,15 +500,17 @@ function print(value, opts, stdout) {
   if (value.checks && !value.port) stdout.write(JSON.stringify(value.checks, null, 2) + '\n');
 }
 
-export async function runCli(args, { stdout = process.stdout, stderr = process.stderr } = {}) {
+export async function runCli(args, { stdin = process.stdin, stdout = process.stdout, stderr = process.stderr } = {}) {
   let opts = {};
   try {
     const parsed = parseArgs(args);
     opts = parsed.opts;
     const { command, subcommand, extras } = parsed;
+    if (opts.version) { stdout.write(`${VERSION}\n`); return 0; }
     if (opts.help || !command || command === 'help') { stdout.write(help); return 0; }
     if (extras.length || (subcommand && command !== 'project')) throw new Error('Unexpected positional arguments. Run lumasite --help.');
     const allowed = {
+      setup: ['name', 'domain', 'slug', 'port', 'site-port', 'host', 'public-url', 'site-url', 'mode', 'proxy', 'file', 'yes', 'no-start'],
       init: ['name', 'domain', 'slug', 'port', 'site-port', 'host', 'public-url', 'site-url', 'password'],
       configure: ['public-url', 'site-url', 'host', 'port', 'site-port', 'domain', 'project'],
       project: subcommand === 'create' ? ['name', 'domain', 'slug'] : [],
@@ -506,6 +521,34 @@ export async function runCli(args, { stdout = process.stdout, stderr = process.s
       if (!['data-dir', 'json'].includes(key) && !allowed.includes(key)) throw new Error(`--${key} is not supported by ${command}. Run lumasite ${command} --help.`);
     }
     const dataDir = path.resolve(opts['data-dir'] || process.env.LUMASITE_DATA_DIR || path.join(process.cwd(), '.lumasite'));
+    if (command === 'setup') {
+      const plan = await prepareSetup(opts, { input: stdin, output: stdout });
+      if (!plan) { print({ status: 'cancelled', message: 'No instance was created.' }, opts, stdout); return 0; }
+      const result = await withControlLock(plan.dataDir, async () => {
+        const store = await openStore(plan.dataDir);
+        if (store.read().instance) throw new Error('This instance is already initialized. Use project create or import; setup never resets existing data.');
+        await assertSetupPorts(plan);
+        const created = await initializeInstance(store, { port: plan.port, sitePort: plan.sitePort, host: plan.host, publicUrl: plan.publicUrl, sitePublicUrl: plan.sitePublicUrl, password: process.env.LUMASITE_PASSWORD });
+        const project = plan.archive
+          ? await importProject(store, plan.archive, { name: plan.name, slug: plan.slug, domain: plan.domain, linkMode: plan.mode === 'server' ? 'domain' : 'project' })
+          : await createProject(store, { name: plan.name, slug: plan.slug, domain: plan.domain });
+        const files = await writeSetupFiles(plan);
+        let runtime = {}, startupError;
+        if (plan.start) {
+          try { runtime = await startServer(plan.dataDir); }
+          catch (error) { startupError = error.message; }
+        }
+        return {
+          ...runtime, status: startupError ? 'needs attention' : plan.start ? 'running' : 'initialized',
+          dataDir: plan.dataDir, port: plan.port, sitePort: plan.sitePort, host: plan.host,
+          admin: `${plan.publicUrl}/admin`, sitePublicUrl: plan.sitePublicUrl,
+          password: created.password, projects: [{ ...displayProject(store.read(), project.project), token: project.token }],
+          ...files, startupError,
+          message: `${plan.archive ? 'Imported website ready; published revisions were preserved.' : 'Starter homepage created as a draft. Publish it in Studio or through MCP.'}\nCredentials saved privately in credentials.json.\n${files.proxyFile ? `Proxy configuration: ${files.proxyFile}\nPoint DNS to this server, then install the proxy configuration and enable HTTPS.\n` : ''}Setup notes: ${files.instructions}\n${Object.values(files.commands).join('\n')}${plan.mode === 'server' ? '\nUse a process supervisor for automatic startup after reboot.' : ''}${startupError ? `\nStartup needs attention: ${startupError}` : ''}`,
+        };
+      });
+      print(result, opts, stdout); return result.startupError ? 1 : 0;
+    }
     if (command === 'init') {
       const port = tcpPort(opts.port, 4310, 'Admin port');
       const sitePort = tcpPort(opts['site-port'], 4311, 'Website port');
@@ -625,6 +668,7 @@ export async function runCli(args, { stdout = process.stdout, stderr = process.s
     if (command === 'backup') { print(await backup(dataDir, opts.output), opts, stdout); return 0; }
     throw new Error(`Unknown command: ${command}. Run lumasite --help.`);
   } catch (error) {
+    if (error.code === 'SETUP_CANCELLED') { print({ status: 'cancelled', message: error.message }, opts, stdout); return 130; }
     const message = error?.message || String(error);
     if (opts.json) stderr.write(JSON.stringify({ error: message }) + '\n');
     else stderr.write(`LumaSite: ${message}\n`);
