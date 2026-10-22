@@ -16,6 +16,15 @@
   corner-shape: inherit;
 }
 
+/* Keep the animated fill independent of the label's current color. */
+.marketing-site .button[data-fx~="press"][data-fx-style="fill"] {
+  --fx-color: #fff;
+  --fx-fill-ink: var(--site-action);
+}
+.marketing-site .button[data-fx~="press"][data-fx-style="fill"]:is(:hover, :focus-visible) {
+  color: var(--fx-fill-ink);
+}
+
 /* Readable native shimmer even before the runtime maps data attributes to vars. */
 .marketing-site main h2[data-fx~="shimmer"] {
   --fx-color: var(--site-accent-soft, #a7c8ff);
