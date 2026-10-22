@@ -26,6 +26,8 @@
 .marketing-site .editorial-card > p { max-width: 31ch; }
 .marketing-site .editorial-card-bottom > p { max-width: 29ch; }
 .marketing-site .founder-image .reply-toast { left: 16px; right: 16px; padding: 12px; }
+/* Keep icons and copy comfortably inside the feature-card hover surface. */
+.marketing-site .feature-tile { padding: 32px; }
 
 @media (min-width: 1650px) {
   .marketing-site .hero-content { max-width: 1080px; padding-left: max(64px, calc((100vw - 1280px) / 2 - 16px)); }
@@ -56,6 +58,7 @@
   .marketing-site .hero-bottom { display: none; }
 }
 @media (max-width: 600px) {
+  .marketing-site .feature-tile { padding: 24px; }
   .marketing-site .hero-shell { padding: 12px; }
   .marketing-site .photo-hero { border-radius: 23px; }
   .marketing-site .hero-content { padding: 116px 22px 0; }
