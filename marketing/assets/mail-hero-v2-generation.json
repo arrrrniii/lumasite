@@ -1,0 +1,67 @@
+{
+  "asset": "SendMailOS mail hero v2",
+  "generatedAt": "2026-10-22T11:13:09.862Z",
+  "mode": "built-in",
+  "tool": "image_gen.imagegen",
+  "modelIdentifier": null,
+  "modelNote": "The built-in tool did not disclose a model identifier.",
+  "useCase": "stylized-concept",
+  "intent": "generate",
+  "projectBound": true,
+  "transparentBackground": false,
+  "inputImages": [],
+  "prompt": "Use case: stylized-concept.\nAsset type: original premium marketing website hero image, one complete scene, landscape 16:9 composition (target 2048 x 1152).\nPrimary request: sophisticated tangible 3D product illustration for an email platform, rendered like exacting studio product photography rather than generic digital AI artwork.\nScene/backdrop: a quiet dark navy architectural studio. Seamless nearly plain navy background and navy floor, using #07101d, with a grounded soft contact shadow. The entire left 45% of the canvas is empty dark navy negative space reserved for large white headline typography that will be added in HTML. No text is included in the image.\nSubject: on the right 55% of the canvas, a beautiful sculptural OPEN EMAIL ENVELOPE / INBOX TRAY, immediately recognizable as email. A precise, substantial cobalt blue envelope body made of folded paper-metal with a clear triangular flap, subtle seams, softly chamfered edges, and a restrained frosted-glass insert. Several matte ivory message sheets rise from the open envelope. One or two simple floating frosted message panels sit just behind the envelope, adding depth. The sheets and panels are entirely blank, no lines or characters, no interface or fake data. Show one connected hero arrangement, not an object collection.\nComposition/framing: generous wide horizontal canvas; main object at right-center, roughly centered at 73% horizontal and 55% vertical; large enough to have presence, entire main envelope visible with safe breathing space at top, right, and bottom. The negative space at left must remain quiet, even-toned, and unoccupied. Three-quarter front view at an elegant slightly elevated angle; clear geometry with natural perspective. It must also crop well around the right-center object on mobile.\nLighting/mood: carefully controlled large soft key light from upper right, crisp but delicate pale blue edge highlights, believable soft shadows, rich deep blacks retaining detail, polished understated editorial art direction. No blinding glow.\nColor palette: dark navy #07101d, cobalt/accent blue #4f8cff, pale blue #accaff, restrained matte ivory for message paper. High material contrast without neon saturation.\nMaterials/textures: premium folded coated paper-metal, subtle satin roughness, a small amount of thick frosted glass, real paper softness. Tactile and impeccably finished. Avoid chrome overload.\nConstraints: absolutely NO text, letters, numbers, logos, brand marks, watermarks, metrics, graphs, typography, or legible UI anywhere. NO people, meeting scene, glowing AI orb, nebula, space tunnel, confetti, sparkles, decorative starbursts, excessive chrome, extra props, multiple disconnected scenes, or busy abstract background. Create an original scene, not a reproduction of another brand image.",
+  "generatedSource": "/Users/arnoldkajolli/.codex/generated_images/01a162c6-cca4-7781-b294-7eb256c348e7/exec-8dc886d6-64e0-45ae-8e29-e93b62502ef3.png",
+  "provenance": "Generated with the built-in image generation tool for the SendMailOS marketing website. The unchanged source PNG was copied into the workspace. No stock image, customer photograph, logo, text, or reference image was used.",
+  "inspection": "Inspected the generated result. One clearly recognizable open cobalt envelope with blank ivory message sheets and frosted panels is placed at right center; left roughly 45% remains quiet navy. No people, text, logo, metrics, or watermark are visible.",
+  "processing": {
+    "library": "sharp",
+    "desktop": {
+      "resize": {
+        "width": 1900,
+        "withoutEnlargement": true
+      },
+      "webp": {
+        "quality": 85,
+        "effort": 6
+      }
+    },
+    "mobile": {
+      "resize": {
+        "width": 1000,
+        "withoutEnlargement": true
+      },
+      "webp": {
+        "quality": 85,
+        "effort": 6
+      }
+    },
+    "note": "Proportional resizing and WebP format conversion only. No crop, recoloring, retouching, compositing, or generated edits. The original was already 1672px wide, so desktop was not enlarged."
+  },
+  "files": [
+    {
+      "name": "mail-hero-v2.png",
+      "width": 1672,
+      "height": 941,
+      "bytes": 1796653,
+      "sha256": "aea2de9ac27126d05902dd3277dcea4d03bc6b7ecddd0132f98cfa32f171faf6",
+      "format": "png"
+    },
+    {
+      "name": "mail-hero-v2.webp",
+      "width": 1672,
+      "height": 941,
+      "bytes": 50610,
+      "sha256": "c74fca27084b187e2acfee8eb39d2cf361f740639f837fd1ad18dd12b27838b0",
+      "format": "webp"
+    },
+    {
+      "name": "mail-hero-v2-mobile.webp",
+      "width": 1000,
+      "height": 563,
+      "bytes": 18060,
+      "sha256": "f4ae1ac672b2cbb769279261d7e10181345d25fc692569efcf13810c40ba1bb0",
+      "format": "webp"
+    }
+  ]
+}

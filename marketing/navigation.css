@@ -1,0 +1,2 @@
+/* Page content appears immediately, including on back/forward navigation. */
+.marketing-site > main { animation: none; }

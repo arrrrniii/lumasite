@@ -1,0 +1,62 @@
+// Original browser-native illustrations. Every instance owns its SVG IDs.
+let instance = 0;
+const escape = value => String(value).replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
+const glyphs = {
+  mail: '<rect x="2" y="4" width="20" height="16" rx="3"/><path d="m3 6 9 7 9-7"/>',
+  arrow: '<path d="M4 12h16m-6-6 6 6-6 6"/>',
+  person: '<circle cx="12" cy="8" r="4"/><path d="M4 22v-2a8 8 0 0 1 16 0v2"/>',
+  clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  plus: '<path d="M12 4v16M4 12h16"/>',
+  check: '<path d="m5 12 4 4L19 6"/>',
+  code: '<path d="m8 6-6 6 6 6m8-12 6 6-6 6m-2-15-4 18"/>',
+  reply: '<path d="m9 4-7 7 7 7M2 11h10c6 0 10 3 10 9"/>',
+  pixel: '<path d="M4 8V4h4m8 0h4v4m0 8v4h-4M8 20H4v-4"/><rect x="9" y="9" width="6" height="6" rx="1"/>',
+  blocks: '<rect x="3" y="3" width="18" height="6" rx="1"/><rect x="3" y="12" width="8" height="9" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/>',
+};
+function glyph(name, x, y, size = 24, extra = '') {
+  return `<g class="scene-icon ${extra}" transform="translate(${x} ${y}) scale(${size / 24})" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${glyphs[name] || glyphs.mail}</g>`;
+}
+const text = (x, y, content, css = 'scene-label', extra = '') => `<text x="${x}" y="${y}" class="${css}" ${extra}>${escape(content)}</text>`;
+const rect = (x, y, width, height, css = 'scene-card', radius = 18, extra = '') => `<rect x="${x}" y="${y}" width="${width}" height="${height}" rx="${radius}" class="${css}" ${extra}/>`;
+function envelope(x, y, width = 116, extra = '') {
+  const height = width * .69;
+  return `<g class="scene-envelope ${extra}">${rect(x, y, width, height, 'scene-accent-fill', 13)}<path d="M${x + 5} ${y + 7} ${x + width / 2} ${y + height * .58} ${x + width - 5} ${y + 7}" class="scene-on-accent-stroke"/><path d="m${x + 6} ${y + height - 7} ${width * .3} ${-height * .34}m${width * .3 + 6} 0 ${width * .3} ${height * .34}" class="scene-envelope-seam"/></g>`;
+}
+function art(x, y, width, height, id) {
+  return `<g aria-hidden="true"><clipPath id="${id}"><rect x="${x}" y="${y}" width="${width}" height="${height}" rx="10"/></clipPath><g clip-path="url(#${id})">${rect(x, y, width, height, 'scene-accent-fill', 10)}<circle cx="${x + width * .7}" cy="${y + height * .18}" r="${height * .72}" class="scene-art-light"/><path d="M${x - 25} ${y + height} Q${x + width * .3} ${y - height * .25} ${x + width * .55} ${y + height * .7} T${x + width + 20} ${y + height * .4} V${y + height + 10} H${x - 25}Z" class="scene-art-deep"/><path d="M${x - 10} ${y + height * .7} Q${x + width * .3} ${y + height * .05} ${x + width * .72} ${y + height}" fill="none" class="scene-art-line" stroke-width="4"/></g></g>`;
+}
+function campaign(id) {
+  return `${rect(38, 28, 318, 374, 'scene-paper', 19)}${text(62, 66, 'Your next announcement', 'scene-small scene-muted')}${art(60, 88, 274, 132, `${id}-art`)}${text(62, 261, 'A new chapter.', 'scene-heading')}${rect(62, 279, 215, 7, 'scene-copy-line', 3)}${rect(62, 297, 180, 7, 'scene-copy-line scene-faint', 3)}${rect(62, 329, 132, 42, 'scene-accent-fill', 10)}${text(80, 356, 'Take a look', 'scene-button-label')}<path d="M360 320C442 320 386 160 497 160" class="scene-route"/><path d="M360 320C442 320 386 160 497 160" class="scene-route-trace scene-motion scene-campaign-route"/>${glyph('arrow', 477, 148, 24, 'scene-accent')}${envelope(444, 198, 130, 'scene-motion scene-send-flight')}${text(509, 313, 'Ready to send', 'scene-label', 'text-anchor="middle"')}${text(509, 341, 'Your campaign.', 'scene-small scene-muted', 'text-anchor="middle"')}${text(509, 367, 'Your audience.', 'scene-small scene-muted', 'text-anchor="middle"')}`;
+}
+function flowNode(x, y, width, title, subtitle, symbol, emphasis = false) {
+  return `<g class="${emphasis ? 'scene-flow-final' : ''}">${rect(x, y, width, 92, emphasis ? 'scene-card scene-accent-border' : 'scene-card', 17)}${rect(x + 17, y + 21, 50, 50, 'scene-icon-disc', 13)}${glyph(symbol, x + 28, y + 32, 28)}${text(x + 81, y + 39, title, 'scene-label')}${text(x + 81, y + 66, subtitle, 'scene-small scene-muted')}</g>`;
+}
+function workflow() {
+  return `<path d="M314 114V140Q314 154 300 154H214Q200 154 200 168V174M200 266V282Q200 296 214 296H402Q416 296 416 310" class="scene-route"/><path d="M314 114V140Q314 154 300 154H214Q200 154 200 168V174M200 266V282Q200 296 214 296H402Q416 296 416 310" class="scene-route-trace scene-motion scene-workflow-route"/>${flowNode(162, 22, 302, 'Subscriber joins', 'Start the journey', 'person')}${flowNode(48, 174, 302, 'Wait one day', 'Give it a little time', 'clock')}${flowNode(268, 310, 324, 'Send a welcome', 'A thoughtful first hello', 'mail', true)}<circle cx="314" cy="137" r="5" class="scene-accent-fill"/><circle cx="416" cy="287" r="5" class="scene-accent-fill"/>${glyph('plus', 514, 47, 33, 'scene-muted scene-faint')}${glyph('plus', 102, 334, 29, 'scene-muted scene-faint')}`;
+}
+function pixel() {
+  return `${rect(32, 50, 257, 271, 'scene-paper', 18)}<path d="M32 96H289" class="scene-rule"/><g aria-hidden="true"><circle cx="54" cy="73" r="4" class="scene-copy-line"/><circle cx="69" cy="73" r="4" class="scene-copy-line"/><circle cx="84" cy="73" r="4" class="scene-copy-line"/></g>${text(54, 133, 'Your website', 'scene-label')}${rect(53, 153, 215, 86, 'scene-website-art', 11)}${glyph('pixel', 137, 176, 40, 'scene-accent')}${rect(53, 257, 214, 43, 'scene-icon-disc', 9)}${text(72, 285, 'Page viewed', 'scene-label')}<path d="M291 206H323Q340 206 340 189V131Q340 114 357 114H376M340 189V294Q340 310 356 310H376" class="scene-route"/><path d="M291 206H323Q340 206 340 189V131Q340 114 357 114H376M340 189V294Q340 310 356 310H376" class="scene-route-trace scene-motion scene-pixel-route"/>${rect(376, 60, 230, 119, 'scene-card', 17)}<circle cx="407" cy="97" r="15" class="scene-icon-disc"/>${glyph('person', 397, 87, 20)}${text(434, 105, 'Known contact', 'scene-label')}${text(397, 146, 'Email already linked', 'scene-small scene-muted')}${rect(376, 247, 230, 119, 'scene-card scene-accent-border', 17)}${text(396, 281, 'Your audience', 'scene-label')}<g aria-hidden="true"><circle cx="407" cy="321" r="15" class="scene-icon-disc"/><circle cx="430" cy="321" r="15" class="scene-art-deep"/><circle cx="453" cy="321" r="15" class="scene-accent-fill"/></g>${text(481, 328, 'Segment', 'scene-small scene-muted')}${text(36, 395, 'Website context for identified subscribers.', 'scene-note scene-muted')}`;
+}
+function inbox() {
+  return `${rect(42, 24, 556, 382, 'scene-paper', 20)}<path d="M42 100H598" class="scene-rule"/><circle cx="84" cy="63" r="20" class="scene-icon-disc"/>${glyph('inbox', 70, 49, 28)}${text(120, 61, 'A real conversation', 'scene-label')}${text(120, 84, 'Sample email thread', 'scene-small scene-muted')}<g class="scene-motion scene-message-arrive">${rect(68, 126, 345, 105, 'scene-card', 17)}${text(91, 159, 'Your subscriber', 'scene-small scene-muted')}${text(91, 194, 'Does it come in blue?', 'scene-message')}</g><path d="M114 231V262Q114 282 134 282H196" class="scene-reply-route"/>${glyph('reply', 127, 252, 23, 'scene-accent')}<g class="scene-motion scene-reply-arrive">${rect(201, 252, 367, 107, 'scene-reply-fill', 17)}${text(224, 285, 'Your team', 'scene-small scene-accent-soft')}${text(224, 320, 'It does. Happy to help.', 'scene-message')}</g>${text(320, 389, 'Keep the conversation together.', 'scene-note scene-muted', 'text-anchor="middle"')}`;
+}
+function api() {
+  return `${rect(32, 44, 306, 300, 'scene-paper', 18)}${rect(51, 65, 72, 32, 'scene-icon-disc', 8)}${text(61, 87, 'POST', 'scene-code scene-accent')}${text(136, 89, '/v1/emails', 'scene-label')}<path d="M32 116H338" class="scene-rule"/>${text(57, 157, '{', 'scene-code scene-muted')}${text(73, 194, 'from: your domain', 'scene-code')}${text(73, 231, 'to: subscriber', 'scene-code')}${text(73, 268, 'subject: welcome', 'scene-code scene-accent-soft')}${text(57, 307, '}', 'scene-code scene-muted')}<path d="M341 172H405Q424 172 424 153V122H472" class="scene-route"/><path d="M341 172H405Q424 172 424 153V122H472" class="scene-route-trace scene-motion scene-api-route"/>${envelope(454, 78, 126, 'scene-motion scene-api-send')}<path d="M517 173V231" class="scene-route"/>${glyph('arrow', 505, 210, 24, 'scene-down-arrow scene-accent')}${rect(378, 251, 231, 113, 'scene-card scene-accent-border', 17)}${text(399, 300, '202', 'scene-status-code')}${text(485, 287, 'Accepted', 'scene-label')}${text(485, 316, 'For processing', 'scene-tiny scene-muted')}${text(320, 402, 'Follow delivery with webhooks.', 'scene-note scene-muted', 'text-anchor="middle"')}`;
+}
+function template(id) {
+  return `${rect(155, 24, 337, 382, 'scene-paper', 19)}${text(179, 62, 'Your email', 'scene-small scene-muted')}${art(177, 82, 293, 127, `${id}-art`)}${rect(177, 228, 293, 63, 'scene-selection-fill', 3)}${text(193, 270, 'Made for you.', 'scene-heading')}${rect(178, 308, 245, 7, 'scene-copy-line', 3)}${rect(178, 326, 212, 7, 'scene-copy-line scene-faint', 3)}${rect(178, 354, 113, 31, 'scene-accent-fill', 8)}${text(198, 376, 'Explore', 'scene-button-label')}${rect(177, 228, 293, 63, 'scene-selection-line scene-motion', 2)}<g class="scene-selection-handles" aria-hidden="true">${[[173,224],[466,224],[173,287],[466,287]].map(([x,y])=>rect(x,y,8,8,'scene-handle',0)).join('')}</g><g class="scene-motion scene-edit-cursor"><path d="m443 278 2 39 11-10 14 19 10-7-13-18 16-6Z" class="scene-cursor"/></g>${rect(33, 136, 91, 163, 'scene-card', 14)}${rect(48, 151, 61, 39, 'scene-icon-disc', 7)}${glyph('blocks', 65, 159, 24, 'scene-accent')}${glyph('plus', 65, 211, 25)}<path d="M54 266h49" class="scene-muted-line"/>${rect(352, 34, 252, 48, 'scene-mcp-badge', 24)}${glyph('code', 370, 47, 22, 'scene-accent-soft')}${text(405, 66, 'MCP editable', 'scene-label')}${text(60, 383, 'Blocks', 'scene-small scene-muted')}`;
+}
+const scenes = {
+  campaign: { title: 'Email campaigns', description: 'An illustrative email composition with original blue artwork and an envelope moving along its sending path.', render: campaign, symbol: 'mail' },
+  workflow: { title: 'Welcome workflow', description: 'An illustrative three-step journey: a subscriber joins, waits one day and receives a welcome email. Connected paths indicate the sequence.', render: workflow, symbol: 'clock' },
+  pixel: { title: 'Pixel & audiences', description: 'An illustrative website page-view event connects to an already identified subscriber and an audience segment. This does not discover anonymous visitor identities.', render: pixel, symbol: 'pixel' },
+  inbox: { title: 'Connected conversations', description: 'An illustrative email thread with a subscriber asking whether a product comes in blue and a team replying that it does.', render: inbox, symbol: 'reply' },
+  api: { title: 'Email API', description: 'An illustrative POST request to /v1/emails sends a message and returns 202 Accepted for processing. Accepted does not mean delivered; delivery can be followed with webhooks.', render: api, symbol: 'code' },
+  template: { title: 'Template Studio', description: 'An illustrative editable email template with blue artwork, a selected heading block, a pointer and an MCP editable badge. Individual blocks remain editable.', render: template, symbol: 'blocks' },
+};
+export function visual(type = 'campaign') {
+  const key = Object.hasOwn(scenes, type) ? type : 'campaign';
+  const scene = scenes[key];
+  const id = `smo-scene-${key}-${++instance}`;
+  return `<figure class="product-visual visual-scene visual-${key}"><figcaption class="visual-topline"><span class="scene-visual-title"><svg class="scene-caption-icon" viewBox="0 0 24 24" aria-hidden="true">${glyph(scene.symbol, 0, 0, 24)}</svg>${escape(scene.title)}</span><span class="scene-sample-label">Illustrative preview</span></figcaption><svg class="scene-svg" viewBox="0 0 640 430" preserveAspectRatio="xMidYMid meet" role="img" aria-labelledby="${id}-title ${id}-desc" xmlns="http://www.w3.org/2000/svg"><title id="${id}-title">${escape(scene.title)} — illustrative preview</title><desc id="${id}-desc">${escape(scene.description)}</desc><defs><pattern id="${id}-grid" width="30" height="30" patternUnits="userSpaceOnUse"><circle cx="1" cy="1" r="1" class="scene-grid-dot"/></pattern></defs><rect width="640" height="430" fill="url(#${id}-grid)" aria-hidden="true"/>${scene.render(id)}</svg></figure>`;
+}

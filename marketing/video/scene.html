@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><title>SendMailOS — original mail signals animation</title>
+<style>html,body{margin:0;background:#07101d;overflow:hidden}canvas{display:block;width:1280px;height:720px}</style>
+<canvas id="scene" width="1280" height="720" aria-label="Illustrative electronic email signals travel through an API gateway into delivered messages"></canvas>
+<script>
+'use strict';
+const canvas=document.querySelector('canvas');
+const ctx=canvas.getContext('2d',{alpha:false});
+const W=1280,H=720,T=12,TAU=Math.PI*2;
+const C={bg:'#07101d',card:'#101b2d',card2:'#14223a',blue:'#4f8cff',sky:'#a7c8ff',white:'#f5f8ff',muted:'#8197b7'};
+const frac=x=>x-Math.floor(x);
+const ease=x=>x*x*(3-2*x);
+const pulse=(t,phase=0)=>.5+.5*Math.sin(TAU*(t/T+phase));
+function rounded(x,y,w,h,r=12){ctx.beginPath();ctx.roundRect(x,y,w,h,r);}
+function fillRect(x,y,w,h,r,fill,stroke){rounded(x,y,w,h,r);ctx.fillStyle=fill;ctx.fill();if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=1;ctx.stroke();}}
+function line(points,color,width=1){ctx.beginPath();ctx.moveTo(...points[0]);for(const point of points.slice(1))ctx.lineTo(...point);ctx.strokeStyle=color;ctx.lineWidth=width;ctx.stroke();}
+function text(content,x,y,size=14,color=C.white,weight=500,align='left',mono=false){ctx.fillStyle=color;ctx.font=`${weight} ${size}px ${mono?'ui-monospace,Menlo,monospace':'Arial,Helvetica,sans-serif'}`;ctx.textAlign=align;ctx.fillText(content,x,y);}
+function circle(x,y,r,fill,stroke){ctx.beginPath();ctx.arc(x,y,r,0,TAU);if(fill){ctx.fillStyle=fill;ctx.fill();}if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=1;ctx.stroke();}}
+function glow(x,y,r,color,alpha=.3){const g=ctx.createRadialGradient(x,y,0,x,y,r);g.addColorStop(0,color);g.addColorStop(1,'rgba(79,140,255,0)');ctx.globalAlpha=alpha;ctx.fillStyle=g;ctx.fillRect(x-r,y-r,r*2,r*2);ctx.globalAlpha=1;}
+function point(curve,p){const[q0,q1,q2,q3]=curve,a=1-p;return{x:a*a*a*q0[0]+3*a*a*p*q1[0]+3*a*p*p*q2[0]+p*p*p*q3[0],y:a*a*a*q0[1]+3*a*a*p*q1[1]+3*a*p*p*q2[1]+p*p*p*q3[1]};}
+function tangent(curve,p){const[q0,q1,q2,q3]=curve,a=1-p;return{x:3*a*a*(q1[0]-q0[0])+6*a*p*(q2[0]-q1[0])+3*p*p*(q3[0]-q2[0]),y:3*a*a*(q1[1]-q0[1])+6*a*p*(q2[1]-q1[1])+3*p*p*(q3[1]-q2[1])};}
+function bezier(curve){ctx.beginPath();ctx.moveTo(...curve[0]);ctx.bezierCurveTo(...curve[1],...curve[2],...curve[3]);}
+function check(x,y,size=12,color=C.sky){ctx.beginPath();ctx.moveTo(x-size*.45,y);ctx.lineTo(x-size*.1,y+size*.33);ctx.lineTo(x+size*.55,y-size*.4);ctx.lineWidth=2;ctx.strokeStyle=color;ctx.lineCap='round';ctx.stroke();}
+function envelope(x,y,size=32,{angle=0,opacity=1,bright=false}={}){
+ ctx.save();ctx.translate(x,y);ctx.rotate(angle);ctx.globalAlpha=opacity;
+ const w=size,h=size*.68;
+ ctx.shadowColor=bright?'#4f8cff':'#010610';ctx.shadowBlur=bright?20:9;ctx.shadowOffsetY=bright?0:5;
+ const fill=ctx.createLinearGradient(0,-h/2,0,h/2);fill.addColorStop(0,bright?'#a7c8ff':'#568fff');fill.addColorStop(1,'#2e65d3');
+ fillRect(-w/2,-h/2,w,h,Math.max(3,size*.1),fill,'#9fc3ff');ctx.shadowBlur=0;ctx.shadowOffsetY=0;
+ ctx.beginPath();ctx.moveTo(-w/2+2,-h/2+3);ctx.lineTo(0,h*.1);ctx.lineTo(w/2-2,-h/2+3);ctx.strokeStyle=bright?'#e3efff':'#b5d1ff';ctx.lineWidth=Math.max(1,size*.026);ctx.lineJoin='round';ctx.stroke();
+ ctx.beginPath();ctx.moveTo(-w/2+3,h/2-3);ctx.lineTo(-w*.2,0);ctx.moveTo(w/2-3,h/2-3);ctx.lineTo(w*.2,0);ctx.strokeStyle='#12397677';ctx.lineWidth=1;ctx.stroke();ctx.restore();
+}
+const incoming=[[727,531],[810,531],[772,350],[866,350]];
+const branches=[
+ [[995,326],[1090,326],[1034,183],[1134,183]],
+ [[1008,363],[1074,363],[1098,363],[1174,363]],
+ [[995,399],[1080,399],[1045,545],[1135,545]],
+];
+function drawBackground(t){
+ ctx.fillStyle=C.bg;ctx.fillRect(0,0,W,H);
+ const blue=ctx.createRadialGradient(970,367,30,970,367,470);blue.addColorStop(0,'#15346388');blue.addColorStop(.5,'#0c203c55');blue.addColorStop(1,'#07101d00');ctx.fillStyle=blue;ctx.fillRect(520,0,760,720);
+ // A quiet depth plane lives entirely behind the network, away from headline copy.
+ ctx.save();ctx.strokeStyle='#82b3ff0b';ctx.lineWidth=1;
+ for(let i=0;i<13;i++){const x=578+i*62;line([[928,373],[x,720]],'#82b3ff0b');}
+ for(let i=0;i<8;i++){const y=428+i*i*6.7;line([[600,y],[1280,y]],'#82b3ff08');}ctx.restore();
+ // Fixed depth particles twinkle deterministically, rather than a camera pan.
+ for(let i=0;i<56;i++){const x=600+frac(Math.sin(i*31.73+8)*43758.5453)*650,y=76+frac(Math.sin(i*17.1+3)*9631.34)*570;const a=.08+.2*pulse(t,i*.133);circle(x,y,i%8===0?1.5:.7,`rgba(167,200,255,${a})`);}
+ const floor=ctx.createRadialGradient(944,565,8,944,565,245);floor.addColorStop(0,'#02071199');floor.addColorStop(1,'#02071100');ctx.save();ctx.scale(1,.3);ctx.fillStyle=floor;ctx.fillRect(650,1400,600,700);ctx.restore();
+ // Preserve the left 44 percent as an uninterrupted navy writing surface.
+ const shade=ctx.createLinearGradient(500,0,760,0);shade.addColorStop(0,C.bg);shade.addColorStop(1,'#07101d00');ctx.fillStyle=shade;ctx.fillRect(0,0,760,H);
+}
+function drawRoute(curve,t,{cycle=2,phase=0,input=false}={}){
+ ctx.save();ctx.lineCap='round';
+ bezier(curve);ctx.strokeStyle='#8bb7ff0c';ctx.lineWidth=13;ctx.stroke();
+ bezier(curve);ctx.strokeStyle='#2a4772';ctx.lineWidth=2;ctx.stroke();
+ bezier(curve);ctx.strokeStyle='#4f8cff51';ctx.lineWidth=1;ctx.stroke();
+ // Independent light bits travel the entire cubic route, with a real curved trail.
+ for(let i=0;i<9;i++){
+  const p=frac(t/T*(cycle+1)+phase+i/9),alpha=Math.sin(Math.PI*p)*.85;
+  const here=point(curve,p),previous=point(curve,Math.max(0,p-.035));
+  ctx.globalAlpha=alpha;ctx.shadowColor=C.blue;ctx.shadowBlur=9;
+  line([[previous.x,previous.y],[here.x,here.y]],i%3===0?C.sky:C.blue,i%3===0?2.5:1.7);circle(here.x,here.y,1.5,C.sky);
+ }
+ ctx.shadowBlur=0;ctx.globalAlpha=1;
+ for(let i=0;i<2;i++){
+  const p=frac(t/T*cycle+phase+i*.5),alpha=Math.min(1,p/.08,(1-p)/.08),here=point(curve,p),direction=tangent(curve,p);
+  envelope(here.x,here.y,input?24:29,{angle:Math.atan2(direction.y,direction.x)*.32,opacity:alpha,bright:true});
+ }
+ ctx.restore();
+}
+function requestNode(t){
+ ctx.save();ctx.translate(720,515);ctx.rotate(-.055);
+ ctx.shadowColor='#010610';ctx.shadowBlur=27;ctx.shadowOffsetY=15;
+ const bg=ctx.createLinearGradient(-65,-70,65,56);bg.addColorStop(0,'#1a2c46');bg.addColorStop(1,'#0a1627');fillRect(-73,-69,146,113,15,bg,'#30496b');ctx.shadowBlur=0;ctx.shadowOffsetY=0;
+ fillRect(-57,-52,38,22,6,'#15396c','#447bcd');text('POST',-38,-37,10,C.sky,600,'center',true);
+ text('/v1/emails',-57,-5,15,C.white,500,'left',true);
+ text('{ message }',-57,22,13,'#738caf',400,'left',true);
+ for(let i=0;i<3;i++){circle(44+i*8,-41,1.6,`rgba(79,140,255,${.25+.6*pulse(t,i*.14)})`);}
+ ctx.restore();
+ text('Your application',720,607,14,'#9cb3d1',450,'center');
+}
+function gateway(t){
+ const x=934,y=363;
+ glow(x,y,160,'#2872ed',.15+.045*pulse(t));
+ ctx.save();ctx.translate(x,y);
+ // Concentric dimensional bands form an electronic gateway, not a screenshot.
+ ctx.save();ctx.rotate(-.08);ctx.scale(.82,1);
+ for(const[r,width,color]of[[96,1,'#3e639450'],[85,10,'#112b4d'],[84,2,'#5b96ef'],[75,1,'#a7c8ff6b']]){ctx.beginPath();ctx.arc(0,0,r,0,TAU);ctx.strokeStyle=color;ctx.lineWidth=width;ctx.stroke();}
+ for(let i=0;i<24;i++){const a=i/24*TAU;line([[Math.cos(a)*89,Math.sin(a)*89],[Math.cos(a)*94,Math.sin(a)*94]],i%4===0?'#8db9ff':'#31557d',i%4===0?2:1);}
+ const angle=TAU*t/T;ctx.beginPath();ctx.arc(0,0,84,angle-.4,angle+.2);ctx.strokeStyle=C.sky;ctx.shadowColor=C.blue;ctx.shadowBlur=12;ctx.lineWidth=3;ctx.stroke();ctx.restore();
+ // Floating chip: a shaded side face and a bright readable front face.
+ ctx.beginPath();ctx.moveTo(-45,-55);ctx.lineTo(-32,-66);ctx.lineTo(48,-57);ctx.lineTo(55,50);ctx.lineTo(43,62);ctx.lineTo(-45,53);ctx.closePath();ctx.fillStyle='#0a1526';ctx.fill();ctx.strokeStyle='#315887';ctx.lineWidth=1;ctx.stroke();
+ const chip=ctx.createLinearGradient(-44,-55,44,59);chip.addColorStop(0,'#234b7a');chip.addColorStop(.48,'#183559');chip.addColorStop(1,'#0e2440');
+ fillRect(-46,-54,90,112,12,chip,'#659aee');
+ line([[-43,-39],[40,-30]],'#a7c8ff26');
+ ctx.save();ctx.shadowColor=C.blue;ctx.shadowBlur=18;text('API',-1,8,31,'#d5e6ff',550,'center');ctx.restore();
+ for(let i=0;i<5;i++){const alpha=.2+.65*pulse(t,i*.12);fillRect(-27+i*12,31,5,6,1,`rgba(79,140,255,${alpha})`);}
+ ctx.restore();
+ text('Route. Process. Send.',934,494,14,'#9cb3d1',450,'center');
+}
+function deliveryCard(x,y,index,t){
+ const arrived=frac(t/T*2+[.12,.37,.62][index]);
+ const active=arrived>.78?Math.sin((arrived-.78)/.22*Math.PI):0;
+ ctx.save();ctx.translate(x,y);ctx.rotate([-.045,.035,-.025][index]);
+ ctx.shadowColor='#01050caa';ctx.shadowBlur=25;ctx.shadowOffsetY=13;
+ const bg=ctx.createLinearGradient(-80,-54,82,54);bg.addColorStop(0,'#192c47');bg.addColorStop(1,'#0c192d');
+ fillRect(-87,-53,174,106,14,bg,`rgba(112,163,241,${.23+.48*active})`);ctx.shadowBlur=0;ctx.shadowOffsetY=0;
+ envelope(-42,-14,40,{bright:false});
+ fillRect(-11,-28,66,5,2,'#8099bd');fillRect(-11,-14,43,4,2,'#496381');
+ line([[-69,12],[67,12]],'#2d4563');
+ circle(-61,33,8,'#173e70');check(-61,33,7,'#b5d2ff');
+ text('Delivered',-44,38,13,'#c0d8fb',500);
+ if(active>0){ctx.globalAlpha=active*.5;ctx.strokeStyle=C.blue;ctx.lineWidth=2;rounded(-87,-53,174,106,14);ctx.stroke();ctx.globalAlpha=1;}
+ ctx.restore();
+}
+function binarySignals(t){
+ for(let i=0;i<12;i++){
+  const phase=frac(i*.197+t/T),x=774+Math.sin(i*2.72)*55,y=135+phase*460,alpha=Math.sin(phase*Math.PI)*.22;
+  text(i%3?'01':'10',x,y,11,`rgba(126,176,255,${alpha})`,400,'left',true);
+ }
+}
+function renderFrame(frame){
+ const t=(frame/30)%T;
+ drawBackground(t);binarySignals(t);
+ // Paint the network first, so packets travel into foreground gateway hardware.
+ drawRoute(incoming,t,{cycle:3,phase:.05,input:true});
+ branches.forEach((curve,index)=>drawRoute(curve,t,{cycle:2,phase:[.12,.37,.62][index]}));
+ requestNode(t);gateway(t);
+ deliveryCard(1151,183,0,t);deliveryCard(1175,363,1,t);deliveryCard(1152,545,2,t);
+ // Intentionally no metrics, real addresses or customer claims.
+ text('Illustrative email flow',1198,658,12,'#7089ab',400,'right');
+}
+window.renderFrame=renderFrame;
+window.exportFrame=(frame,type='image/png')=>{renderFrame(frame);return canvas.toDataURL(type,.97).split(',')[1];};
+renderFrame(0);
+</script></html>

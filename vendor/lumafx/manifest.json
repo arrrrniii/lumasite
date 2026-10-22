@@ -1,0 +1,252 @@
+{
+  "name": "lumafx",
+  "version": "0.5.0",
+  "commit": "f6f3508b0cba10d97a2a00d78eeef36843cd1b85",
+  "repository": "https://github.com/arrrrniii/lumafx",
+  "documentation": "https://arrrrniii.github.io/lumafx/",
+  "license": "MIT",
+  "copyright": "Copyright (c) 2026 Arnold Kajolli",
+  "publicPath": "/runtime/lumafx/",
+  "styles": [
+    "lumafx.css"
+  ],
+  "scripts": [
+    "lumafx.global.js"
+  ],
+  "runtimeDependencies": [],
+  "files": [
+    "lumafx.css",
+    "lumafx.global.js",
+    "effects.json",
+    "LICENSE"
+  ],
+  "sha256": {
+    "lumafx.css": "794109355bd8746ac889812990cae0e4a61819931246c3f3149aa1b8e6886d1a",
+    "lumafx.global.js": "d7b19dc5b5260597c61b7d04f6673cf826d61c16625817be59ef76a03ef6dfe7",
+    "effects.json": "5f06eaaab6b2365fd86a2bb7d556d4d7a7d05ee3e8b09db050d197e7a41e42e9",
+    "LICENSE": "fe1c09ad1f964ec197f0bc8d72ec7d80f4a286470511c932d3b21ea75090efe9"
+  },
+  "catalogEffectCount": 52,
+  "animations": [
+    {
+      "id": "text-reveal",
+      "name": "Text reveal",
+      "description": "Splits text into words, letters or lines and animates them in. Keeps links and inline markup intact.",
+      "category": "Text",
+      "html": "<h2 class=\"text-4xl font-semibold tracking-tight md:text-6xl\" data-fx=\"text-reveal\" data-fx-split=\"words\" data-fx-style=\"flip\">Your next chapter starts here.</h2>",
+      "css": "",
+      "js": "",
+      "runtime": "lumafx",
+      "effect": "text-reveal"
+    },
+    {
+      "id": "border-beam",
+      "name": "Border beam",
+      "description": "A comet of light that travels around the element border. Set mode=\"full\" for a continuous gradient circuit.",
+      "category": "Surface",
+      "html": "<article class=\"relative rounded-3xl bg-slate-950 p-10 text-white\" data-fx=\"border-beam\" data-fx-duration=\"5s\" data-fx-color=\"#8b5cf6\" data-fx-color-2=\"#22d3ee\"><p class=\"text-sm uppercase tracking-widest text-violet-300\">Built to move</p><h2 class=\"mt-4 text-3xl font-semibold\">A little light. A lasting impression.</h2><p class=\"mt-4 text-slate-300\">An animated border powered by your own LumaFX library.</p></article>",
+      "css": "",
+      "js": "",
+      "runtime": "lumafx",
+      "effect": "border-beam"
+    },
+    {
+      "id": "reveal",
+      "name": "Scroll reveal",
+      "description": "Animates the element in when it scrolls into view. Never leaves content hidden if JavaScript fails.",
+      "category": "Motion",
+      "html": "<section class=\"rounded-3xl bg-slate-100 p-10\" data-fx=\"reveal\" data-fx-from=\"blur\"><h2 class=\"text-3xl font-semibold\">Make an entrance.</h2><p class=\"mt-4 text-slate-600\">This section reveals when it enters the viewport.</p></section>",
+      "css": "",
+      "js": "",
+      "runtime": "lumafx",
+      "effect": "reveal"
+    },
+    {
+      "id": "stagger",
+      "name": "Stagger children",
+      "description": "Reveals each child one after another when the group scrolls into view.",
+      "category": "Motion",
+      "html": "<div class=\"grid gap-4 md:grid-cols-3\" data-fx=\"stagger\"><article class=\"rounded-2xl bg-violet-50 p-6\"><h3 class=\"text-xl font-semibold\">Create</h3><p class=\"mt-2\">Start with your idea.</p></article><article class=\"rounded-2xl bg-blue-50 p-6\"><h3 class=\"text-xl font-semibold\">Refine</h3><p class=\"mt-2\">Make every detail yours.</p></article><article class=\"rounded-2xl bg-cyan-50 p-6\"><h3 class=\"text-xl font-semibold\">Publish</h3><p class=\"mt-2\">Share it with the world.</p></article></div>",
+      "css": "",
+      "js": "",
+      "runtime": "lumafx",
+      "effect": "stagger"
+    },
+    {
+      "id": "tilt",
+      "name": "3D tilt + glare",
+      "description": "Tilts toward the cursor in 3D with a moving light reflection. Children with data-fx-depth float above the surface.",
+      "category": "Pointer",
+      "html": "<article class=\"rounded-3xl bg-slate-950 p-10 text-white\" data-fx=\"tilt\"><p class=\"text-sm text-violet-300\">Move your pointer</p><h2 class=\"mt-5 text-4xl font-semibold\" data-fx-depth=\"40\">A new perspective.</h2><p class=\"mt-4 text-slate-300\">Native depth and glare without a framework.</p></article>",
+      "css": "",
+      "js": "",
+      "runtime": "lumafx",
+      "effect": "tilt"
+    },
+    {
+      "id": "spotlight",
+      "name": "Spotlight card",
+      "description": "A soft light and a glowing border follow the cursor across the card.",
+      "category": "Pointer",
+      "html": "<article class=\"rounded-3xl bg-slate-950 p-10 text-white\" data-fx=\"spotlight\"><h2 class=\"text-3xl font-semibold\">Follow your curiosity.</h2><p class=\"mt-4 text-slate-300\">Move your pointer across this card to reveal its spotlight.</p></article>",
+      "css": "",
+      "js": "",
+      "runtime": "lumafx",
+      "effect": "spotlight"
+    },
+    {
+      "id": "magnetic",
+      "name": "Magnetic",
+      "description": "The element is pulled toward the cursor when it gets close, then springs back.",
+      "category": "Pointer",
+      "html": "<a href=\"#contact\" class=\"inline-flex rounded-full bg-violet-600 px-8 py-4 font-semibold text-white\" data-fx=\"magnetic\">Let’s build something</a>",
+      "css": "",
+      "js": "",
+      "runtime": "lumafx",
+      "effect": "magnetic"
+    },
+    {
+      "id": "aurora",
+      "name": "Aurora background",
+      "description": "Slow, drifting aurora light behind the content of a section.",
+      "category": "Surface",
+      "html": "<section class=\"relative overflow-hidden rounded-3xl bg-slate-950 px-10 py-24 text-white\" data-fx=\"aurora\"><div class=\"relative\"><p class=\"text-sm uppercase tracking-widest text-violet-200\">A brighter beginning</p><h2 class=\"mt-5 max-w-2xl text-5xl font-semibold tracking-tight\">Ideas deserve room to shine.</h2></div></section>",
+      "css": "",
+      "js": "",
+      "runtime": "lumafx",
+      "effect": "aurora"
+    },
+    {
+      "id": "glass",
+      "name": "Liquid glass",
+      "description": "Glass surface with rim light and specular sheen. Adds real edge refraction and chromatic aberration in Chromium; frosted glass everywhere else.",
+      "category": "Surface",
+      "html": "<section class=\"rounded-3xl bg-gradient-to-br from-violet-500 via-blue-500 to-cyan-400 p-10\"><div class=\"rounded-2xl p-8 text-white\" data-fx=\"glass\"><h2 class=\"text-3xl font-semibold\">Clear by design.</h2><p class=\"mt-4\">A translucent surface over your own background.</p></div></section>",
+      "css": "",
+      "js": "",
+      "runtime": "lumafx",
+      "effect": "glass"
+    },
+    {
+      "id": "shimmer",
+      "name": "Shimmer text",
+      "description": "A band of light sweeps across text. Keeps the real text selectable and accessible.",
+      "category": "Text",
+      "html": "<h2 class=\"rounded-2xl bg-slate-950 p-10 text-4xl font-semibold text-white\" data-fx=\"shimmer\">Something extraordinary is taking shape.</h2>",
+      "css": "",
+      "js": "",
+      "runtime": "lumafx",
+      "effect": "shimmer"
+    },
+    {
+      "id": "shine",
+      "name": "Shine sweep",
+      "description": "A glossy highlight sweeps across a surface such as a button or card.",
+      "category": "Surface",
+      "html": "<a href=\"#contact\" class=\"inline-flex rounded-full bg-slate-950 px-8 py-4 font-semibold text-white\" data-fx=\"shine\">Start your next project</a>",
+      "css": "",
+      "js": "",
+      "runtime": "lumafx",
+      "effect": "shine"
+    },
+    {
+      "id": "counter",
+      "name": "Number counter",
+      "description": "Counts up to the number in the text when it scrolls into view. Keeps prefixes, suffixes and the original number format.",
+      "category": "Text",
+      "html": "<div class=\"rounded-3xl bg-violet-50 p-10\"><p class=\"text-sm uppercase tracking-widest text-violet-700\">Illustrative milestone</p><strong class=\"mt-4 block text-6xl font-semibold text-violet-950\" data-fx=\"counter\">100</strong><p class=\"mt-4 text-slate-600\">Replace this sample with a verified product metric.</p></div>",
+      "css": "",
+      "js": "",
+      "runtime": "lumafx",
+      "effect": "counter"
+    },
+    {
+      "id": "press",
+      "name": "Button press",
+      "description": "Click feedback for buttons and links: a ripple from the click point, a burst of sparks, a fill that follows the cursor in and out, or a squish. Can swap the label to a done state (\"Added ✓\").",
+      "category": "Pointer",
+      "html": "<button type=\"button\" class=\"rounded-full bg-violet-600 px-8 py-4 font-semibold text-white\" data-fx=\"press\" data-fx-style=\"burst\">Try a little motion</button>",
+      "css": "",
+      "js": "",
+      "runtime": "lumafx",
+      "effect": "press"
+    },
+    {
+      "id": "rotate-words",
+      "name": "Rotating words",
+      "description": "Cycles through a list of words in place, with the width easing between them.",
+      "category": "Text",
+      "html": "<h2 class=\"text-4xl font-semibold tracking-tight\">Built for <span class=\"text-violet-600\" data-fx=\"rotate-words\" data-fx-words=\"creators, teams, possibilities\">your ideas</span>.</h2>",
+      "css": "",
+      "js": "",
+      "runtime": "lumafx",
+      "effect": "rotate-words"
+    },
+    {
+      "id": "typewriter",
+      "name": "Typewriter",
+      "description": "Types the text letter by letter with a blinking caret. Child lines type one after another, like a terminal.",
+      "category": "Text",
+      "html": "<p class=\"rounded-2xl bg-slate-950 p-8 font-mono text-xl text-emerald-300\" data-fx=\"typewriter\">Create. Refine. Publish.</p>",
+      "css": "",
+      "js": "",
+      "runtime": "lumafx",
+      "effect": "typewriter"
+    },
+    {
+      "id": "svg-draw",
+      "name": "SVG draw + flow",
+      "description": "Draws the strokes of an SVG when it scrolls into view (or with the scroll), and can send glowing pulses travelling along the paths.",
+      "category": "Motion",
+      "html": "<svg class=\"h-28 w-full text-violet-600\" data-fx=\"svg-draw\" viewBox=\"0 0 400 100\" fill=\"none\" aria-label=\"Animated flowing line\" role=\"img\"><path d=\"M10 80 C80 80 60 20 130 20 S210 85 270 50 S350 20 390 20\" stroke=\"currentColor\" stroke-width=\"4\" stroke-linecap=\"round\"/></svg>",
+      "css": "",
+      "js": "",
+      "runtime": "lumafx",
+      "effect": "svg-draw"
+    },
+    {
+      "id": "modal",
+      "name": "Liquid modal",
+      "description": "Accessible <dialog> that pulls out of the button, dock icon or link that opened it like a drop of liquid, detaches, and blooms into the panel; closing flows back into the trigger. Without a trigger it rises from the bottom edge. Open it with data-fx-open=\"#id\", any link to href=\"#id\", or modals.open().",
+      "category": "Components",
+      "html": "<button type=\"button\" class=\"rounded-full bg-slate-950 px-8 py-4 font-semibold text-white\" data-fx-open=\"#lumasite-modal\">Open a liquid modal</button><dialog id=\"lumasite-modal\" class=\"rounded-3xl p-10\" data-fx=\"modal\"><h2 class=\"text-3xl font-semibold\">A moment of focus.</h2><p class=\"my-5\">Replace this content with your message.</p><button type=\"button\" class=\"rounded-full bg-violet-600 px-6 py-3 text-white\" data-fx-close>Close</button></dialog>",
+      "css": "",
+      "js": "",
+      "runtime": "lumafx",
+      "effect": "modal"
+    },
+    {
+      "id": "drawer",
+      "name": "Drawer",
+      "description": "A side panel or bottom sheet on a <dialog>: slides in with a spring, as stretchy liquid glass, with the page shrinking back behind it, pushing the page aside to make room, docked next to a page that stays usable, or as liquid out of the button that opened it. Click outside, Esc or data-fx-close closes it with the reverse animation.",
+      "category": "Components",
+      "html": "<button type=\"button\" class=\"rounded-full bg-slate-950 px-8 py-4 font-semibold text-white\" data-fx-open=\"#lumasite-drawer\">Open a drawer</button><dialog id=\"lumasite-drawer\" class=\"p-8\" data-fx=\"drawer\" data-fx-side=\"right\" data-fx-style=\"glass\"><h2 class=\"text-3xl font-semibold\">Room for more.</h2><p class=\"my-5\">Add navigation, a form, or product details here.</p><button type=\"button\" class=\"rounded-full bg-violet-600 px-6 py-3 text-white\" data-fx-close>Close</button></dialog>",
+      "css": "",
+      "js": "",
+      "runtime": "lumafx",
+      "effect": "drawer"
+    },
+    {
+      "id": "hover-icon",
+      "name": "Hover icon",
+      "description": "Menu links slide an icon in on hover while the text makes room. Uses the data-fx-icon text, or a child marked data-fx-icon-el.",
+      "category": "Pointer",
+      "html": "<a href=\"#contact\" class=\"inline-flex px-4 py-3 text-xl font-semibold text-violet-600\" data-fx=\"hover-icon\" data-fx-icon=\"✦\">Explore the possibilities</a>",
+      "css": "",
+      "js": "",
+      "runtime": "lumafx",
+      "effect": "hover-icon"
+    },
+    {
+      "id": "dot-field",
+      "name": "Dot field",
+      "description": "A grid of dots that ripples away from the cursor and breathes when idle.",
+      "category": "Surface",
+      "html": "<section class=\"relative overflow-hidden rounded-3xl bg-slate-950 px-10 py-24 text-white\" data-fx=\"dot-field\"><h2 class=\"relative text-4xl font-semibold\">Every detail connects.</h2><p class=\"relative mt-4 text-slate-300\">An interactive field that responds to your pointer.</p></section>",
+      "css": "",
+      "js": "",
+      "runtime": "lumafx",
+      "effect": "dot-field"
+    }
+  ]
+}

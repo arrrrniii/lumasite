@@ -1,0 +1,1688 @@
+{
+  "version": "0.5.0",
+  "effects": {
+    "border-beam": {
+      "name": "border-beam",
+      "title": "Border beam",
+      "kind": "css",
+      "loop": true,
+      "desc": "A comet of light that travels around the element border. Set mode=\"full\" for a continuous gradient circuit.",
+      "options": {
+        "duration": {
+          "type": "time",
+          "default": "6s",
+          "css": true,
+          "desc": "Time for one lap."
+        },
+        "delay": {
+          "type": "time",
+          "default": "0s",
+          "css": true,
+          "desc": "Start offset. Use negative values to desync several beams."
+        },
+        "color": {
+          "type": "color",
+          "default": "#a78bfa",
+          "css": true,
+          "desc": "Head color of the beam."
+        },
+        "color-2": {
+          "type": "color",
+          "default": "#22d3ee",
+          "css": true,
+          "desc": "Tail color of the beam."
+        },
+        "length": {
+          "type": "percent",
+          "default": "22%",
+          "css": true,
+          "desc": "Beam length as a share of the full lap."
+        },
+        "width": {
+          "type": "length",
+          "default": "1.5px",
+          "css": true,
+          "desc": "Border thickness."
+        },
+        "count": {
+          "type": "number",
+          "default": 1,
+          "css": true,
+          "desc": "Number of beams chasing each other."
+        },
+        "mode": {
+          "type": "enum",
+          "values": [
+            "beam",
+            "full"
+          ],
+          "default": "beam",
+          "desc": "beam = travelling comet, full = rotating gradient border."
+        },
+        "glow": {
+          "type": "boolean",
+          "default": false,
+          "desc": "Adds a soft two-tone halo around the element (uses box-shadow)."
+        }
+      },
+      "example": "<div class=\"card\" data-fx=\"border-beam\" data-fx-duration=\"5s\"></div>"
+    },
+    "shimmer": {
+      "name": "shimmer",
+      "title": "Shimmer text",
+      "kind": "css",
+      "loop": true,
+      "desc": "A band of light sweeps across text. Keeps the real text selectable and accessible.",
+      "options": {
+        "duration": {
+          "type": "time",
+          "default": "2.8s",
+          "css": true,
+          "desc": "Time between sweeps."
+        },
+        "color": {
+          "type": "color",
+          "default": "currentColor",
+          "css": true,
+          "desc": "Base text color (defaults to the current color, dimmed)."
+        },
+        "color-2": {
+          "type": "color",
+          "default": "#ffffff",
+          "css": true,
+          "desc": "Highlight color."
+        }
+      },
+      "example": "<h2 data-fx=\"shimmer\">Introducing Luma</h2>"
+    },
+    "shine": {
+      "name": "shine",
+      "title": "Shine sweep",
+      "kind": "css",
+      "loop": true,
+      "desc": "A glossy highlight sweeps across a surface such as a button or card.",
+      "options": {
+        "duration": {
+          "type": "time",
+          "default": "3.2s",
+          "css": true,
+          "desc": "Time between sweeps."
+        },
+        "intensity": {
+          "type": "number",
+          "default": 0.35,
+          "css": true,
+          "desc": "Opacity of the highlight, 0–1."
+        },
+        "trigger": {
+          "type": "enum",
+          "values": [
+            "loop",
+            "hover"
+          ],
+          "default": "loop",
+          "desc": "loop = repeats forever, hover = sweeps once on hover."
+        }
+      },
+      "example": "<button data-fx=\"shine\">Get started</button>"
+    },
+    "aurora": {
+      "name": "aurora",
+      "title": "Aurora background",
+      "kind": "css",
+      "loop": true,
+      "desc": "Slow, drifting aurora light behind the content of a section.",
+      "options": {
+        "duration": {
+          "type": "time",
+          "default": "18s",
+          "css": true,
+          "desc": "Length of one drift cycle."
+        },
+        "color": {
+          "type": "color",
+          "default": "#7c3aed",
+          "css": true,
+          "desc": "First light."
+        },
+        "color-2": {
+          "type": "color",
+          "default": "#06b6d4",
+          "css": true,
+          "desc": "Second light."
+        },
+        "color-3": {
+          "type": "color",
+          "default": "#ec4899",
+          "css": true,
+          "desc": "Third light."
+        },
+        "opacity": {
+          "type": "number",
+          "default": 0.55,
+          "css": true,
+          "desc": "Overall strength, 0–1."
+        }
+      },
+      "example": "<section data-fx=\"aurora\">…</section>"
+    },
+    "squircle": {
+      "name": "squircle",
+      "title": "Squircle corners",
+      "kind": "hybrid",
+      "desc": "Smooth, continuous iOS-style corners. Native corner-shape where supported, an SVG clip-path fallback elsewhere.",
+      "options": {
+        "radius": {
+          "type": "length",
+          "default": "28px",
+          "css": true,
+          "desc": "Corner size."
+        },
+        "smoothing": {
+          "type": "number",
+          "default": 0.6,
+          "css": false,
+          "desc": "Fallback corner smoothing, 0–1 (0.6 matches iOS)."
+        },
+        "fallback": {
+          "type": "enum",
+          "values": [
+            "auto",
+            "clip",
+            "radius"
+          ],
+          "default": "auto",
+          "desc": "Where corner-shape is missing: clip = SVG clip-path, radius = plain rounded corners, auto = clip unless the element has a border or shadow."
+        }
+      },
+      "example": "<div data-fx=\"squircle\" data-fx-radius=\"32\">…</div>"
+    },
+    "glass": {
+      "name": "glass",
+      "title": "Liquid glass",
+      "kind": "hybrid",
+      "desc": "Glass surface with rim light and specular sheen. Adds real edge refraction and chromatic aberration in Chromium; frosted glass everywhere else.",
+      "options": {
+        "blur": {
+          "type": "length",
+          "default": "14px",
+          "css": true,
+          "desc": "Backdrop blur (frost mode, and fallback browsers)."
+        },
+        "saturate": {
+          "type": "number",
+          "default": 1.6,
+          "css": true,
+          "desc": "Backdrop saturation."
+        },
+        "tint": {
+          "type": "color",
+          "default": "rgb(255 255 255 / 0.08)",
+          "css": true,
+          "desc": "Surface tint."
+        },
+        "refraction": {
+          "type": "number",
+          "default": 1,
+          "css": false,
+          "desc": "Edge refraction strength (Chromium)."
+        },
+        "aberration": {
+          "type": "number",
+          "default": 1,
+          "css": false,
+          "desc": "Chromatic aberration strength, 0 to disable (Chromium)."
+        },
+        "mode": {
+          "type": "enum",
+          "values": [
+            "liquid",
+            "frost"
+          ],
+          "default": "liquid",
+          "desc": "liquid = refraction where supported, frost = blur only."
+        }
+      },
+      "example": "<nav data-fx=\"glass\">…</nav>"
+    },
+    "shadow": {
+      "name": "shadow",
+      "title": "Realistic shadow",
+      "kind": "hybrid",
+      "desc": "Five-layer soft shadow that looks physical. Optional hover lift, or a light source that follows the cursor.",
+      "options": {
+        "elevation": {
+          "type": "number",
+          "default": 1,
+          "css": true,
+          "desc": "Shadow depth multiplier."
+        },
+        "color": {
+          "type": "color",
+          "default": "rgb(15 17 35)",
+          "css": true,
+          "desc": "Shadow color."
+        },
+        "lift": {
+          "type": "boolean",
+          "default": false,
+          "desc": "Lifts the element on hover."
+        },
+        "light": {
+          "type": "enum",
+          "values": [
+            "top",
+            "cursor"
+          ],
+          "default": "top",
+          "desc": "top = fixed light above, cursor = shadow moves away from the cursor."
+        }
+      },
+      "example": "<div data-fx=\"shadow\" data-fx-lift>…</div>"
+    },
+    "reveal": {
+      "name": "reveal",
+      "title": "Scroll reveal",
+      "kind": "js",
+      "desc": "Animates the element in when it scrolls into view. Never leaves content hidden if JavaScript fails.",
+      "options": {
+        "from": {
+          "type": "enum",
+          "values": [
+            "up",
+            "down",
+            "left",
+            "right",
+            "zoom",
+            "blur",
+            "book",
+            "clip"
+          ],
+          "default": "up",
+          "desc": "Entrance style."
+        },
+        "duration": {
+          "type": "time",
+          "default": "900ms",
+          "css": true,
+          "desc": "Animation length."
+        },
+        "delay": {
+          "type": "time",
+          "default": "0ms",
+          "css": true,
+          "desc": "Delay before it starts."
+        },
+        "distance": {
+          "type": "length",
+          "default": "28px",
+          "css": true,
+          "desc": "Travel distance for up/down/left/right."
+        },
+        "ease": {
+          "type": "string",
+          "default": "cubic-bezier(.16,1,.3,1)",
+          "css": true,
+          "desc": "CSS easing."
+        },
+        "once": {
+          "type": "boolean",
+          "default": true,
+          "desc": "Animate only the first time it enters the viewport."
+        }
+      },
+      "example": "<div data-fx=\"reveal\" data-fx-from=\"blur\">…</div>"
+    },
+    "stagger": {
+      "name": "stagger",
+      "title": "Stagger children",
+      "kind": "js",
+      "desc": "Reveals each child one after another when the group scrolls into view.",
+      "options": {
+        "from": {
+          "type": "enum",
+          "values": [
+            "up",
+            "down",
+            "left",
+            "right",
+            "zoom",
+            "blur",
+            "book",
+            "clip"
+          ],
+          "default": "up",
+          "desc": "Entrance style of each child."
+        },
+        "stagger": {
+          "type": "time",
+          "default": "70ms",
+          "css": true,
+          "desc": "Delay between children."
+        },
+        "duration": {
+          "type": "time",
+          "default": "800ms",
+          "css": true,
+          "desc": "Animation length per child."
+        },
+        "delay": {
+          "type": "time",
+          "default": "0ms",
+          "css": true,
+          "desc": "Delay before the first child."
+        },
+        "distance": {
+          "type": "length",
+          "default": "24px",
+          "css": true,
+          "desc": "Travel distance."
+        },
+        "ease": {
+          "type": "string",
+          "default": "cubic-bezier(.16,1,.3,1)",
+          "css": true,
+          "desc": "CSS easing."
+        },
+        "once": {
+          "type": "boolean",
+          "default": true,
+          "desc": "Animate only the first time."
+        }
+      },
+      "example": "<ul data-fx=\"stagger\"><li>…</li><li>…</li></ul>"
+    },
+    "text-reveal": {
+      "name": "text-reveal",
+      "title": "Text reveal",
+      "kind": "js",
+      "desc": "Splits text into words, letters or lines and animates them in. Keeps links and inline markup intact.",
+      "options": {
+        "split": {
+          "type": "enum",
+          "values": [
+            "words",
+            "chars",
+            "lines"
+          ],
+          "default": "words",
+          "desc": "How the text is split."
+        },
+        "style": {
+          "type": "enum",
+          "values": [
+            "blur",
+            "rise",
+            "flip",
+            "fade"
+          ],
+          "default": "blur",
+          "desc": "blur = focus in, rise = slides up from a mask, flip = letters unfold like pages, fade = opacity only."
+        },
+        "stagger": {
+          "type": "time",
+          "default": "",
+          "css": true,
+          "desc": "Delay between pieces (default 60ms words, 22ms letters, 120ms lines)."
+        },
+        "duration": {
+          "type": "time",
+          "default": "800ms",
+          "css": true,
+          "desc": "Animation length per piece."
+        },
+        "delay": {
+          "type": "time",
+          "default": "0ms",
+          "css": true,
+          "desc": "Delay before it starts."
+        },
+        "trigger": {
+          "type": "enum",
+          "values": [
+            "view",
+            "load"
+          ],
+          "default": "view",
+          "desc": "Start when visible, or immediately."
+        },
+        "once": {
+          "type": "boolean",
+          "default": true,
+          "desc": "Animate only the first time."
+        }
+      },
+      "example": "<h1 data-fx=\"text-reveal\" data-fx-split=\"chars\" data-fx-style=\"flip\">Hello</h1>"
+    },
+    "scramble": {
+      "name": "scramble",
+      "title": "Text scramble",
+      "kind": "js",
+      "desc": "Letters decode from random characters into the final text.",
+      "options": {
+        "trigger": {
+          "type": "enum",
+          "values": [
+            "view",
+            "hover",
+            "load"
+          ],
+          "default": "view",
+          "desc": "When to play."
+        },
+        "speed": {
+          "type": "time",
+          "default": "28ms",
+          "css": false,
+          "desc": "Time per letter."
+        },
+        "chars": {
+          "type": "string",
+          "default": "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789#%&*+=?/<>",
+          "desc": "Characters used while scrambling."
+        }
+      },
+      "example": "<span data-fx=\"scramble\" data-fx-trigger=\"hover\">Decode me</span>"
+    },
+    "counter": {
+      "name": "counter",
+      "title": "Number counter",
+      "kind": "js",
+      "desc": "Counts up to the number in the text when it scrolls into view. Keeps prefixes, suffixes and the original number format.",
+      "options": {
+        "from": {
+          "type": "number",
+          "default": 0,
+          "css": false,
+          "desc": "Start value."
+        },
+        "duration": {
+          "type": "time",
+          "default": "1800ms",
+          "css": false,
+          "desc": "Count duration."
+        }
+      },
+      "example": "<strong data-fx=\"counter\">$12,500+</strong>"
+    },
+    "marquee": {
+      "name": "marquee",
+      "title": "Marquee",
+      "kind": "hybrid",
+      "loop": true,
+      "desc": "Seamless infinite scroll of logos or cards with soft edges. Pauses on hover.",
+      "options": {
+        "speed": {
+          "type": "number",
+          "default": 60,
+          "css": false,
+          "desc": "Speed in pixels per second."
+        },
+        "gap": {
+          "type": "length",
+          "default": "2rem",
+          "css": true,
+          "desc": "Space between items."
+        },
+        "fade": {
+          "type": "percent",
+          "default": "8%",
+          "css": true,
+          "desc": "Edge fade width."
+        },
+        "reverse": {
+          "type": "boolean",
+          "default": false,
+          "desc": "Scroll the other way."
+        },
+        "vertical": {
+          "type": "boolean",
+          "default": false,
+          "desc": "Scroll vertically."
+        },
+        "pause": {
+          "type": "boolean",
+          "default": true,
+          "desc": "Pause on hover."
+        }
+      },
+      "example": "<div data-fx=\"marquee\"><img …><img …></div>"
+    },
+    "spotlight": {
+      "name": "spotlight",
+      "title": "Spotlight card",
+      "kind": "js",
+      "desc": "A soft light and a glowing border follow the cursor across the card.",
+      "options": {
+        "color": {
+          "type": "color",
+          "default": "#a78bfa",
+          "css": true,
+          "desc": "Light color."
+        },
+        "size": {
+          "type": "length",
+          "default": "360px",
+          "css": true,
+          "desc": "Light radius."
+        },
+        "border": {
+          "type": "boolean",
+          "default": true,
+          "desc": "Light up the border too."
+        }
+      },
+      "example": "<div data-fx=\"spotlight\">…</div>"
+    },
+    "magnetic": {
+      "name": "magnetic",
+      "title": "Magnetic",
+      "kind": "js",
+      "desc": "The element is pulled toward the cursor when it gets close, then springs back.",
+      "options": {
+        "strength": {
+          "type": "number",
+          "default": 0.35,
+          "css": false,
+          "desc": "Pull strength, 0–1."
+        },
+        "area": {
+          "type": "length",
+          "default": "40px",
+          "css": false,
+          "desc": "Extra reach around the element."
+        }
+      },
+      "example": "<a data-fx=\"magnetic\" href=\"#\">Let's talk</a>"
+    },
+    "tilt": {
+      "name": "tilt",
+      "title": "3D tilt + glare",
+      "kind": "js",
+      "desc": "Tilts toward the cursor in 3D with a moving light reflection. Children with data-fx-depth float above the surface.",
+      "options": {
+        "max": {
+          "type": "number",
+          "default": 10,
+          "css": false,
+          "desc": "Maximum tilt in degrees."
+        },
+        "scale": {
+          "type": "number",
+          "default": 1.03,
+          "css": false,
+          "desc": "Scale while hovered."
+        },
+        "perspective": {
+          "type": "length",
+          "default": "900px",
+          "css": false,
+          "desc": "Perspective distance."
+        },
+        "glare": {
+          "type": "boolean",
+          "default": true,
+          "desc": "Show the light reflection."
+        }
+      },
+      "example": "<div data-fx=\"tilt\"><h3 data-fx-depth=\"40\">Floating</h3></div>"
+    },
+    "cursor-image": {
+      "name": "cursor-image",
+      "title": "Cursor image / label",
+      "kind": "js",
+      "desc": "Hovering shows an image, icon or label that follows the cursor with a little momentum.",
+      "options": {
+        "src": {
+          "type": "string",
+          "desc": "Image to show."
+        },
+        "label": {
+          "type": "string",
+          "desc": "Text or emoji to show instead of an image."
+        },
+        "size": {
+          "type": "length",
+          "default": "280px",
+          "css": false,
+          "desc": "Image width."
+        },
+        "cursor": {
+          "type": "enum",
+          "values": [
+            "auto",
+            "none"
+          ],
+          "default": "auto",
+          "desc": "none hides the native cursor while hovering."
+        }
+      },
+      "example": "<a data-fx=\"cursor-image\" data-fx-src=\"/work/1.jpg\">Project one</a>"
+    },
+    "parallax": {
+      "name": "parallax",
+      "title": "Parallax",
+      "kind": "hybrid",
+      "desc": "Moves at a different speed than the page while scrolling. Runs on the compositor in modern browsers.",
+      "options": {
+        "speed": {
+          "type": "number",
+          "default": 0.25,
+          "css": true,
+          "desc": "Positive = moves faster (closer), negative = slower (farther)."
+        }
+      },
+      "example": "<img data-fx=\"parallax\" data-fx-speed=\"-0.2\" …>"
+    },
+    "stack": {
+      "name": "stack",
+      "title": "Sticky stacking cards",
+      "kind": "hybrid",
+      "desc": "Children stick and stack on top of each other while scrolling; covered cards shrink and dim.",
+      "options": {
+        "top": {
+          "type": "length",
+          "default": "12vh",
+          "css": true,
+          "desc": "Distance from the top where cards stick."
+        },
+        "offset": {
+          "type": "length",
+          "default": "16px",
+          "css": true,
+          "desc": "Visible edge of each covered card."
+        },
+        "shrink": {
+          "type": "number",
+          "default": 0.05,
+          "css": false,
+          "desc": "How much each covered card shrinks."
+        }
+      },
+      "example": "<div data-fx=\"stack\"><article>…</article><article>…</article></div>"
+    },
+    "hscroll": {
+      "name": "hscroll",
+      "title": "Horizontal scroll section",
+      "kind": "hybrid",
+      "desc": "Vertical scrolling moves a row of panels sideways while the section is pinned.",
+      "options": {
+        "gap": {
+          "type": "length",
+          "default": "2rem",
+          "css": true,
+          "desc": "Space between panels."
+        }
+      },
+      "example": "<section data-fx=\"hscroll\"><div>…panels…</div></section>"
+    },
+    "carousel": {
+      "name": "carousel",
+      "title": "Drag carousel",
+      "kind": "hybrid",
+      "desc": "Native scroll-snap carousel with mouse drag and momentum, keyboard support and optional controls.",
+      "options": {
+        "slide": {
+          "type": "length",
+          "default": "80%",
+          "css": true,
+          "desc": "Slide width."
+        },
+        "gap": {
+          "type": "length",
+          "default": "16px",
+          "css": true,
+          "desc": "Space between slides."
+        },
+        "style": {
+          "type": "enum",
+          "values": [
+            "default",
+            "scale"
+          ],
+          "default": "default",
+          "desc": "scale = slides grow toward the center (coverflow)."
+        },
+        "controls": {
+          "type": "boolean",
+          "default": false,
+          "desc": "Add previous/next buttons and dots."
+        },
+        "autoplay": {
+          "type": "time",
+          "default": "0",
+          "css": false,
+          "desc": "Advance every N ms (0 = off). Pauses on hover and focus."
+        }
+      },
+      "example": "<div data-fx=\"carousel\" data-fx-controls><img …><img …></div>"
+    },
+    "stories": {
+      "name": "stories",
+      "title": "Stories",
+      "kind": "js",
+      "desc": "Instagram-style stories: progress bars, tap left/right, hold to pause, swipe.",
+      "options": {
+        "duration": {
+          "type": "time",
+          "default": "5000ms",
+          "css": true,
+          "desc": "Time per slide."
+        },
+        "loop": {
+          "type": "boolean",
+          "default": true,
+          "desc": "Start over after the last slide."
+        }
+      },
+      "example": "<div data-fx=\"stories\"><img …><img …><img …></div>"
+    },
+    "ripple": {
+      "name": "ripple",
+      "title": "Liquid image (WebGL)",
+      "kind": "webgl",
+      "desc": "Liquid ripples, lens magnification and RGB split follow the cursor over an image.",
+      "options": {
+        "strength": {
+          "type": "number",
+          "default": 1,
+          "css": false,
+          "desc": "Distortion strength."
+        },
+        "src": {
+          "type": "string",
+          "desc": "Image URL when the host has no <img> child."
+        }
+      },
+      "example": "<div data-fx=\"ripple\"><img src=\"/hero.jpg\" alt=\"\"></div>"
+    },
+    "morph": {
+      "name": "morph",
+      "title": "Shared-element morph",
+      "kind": "js",
+      "desc": "Names an element for View Transitions so it morphs between states or pages. Pair with lumafx.transition() or transitions.css.",
+      "options": {
+        "name": {
+          "type": "string",
+          "desc": "Unique transition name."
+        }
+      },
+      "example": "<img data-fx=\"morph\" data-fx-name=\"hero-1\" …>"
+    },
+    "page-transition": {
+      "name": "page-transition",
+      "title": "SVG page transitions",
+      "kind": "js",
+      "desc": "Animated SVG cover between pages of any site (WordPress and Webflow included). Covers on leave, reveals on arrival. Place one element anywhere in <body>.",
+      "options": {
+        "style": {
+          "type": "enum",
+          "values": [
+            "wave",
+            "curtain",
+            "circle",
+            "slide"
+          ],
+          "default": "wave",
+          "desc": "Shape of the transition."
+        },
+        "color": {
+          "type": "color",
+          "default": "#0b0c12",
+          "css": true,
+          "desc": "Cover color."
+        },
+        "color-2": {
+          "type": "color",
+          "default": "#ffb547",
+          "css": true,
+          "desc": "Accent layer color."
+        },
+        "duration": {
+          "type": "time",
+          "default": "750ms",
+          "css": false,
+          "desc": "Length of each half (cover or reveal)."
+        },
+        "label": {
+          "type": "string",
+          "desc": "Text shown on the cover, e.g. your brand."
+        },
+        "links": {
+          "type": "string",
+          "default": "a[href]",
+          "desc": "Which links trigger a transition."
+        }
+      },
+      "example": "<div data-fx=\"page-transition\" data-fx-style=\"wave\" data-fx-label=\"Sphere\"></div>"
+    },
+    "preloader": {
+      "name": "preloader",
+      "title": "Preloader",
+      "kind": "js",
+      "desc": "Full-screen intro with a 000→100 counter that follows real page loading, then lifts away. Hides itself after a few seconds even if JavaScript fails.",
+      "options": {
+        "style": {
+          "type": "enum",
+          "values": [
+            "slide",
+            "wave",
+            "fade"
+          ],
+          "default": "slide",
+          "desc": "How it exits."
+        },
+        "color": {
+          "type": "color",
+          "default": "#0b0c12",
+          "css": true,
+          "desc": "Background color."
+        },
+        "min": {
+          "type": "time",
+          "default": "900ms",
+          "css": false,
+          "desc": "Minimum time on screen."
+        }
+      },
+      "example": "<div data-fx=\"preloader\"><span>Sphere</span></div>"
+    },
+    "modal": {
+      "name": "modal",
+      "title": "Liquid modal",
+      "kind": "js",
+      "desc": "Accessible <dialog> that pulls out of the button, dock icon or link that opened it like a drop of liquid, detaches, and blooms into the panel; closing flows back into the trigger. Without a trigger it rises from the bottom edge. Open it with data-fx-open=\"#id\", any link to href=\"#id\", or modals.open().",
+      "options": {
+        "style": {
+          "type": "enum",
+          "values": [
+            "liquid",
+            "glass",
+            "scale",
+            "slide"
+          ],
+          "default": "liquid",
+          "desc": "liquid = a gooey drop that pulls out of the trigger, glass = liquid-glass sheet with a jelly overshoot, scale = the page shrinks back behind it, slide = a clean spring."
+        },
+        "from": {
+          "type": "enum",
+          "values": [
+            "auto",
+            "trigger",
+            "bottom"
+          ],
+          "default": "auto",
+          "desc": "Where the liquid comes from: the button, icon or link that opened it (auto), or always the bottom edge."
+        },
+        "side": {
+          "type": "enum",
+          "values": [
+            "center",
+            "right",
+            "left",
+            "bottom",
+            "top"
+          ],
+          "default": "center",
+          "desc": "Dock the panel to an edge (a drawer or sheet) instead of the centre."
+        },
+        "size": {
+          "type": "length",
+          "default": "560px",
+          "css": true,
+          "desc": "Panel width (height for top and bottom)."
+        },
+        "root": {
+          "type": "string",
+          "desc": "Page wrapper that shrinks back with style \"scale\" (default: [data-fx-sheet-root], #__next, #root, #app)."
+        },
+        "color": {
+          "type": "color",
+          "default": "#20232e",
+          "css": true,
+          "desc": "Panel color."
+        }
+      },
+      "example": "<button data-fx-open=\"#join\">Join</button>\n<dialog id=\"join\" data-fx=\"modal\">…<button data-fx-close>Close</button></dialog>"
+    },
+    "drawer": {
+      "name": "drawer",
+      "title": "Drawer",
+      "kind": "js",
+      "desc": "A side panel or bottom sheet on a <dialog>: slides in with a spring, as stretchy liquid glass, with the page shrinking back behind it, pushing the page aside to make room, docked next to a page that stays usable, or as liquid out of the button that opened it. Click outside, Esc or data-fx-close closes it with the reverse animation.",
+      "options": {
+        "side": {
+          "type": "enum",
+          "values": [
+            "right",
+            "left",
+            "bottom",
+            "top"
+          ],
+          "default": "right",
+          "desc": "Edge it comes from."
+        },
+        "style": {
+          "type": "enum",
+          "values": [
+            "slide",
+            "glass",
+            "scale",
+            "push",
+            "dock",
+            "liquid"
+          ],
+          "default": "slide",
+          "desc": "slide = spring, glass = liquid glass, scale = the page shrinks back, push = the page slides over to make room, dock = the page reflows next to the panel and stays usable, liquid = pours out of the button."
+        },
+        "size": {
+          "type": "length",
+          "default": "560px",
+          "css": true,
+          "desc": "Width (height for top and bottom)."
+        },
+        "color": {
+          "type": "color",
+          "default": "#20232e",
+          "css": true,
+          "desc": "Panel color."
+        },
+        "from": {
+          "type": "enum",
+          "values": [
+            "auto",
+            "trigger",
+            "bottom"
+          ],
+          "default": "auto",
+          "desc": "For style liquid: where the liquid comes from."
+        },
+        "root": {
+          "type": "string",
+          "desc": "Page wrapper that shrinks back with style \"scale\"."
+        }
+      },
+      "example": "<button data-fx-open=\"#edit\">Edit</button>\n<dialog id=\"edit\" data-fx=\"drawer\" data-fx-style=\"glass\">…<button data-fx-close>Close</button></dialog>"
+    },
+    "hovercard": {
+      "name": "hovercard",
+      "title": "Hover card",
+      "kind": "js",
+      "desc": "A small card that springs open right next to the hovered or focused element and stays inside the viewport.",
+      "options": {
+        "for": {
+          "type": "string",
+          "desc": "Selector of the card content (hidden in the page)."
+        },
+        "text": {
+          "type": "string",
+          "desc": "Plain text content instead of a selector."
+        },
+        "placement": {
+          "type": "enum",
+          "values": [
+            "auto",
+            "top",
+            "bottom",
+            "left",
+            "right"
+          ],
+          "default": "auto",
+          "desc": "Preferred side."
+        },
+        "delay": {
+          "type": "time",
+          "default": "90ms",
+          "css": false,
+          "desc": "Hover delay before opening."
+        }
+      },
+      "example": "<a data-fx=\"hovercard\" data-fx-for=\"#tip-sphere\">Sphere</a>"
+    },
+    "chat": {
+      "name": "chat",
+      "title": "Chat widget",
+      "kind": "js",
+      "desc": "Animated chat launcher and panel: the button morphs into the window, messages slide in, a typing indicator bounces. Emits fx:chat-send so you can connect any backend.",
+      "options": {
+        "title": {
+          "type": "string",
+          "default": "Chat",
+          "desc": "Panel title."
+        },
+        "subtitle": {
+          "type": "string",
+          "desc": "Line under the title."
+        },
+        "greeting": {
+          "type": "string",
+          "desc": "First message from you to the visitor."
+        },
+        "placeholder": {
+          "type": "string",
+          "default": "Write a message…",
+          "desc": "Input placeholder."
+        },
+        "quick": {
+          "type": "string",
+          "desc": "Comma-separated quick replies shown as chips."
+        },
+        "color": {
+          "type": "color",
+          "default": "#ffb547",
+          "css": true,
+          "desc": "Accent color."
+        },
+        "position": {
+          "type": "enum",
+          "values": [
+            "right",
+            "left"
+          ],
+          "default": "right",
+          "desc": "Corner of the screen."
+        }
+      },
+      "example": "<div data-fx=\"chat\" data-fx-title=\"Support\" data-fx-greeting=\"Hi! How can we help?\"></div>"
+    },
+    "smart-header": {
+      "name": "smart-header",
+      "title": "Smart header",
+      "kind": "hybrid",
+      "desc": "Hides while you scroll down, slides back as glass when you scroll up, and can dock an oversized hero logo into the bar as you scroll.",
+      "options": {
+        "threshold": {
+          "type": "length",
+          "default": "80px",
+          "css": false,
+          "desc": "Scroll distance before it reacts."
+        },
+        "hide": {
+          "type": "boolean",
+          "default": true,
+          "desc": "Hide while scrolling down."
+        }
+      },
+      "example": "<header data-fx=\"smart-header\"><a data-fx-logo>mejuma</a><nav>…</nav></header>"
+    },
+    "scrollbar": {
+      "name": "scrollbar",
+      "title": "Animated scrollbar",
+      "kind": "js",
+      "desc": "Custom page scrollbar with a springy thumb, section marks, and a label that pops up next to the cursor showing which section is at that point.",
+      "options": {
+        "sections": {
+          "type": "string",
+          "default": "h2, [data-fx-section]",
+          "desc": "Elements that become section marks."
+        },
+        "color": {
+          "type": "color",
+          "default": "#ffb547",
+          "css": true,
+          "desc": "Thumb color."
+        }
+      },
+      "example": "<div data-fx=\"scrollbar\"></div>"
+    },
+    "scroll-progress": {
+      "name": "scroll-progress",
+      "title": "Scroll progress",
+      "kind": "hybrid",
+      "desc": "A reading-progress bar that fills as the page scrolls. Runs on the compositor in modern browsers.",
+      "options": {
+        "color": {
+          "type": "color",
+          "default": "#ffb547",
+          "css": true,
+          "desc": "Bar color."
+        },
+        "height": {
+          "type": "length",
+          "default": "3px",
+          "css": true,
+          "desc": "Bar thickness."
+        }
+      },
+      "example": "<div data-fx=\"scroll-progress\"></div>"
+    },
+    "dock": {
+      "name": "dock",
+      "title": "Magnifying dock",
+      "kind": "js",
+      "desc": "Icons grow as the cursor passes over them, like the macOS dock. Labels appear above the hovered icon.",
+      "options": {
+        "magnify": {
+          "type": "number",
+          "default": 1.8,
+          "css": false,
+          "desc": "Maximum scale of the closest icon."
+        },
+        "range": {
+          "type": "length",
+          "default": "150px",
+          "css": false,
+          "desc": "How far the magnification reaches."
+        }
+      },
+      "example": "<nav data-fx=\"dock\"><a data-fx-label=\"Home\">🏠</a>…</nav>"
+    },
+    "hover-icon": {
+      "name": "hover-icon",
+      "title": "Hover icon",
+      "kind": "css",
+      "desc": "Menu links slide an icon in on hover while the text makes room. Uses the data-fx-icon text, or a child marked data-fx-icon-el.",
+      "options": {
+        "icon": {
+          "type": "string",
+          "default": "→",
+          "desc": "Icon character or emoji."
+        },
+        "side": {
+          "type": "enum",
+          "values": [
+            "left",
+            "right"
+          ],
+          "default": "left",
+          "desc": "Where the icon appears."
+        }
+      },
+      "example": "<a data-fx=\"hover-icon\" data-fx-icon=\"✦\">Work</a>"
+    },
+    "lightbox": {
+      "name": "lightbox",
+      "title": "Lightbox",
+      "kind": "js",
+      "desc": "Click a thumbnail and it grows into a full-screen viewer (View Transitions), with keyboard, swipe, zoom and a counter. Put it on a link to a large image, or on a gallery to page through every linked image inside.",
+      "options": {
+        "group": {
+          "type": "string",
+          "desc": "Links with the same group page through together."
+        }
+      },
+      "example": "<a data-fx=\"lightbox\" data-fx-group=\"villa\" href=\"big.jpg\"><img src=\"small.jpg\" alt=\"…\"></a>"
+    },
+    "image-reveal": {
+      "name": "image-reveal",
+      "title": "Image reveal",
+      "kind": "js",
+      "desc": "The image is uncovered by a moving mask while it settles from a slight zoom. Seven mask shapes.",
+      "options": {
+        "from": {
+          "type": "enum",
+          "values": [
+            "up",
+            "down",
+            "left",
+            "right",
+            "center",
+            "circle",
+            "diagonal"
+          ],
+          "default": "up",
+          "desc": "Direction or shape of the mask."
+        },
+        "duration": {
+          "type": "time",
+          "default": "1200ms",
+          "css": true,
+          "desc": "Reveal length."
+        },
+        "delay": {
+          "type": "time",
+          "default": "0ms",
+          "css": true,
+          "desc": "Delay before it starts."
+        },
+        "scale": {
+          "type": "number",
+          "default": 1.25,
+          "css": true,
+          "desc": "Starting zoom of the image."
+        }
+      },
+      "example": "<figure data-fx=\"image-reveal\" data-fx-from=\"circle\"><img …></figure>"
+    },
+    "expand": {
+      "name": "expand",
+      "title": "Expand on scroll",
+      "kind": "hybrid",
+      "desc": "An inset, rounded image or video grows to full width as it scrolls into the middle of the screen.",
+      "options": {
+        "inset": {
+          "type": "length",
+          "default": "8vw",
+          "css": true,
+          "desc": "Starting inset on each side."
+        },
+        "radius": {
+          "type": "length",
+          "default": "32px",
+          "css": true,
+          "desc": "Starting corner radius."
+        }
+      },
+      "example": "<div data-fx=\"expand\"><video autoplay muted loop playsinline …></video></div>"
+    },
+    "image-trail": {
+      "name": "image-trail",
+      "title": "Image trail",
+      "kind": "js",
+      "desc": "Moving the cursor leaves a trail of images that pop in and fade away.",
+      "options": {
+        "images": {
+          "type": "string",
+          "desc": "Comma-separated image URLs (or put <img> children inside)."
+        },
+        "size": {
+          "type": "length",
+          "default": "190px",
+          "css": false,
+          "desc": "Image width."
+        },
+        "spacing": {
+          "type": "length",
+          "default": "90px",
+          "css": false,
+          "desc": "Cursor travel between images."
+        }
+      },
+      "example": "<section data-fx=\"image-trail\" data-fx-images=\"a.jpg, b.jpg, c.jpg\">…</section>"
+    },
+    "video-scrub": {
+      "name": "video-scrub",
+      "title": "Scroll-scrubbed video",
+      "kind": "js",
+      "desc": "The video plays forward as you scroll down and backward as you scroll up, pinned while its section passes.",
+      "options": {
+        "length": {
+          "type": "length",
+          "default": "300vh",
+          "css": true,
+          "desc": "Scroll distance for the whole video."
+        },
+        "smooth": {
+          "type": "number",
+          "default": 8,
+          "css": false,
+          "desc": "Smoothing (higher follows the scroll more tightly)."
+        }
+      },
+      "example": "<section data-fx=\"video-scrub\"><video src=\"flyover.mp4\" muted playsinline preload=\"auto\"></video></section>"
+    },
+    "frames": {
+      "name": "frames",
+      "title": "Image sequence",
+      "kind": "js",
+      "desc": "Apple-style scroll animation from numbered images drawn on a canvas. Sharper and smoother to scrub than video.",
+      "options": {
+        "src": {
+          "type": "string",
+          "desc": "URL pattern, ### is replaced by the frame number: /seq/frame-###.jpg"
+        },
+        "count": {
+          "type": "number",
+          "default": 60,
+          "css": false,
+          "desc": "Number of frames."
+        },
+        "start": {
+          "type": "number",
+          "default": 1,
+          "css": false,
+          "desc": "First frame number."
+        },
+        "length": {
+          "type": "length",
+          "default": "300vh",
+          "css": true,
+          "desc": "Scroll distance for the whole sequence."
+        }
+      },
+      "example": "<section data-fx=\"frames\" data-fx-src=\"/seq/f-###.jpg\" data-fx-count=\"90\"></section>"
+    },
+    "svg-draw": {
+      "name": "svg-draw",
+      "title": "SVG draw + flow",
+      "kind": "js",
+      "desc": "Draws the strokes of an SVG when it scrolls into view (or with the scroll), and can send glowing pulses travelling along the paths.",
+      "options": {
+        "mode": {
+          "type": "enum",
+          "values": [
+            "view",
+            "scroll"
+          ],
+          "default": "view",
+          "desc": "view = draws once, scroll = drawing follows the scroll."
+        },
+        "duration": {
+          "type": "time",
+          "default": "1800ms",
+          "css": true,
+          "desc": "Drawing time per path."
+        },
+        "stagger": {
+          "type": "time",
+          "default": "140ms",
+          "css": true,
+          "desc": "Delay between paths."
+        },
+        "pulse": {
+          "type": "number",
+          "default": 0,
+          "css": false,
+          "desc": "Glowing pulses travelling along each path (0 = none)."
+        },
+        "color": {
+          "type": "color",
+          "default": "#ffb547",
+          "css": true,
+          "desc": "Pulse color."
+        }
+      },
+      "example": "<svg data-fx=\"svg-draw\" data-fx-pulse=\"2\" …><path …/></svg>"
+    },
+    "dot-field": {
+      "name": "dot-field",
+      "title": "Dot field",
+      "kind": "js",
+      "desc": "A grid of dots that ripples away from the cursor and breathes when idle.",
+      "options": {
+        "color": {
+          "type": "color",
+          "default": "#ffb547",
+          "css": true,
+          "desc": "Dot color."
+        },
+        "gap": {
+          "type": "length",
+          "default": "22px",
+          "css": false,
+          "desc": "Distance between dots."
+        },
+        "force": {
+          "type": "number",
+          "default": 1,
+          "css": false,
+          "desc": "How strongly dots react."
+        }
+      },
+      "example": "<section data-fx=\"dot-field\">…</section>"
+    },
+    "typewriter": {
+      "name": "typewriter",
+      "title": "Typewriter",
+      "kind": "js",
+      "desc": "Types the text letter by letter with a blinking caret. Child lines type one after another, like a terminal.",
+      "options": {
+        "speed": {
+          "type": "time",
+          "default": "34ms",
+          "css": false,
+          "desc": "Time per letter."
+        },
+        "delay": {
+          "type": "time",
+          "default": "0ms",
+          "css": false,
+          "desc": "Delay before typing starts."
+        },
+        "loop": {
+          "type": "boolean",
+          "default": false,
+          "desc": "Erase and start again."
+        }
+      },
+      "example": "<p data-fx=\"typewriter\">npm i lumafx</p>"
+    },
+    "rotate-words": {
+      "name": "rotate-words",
+      "title": "Rotating words",
+      "kind": "js",
+      "desc": "Cycles through a list of words in place, with the width easing between them.",
+      "options": {
+        "words": {
+          "type": "string",
+          "desc": "Comma-separated words. The element text is the first."
+        },
+        "interval": {
+          "type": "time",
+          "default": "2200ms",
+          "css": false,
+          "desc": "Time each word stays."
+        },
+        "style": {
+          "type": "enum",
+          "values": [
+            "flip",
+            "slide",
+            "blur"
+          ],
+          "default": "flip",
+          "desc": "Transition style."
+        }
+      },
+      "example": "We build <span data-fx=\"rotate-words\" data-fx-words=\"sites, apps, events\">brands</span>"
+    },
+    "clock": {
+      "name": "clock",
+      "title": "Live clock",
+      "kind": "js",
+      "desc": "Shows the live time in any time zone, ticking every second.",
+      "options": {
+        "tz": {
+          "type": "string",
+          "desc": "IANA time zone, e.g. Europe/Tirane. Default: the visitor’s."
+        },
+        "seconds": {
+          "type": "boolean",
+          "default": true,
+          "desc": "Show seconds."
+        },
+        "hour12": {
+          "type": "boolean",
+          "default": false,
+          "desc": "12-hour clock with AM/PM."
+        }
+      },
+      "example": "<time data-fx=\"clock\" data-fx-tz=\"Asia/Dubai\"></time>"
+    },
+    "dapple": {
+      "name": "dapple",
+      "title": "Leaf shadows",
+      "kind": "css",
+      "loop": true,
+      "desc": "Soft, slowly swaying shadows of leaves over a section, like sunlight through a tree.",
+      "options": {
+        "opacity": {
+          "type": "number",
+          "default": 0.4,
+          "css": true,
+          "desc": "Shadow strength, 0–1."
+        },
+        "duration": {
+          "type": "time",
+          "default": "16s",
+          "css": true,
+          "desc": "Length of one sway."
+        }
+      },
+      "example": "<section data-fx=\"dapple\">…</section>"
+    },
+    "ring": {
+      "name": "ring",
+      "title": "3D ring carousel",
+      "kind": "js",
+      "desc": "Items stand on a 3D ring you can drag and fling; it turns slowly on its own when idle.",
+      "options": {
+        "speed": {
+          "type": "number",
+          "default": 6,
+          "css": false,
+          "desc": "Idle rotation in degrees per second (0 = still)."
+        },
+        "tilt": {
+          "type": "number",
+          "default": 8,
+          "css": false,
+          "desc": "Viewing angle in degrees."
+        }
+      },
+      "example": "<div data-fx=\"ring\"><figure>…</figure><figure>…</figure></div>"
+    },
+    "card": {
+      "name": "card",
+      "title": "Cards",
+      "kind": "hybrid",
+      "desc": "Five ready card designs for an image, a title, text and buttons: glow (border lights up around the cursor), product (lifts, image zooms), flip (3D flip to a back side), cover (full-bleed image, details slide up), ticket (event ticket with a perforated stub).",
+      "options": {
+        "style": {
+          "type": "enum",
+          "values": [
+            "glow",
+            "product",
+            "flip",
+            "cover",
+            "ticket"
+          ],
+          "default": "glow",
+          "desc": "Card design."
+        },
+        "color": {
+          "type": "color",
+          "default": "#ffb547",
+          "css": true,
+          "desc": "Accent color."
+        },
+        "radius": {
+          "type": "length",
+          "default": "22px",
+          "css": true,
+          "desc": "Corner radius."
+        }
+      },
+      "example": "<article data-fx=\"card\" data-fx-style=\"product\"><img src=\"…\" alt=\"…\"><div><h3>Title</h3><p>Text</p><button data-fx=\"press\">Buy</button></div></article>"
+    },
+    "press": {
+      "name": "press",
+      "title": "Button press",
+      "kind": "js",
+      "desc": "Click feedback for buttons and links: a ripple from the click point, a burst of sparks, a fill that follows the cursor in and out, or a squish. Can swap the label to a done state (\"Added ✓\").",
+      "options": {
+        "style": {
+          "type": "enum",
+          "values": [
+            "ripple",
+            "burst",
+            "fill",
+            "squish"
+          ],
+          "default": "ripple",
+          "desc": "Feedback style."
+        },
+        "color": {
+          "type": "color",
+          "default": "",
+          "css": true,
+          "desc": "Effect color (defaults to the current text color)."
+        },
+        "done": {
+          "type": "string",
+          "desc": "Label shown for a moment after a click, e.g. \"Added ✓\"."
+        }
+      },
+      "example": "<button data-fx=\"press\" data-fx-style=\"burst\" data-fx-done=\"Added ✓\">Add to cart</button>"
+    },
+    "form": {
+      "name": "form",
+      "title": "Smart form",
+      "kind": "js",
+      "desc": "Validation that feels alive, with the same rules on your server: messages slide in under the field, email typos get a \"Did you mean…?\" fix, phone numbers settle into international format, passwords get a strength meter, and AJAX submits show server errors on the right fields. Rules come from native attributes (required, type=\"email\", minlength…) or data-rules=\"required email phone:AL\".",
+      "options": {
+        "locale": {
+          "type": "string",
+          "desc": "Message language: en or sq (Albanian). Default: the page language."
+        },
+        "country": {
+          "type": "string",
+          "default": "AL",
+          "desc": "Default country for phone numbers typed without +."
+        },
+        "ajax": {
+          "type": "boolean",
+          "default": false,
+          "desc": "Submit with fetch and show the result in place (server errors appear on their fields)."
+        },
+        "spam": {
+          "type": "boolean",
+          "default": true,
+          "desc": "Add a honeypot field and a time trap that schema().validate(…, { spam: true }) checks."
+        },
+        "reset": {
+          "type": "boolean",
+          "default": false,
+          "desc": "Clear the form after a successful AJAX submit."
+        },
+        "success": {
+          "type": "string",
+          "desc": "Selector of a message to reveal after a successful AJAX submit (or put data-fx-success on an element inside the form)."
+        },
+        "color": {
+          "type": "color",
+          "default": "#ffb547",
+          "css": true,
+          "desc": "Accent for focus, the strength meter and the sending spinner."
+        }
+      },
+      "example": "<form data-fx=\"form\" data-fx-ajax action=\"/api/contact\" method=\"post\"><input name=\"email\" type=\"email\" required>…</form>"
+    },
+    "loader-3d": {
+      "name": "loader-3d",
+      "title": "3D loader",
+      "kind": "webgl",
+      "desc": "Glossy 3D panels over a floating glass plate, rendered live on the GPU with soft shadows and studio reflections. pages: upright panels open like a book, spread into a ring and fold back. stack: flat tiles fan apart. For page preloaders, loading blog posts and any wait. Falls back to CSS 3D without WebGL; one shared GPU context serves every loader on the page.",
+      "options": {
+        "style": {
+          "type": "enum",
+          "values": [
+            "pages",
+            "stack"
+          ],
+          "default": "pages",
+          "desc": "Scene."
+        },
+        "colors": {
+          "type": "string",
+          "desc": "Panel colors, comma-separated. The number of colors sets the number of panels (up to 6). Default: indigo to violet for pages, blue to violet for stack."
+        },
+        "count": {
+          "type": "number",
+          "default": 5,
+          "css": false,
+          "desc": "Number of panels (1–6) when you give fewer colors; colors are blended to fill. Default 5 for pages, 4 for stack."
+        },
+        "base": {
+          "type": "color",
+          "default": "#a6d8ea",
+          "css": true,
+          "desc": "Color of the floating plate."
+        },
+        "duration": {
+          "type": "time",
+          "default": "3.6s",
+          "css": true,
+          "desc": "Length of one cycle (stack: 2.8s)."
+        },
+        "size": {
+          "type": "length",
+          "default": "160px",
+          "css": true,
+          "desc": "Width and height of the loader."
+        }
+      },
+      "example": "<div data-fx=\"loader-3d\"></div>"
+    }
+  }
+}

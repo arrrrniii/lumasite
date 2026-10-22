@@ -1,0 +1,163 @@
+/* Original SendMailOS sculpture imagery. The image stages reserve their space
+   before loading and deliberately reuse the campaign / conversation artwork. */
+.marketing-site .editorial-grid {
+  display: grid;
+  grid-template-columns: 1.08fr .94fr 1.02fr;
+  gap: 24px;
+  align-items: start;
+}
+.marketing-site .editorial-card {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  padding: 24px;
+  overflow: hidden;
+}
+.marketing-site .campaign-story { margin-top: 0; }
+.marketing-site .mcp-story { margin-top: 48px; }
+.marketing-site .inbox-story {
+  grid-column: auto;
+  margin-top: 24px;
+  padding-right: 24px;
+  padding-bottom: 24px;
+}
+.marketing-site .editorial-card > h2 { margin-top: 27px; margin-bottom: 0; }
+.marketing-site .editorial-card > p { margin-top: 13px; }
+.marketing-site .editorial-card .editorial-art {
+  position: relative;
+  flex: 0 0 auto;
+  width: 100%;
+  height: auto;
+  min-height: 0;
+  aspect-ratio: 4 / 3;
+  margin: 25px 0 0;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--site-border, #253852);
+  border-radius: 14px;
+  background: var(--site-bg, #07101d);
+}
+.marketing-site .editorial-art > img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  object-fit: cover;
+  object-position: center;
+}
+.marketing-site .mcp-story .editorial-art { margin-top: 26px; }
+.marketing-site .editorial-card-bottom { margin-top: 0; padding-top: 25px; }
+.marketing-site .editorial-card-bottom > h2 { margin-top: 0; }
+.marketing-site .editorial-card-bottom > p { margin-top: 14px; }
+
+/* Override the former fixed-height SVG stage without affecting the native
+   workflow, audience, or API illustrations farther down the page. */
+.marketing-site .platform-section .platform-card .platform-card-art {
+  position: relative;
+  flex: 0 0 auto;
+  width: 100%;
+  height: auto;
+  min-height: 0;
+  aspect-ratio: 4 / 3;
+  padding: 0;
+  margin: 26px 0;
+  overflow: hidden;
+  border: 1px solid var(--site-border, #253852);
+  border-radius: 15px;
+  background: var(--site-bg, #07101d);
+}
+.marketing-site .platform-section .platform-card-art > .platform-art-image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  object-fit: cover;
+  object-position: center;
+}
+
+/* A real image background with a quiet center for the final invitation.
+   Native LumaFX remains attached to the unchanged heading and button. */
+.marketing-site .last-hello {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border-color: var(--site-border, #253852);
+  background: var(--site-bg, #07101d);
+}
+.marketing-site .connection-art,
+.marketing-site .connection-shade {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  user-select: none;
+}
+.marketing-site .connection-art { z-index: -2; }
+.marketing-site .connection-art > img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  object-fit: cover;
+  object-position: center;
+}
+.marketing-site .connection-shade {
+  z-index: -1;
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--site-bg, #07101d) 38%, transparent), color-mix(in srgb, var(--site-bg, #07101d) 55%, transparent) 50%, color-mix(in srgb, var(--site-bg, #07101d) 38%, transparent)),
+    linear-gradient(0deg, color-mix(in srgb, var(--site-bg, #07101d) 42%, transparent), transparent 45%, color-mix(in srgb, var(--site-bg, #07101d) 30%, transparent));
+}
+.marketing-site .last-hello > .container { position: relative; z-index: 1; }
+.marketing-site .last-hello-icon {
+  background: color-mix(in srgb, var(--site-card, #14223a) 80%, transparent);
+  border-color: color-mix(in srgb, var(--site-accent-soft, #a7c8ff) 45%, transparent);
+}
+.marketing-site .last-hello .eyebrow,
+.marketing-site .last-hello .button + p { color: var(--site-accent-soft, #a7c8ff); }
+
+@media (max-width: 1100px) {
+  .marketing-site .editorial-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px; }
+  .marketing-site .mcp-story { margin-top: 32px; }
+  .marketing-site .inbox-story {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: 1fr 1.15fr;
+    grid-template-rows: auto 1fr;
+    align-items: center;
+    gap: 20px 28px;
+    margin-top: 0;
+  }
+  .marketing-site .inbox-story > .editorial-card-top { grid-column: 1; grid-row: 1; }
+  .marketing-site .inbox-story > h2 { grid-column: 1; grid-row: 2; align-self: start; margin: 0; }
+  .marketing-site .inbox-story .editorial-art { grid-column: 2; grid-row: 1 / 3; margin: 0; }
+  .marketing-site .inbox-story .round-arrow { position: static; width: 30px; height: 30px; }
+  .marketing-site .platform-section .platform-card .platform-card-art { margin-block: 24px; }
+}
+@media (max-width: 600px) {
+  .marketing-site .editorial-grid { grid-template-columns: minmax(0, 1fr); gap: 20px; }
+  .marketing-site .editorial-card,
+  .marketing-site .inbox-story { padding: 24px; }
+  .marketing-site .campaign-story,
+  .marketing-site .mcp-story,
+  .marketing-site .inbox-story { margin-top: 0; }
+  .marketing-site .inbox-story { display: flex; flex-direction: column; align-items: stretch; gap: 0; }
+  .marketing-site .inbox-story > h2 { align-self: auto; margin: 27px 0 0; }
+  .marketing-site .editorial-card .editorial-art,
+  .marketing-site .inbox-story .editorial-art { margin-top: 24px; border-radius: 13px; }
+  .marketing-site .editorial-card-bottom { padding-top: 24px; }
+  .marketing-site .platform-section .platform-card .platform-card-art { margin: 23px 0; border-radius: 13px; }
+  .marketing-site .connection-art > img { object-position: 18% center; }
+  .marketing-site .connection-shade {
+    background: linear-gradient(0deg, color-mix(in srgb, var(--site-bg, #07101d) 70%, transparent), color-mix(in srgb, var(--site-bg, #07101d) 62%, transparent) 50%, color-mix(in srgb, var(--site-bg, #07101d) 65%, transparent));
+  }
+}
+@media (max-width: 374px) {
+  .marketing-site .editorial-card,
+  .marketing-site .inbox-story { padding: 21px; }
+  .marketing-site .editorial-card .outline-label { font-size: 10px; }
+  .marketing-site .editorial-card > h2,
+  .marketing-site .editorial-card-bottom > h2 { font-size: 28px; }
+}

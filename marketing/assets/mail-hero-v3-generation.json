@@ -1,0 +1,33 @@
+{
+  "asset": "mail-hero-v3",
+  "generator": "built-in image_gen",
+  "mode": "generate",
+  "source": "/Users/arnoldkajolli/.codex/generated_images/01a162a9-5e89-70a0-9ca4-5c2155c431e5/exec-03c2b7f8-33b6-4b4c-b943-9207e4000a9a.png",
+  "prompt": "Use case: stylized-concept\nAsset type: original premium marketing website hero artwork for SendMailOS, an email platform.\nPrimary request: Create a visually striking, exceptionally polished 3D studio artwork about electronic mail and connection. A large sculptural cobalt-blue envelope, angled in a graceful three-quarter view, floats just above a dark surface on the RIGHT of the image. Its folded face is beautifully crafted from satin anodized blue metal with subtly softened edges, a fine tactile finish and precise folds. Behind it, two thin translucent smoked-blue glass message sheets fan upward, catching delicate ice-blue highlights. A single elegant, narrow luminous blue signal ribbon flows in an arc from behind the sculpture toward the far right, suggesting messages moving through a connected system. Small light points on the ribbon only, restrained and refined.\nScene/backdrop: seamless very dark midnight navy studio, matching approximately #07101d, with soft grounding shadow and a barely visible reflection beneath the sculpture. Sophisticated physical materials, realistic refractions, premium industrial product photography and cinematic global illumination.\nComposition/framing: WIDE 16:9 landscape. This is artwork ONLY, not a screenshot or website mockup. Keep the LEFT 55 percent almost completely empty and uniformly dark navy for large white headline overlay; no bright object, ribbon or highlight in that area. Place the complete sculpture between x=60% and x=95%, centered around x=78%, y=54%. Show the whole sculptural envelope and its glass sheets, large and impressive, with breathing room from the top and right edges. Leave the top 12% unobtrusive for site navigation. The main subject occupies roughly 40% of the frame width and 68% of its height.\nLighting/mood: calm, confident, editorial, meticulous high-end technology brand; soft broad studio key light from upper right, luminous blue rim light, rich controlled shadows, crisp material detail, tasteful depth of field.\nColor palette: midnight navy #07101d, rich cobalt #3978f6, small icy blue #a7c8ff highlights. Minimal ivory reflection on the glass edges only. Dark and blue throughout.\nConstraints: Absolutely NO text, letters, numbers, logos, dashboards, app screens, UI cards, buttons, badges, diagrams, circuit boards, API labels, grids, people, or watermark. No explosion of icons, no neon cyberpunk, no generic stock illustration, no flat/vector graphic, no excessive bloom. Make this feel like a real beautifully art-directed object photographed for a premium email platform.",
+  "description": "Original cobalt-blue metal envelope with smoked glass message sheets and a blue signal ribbon, composed to the right on navy for headline space.",
+  "transparentBackground": false,
+  "dimensions": {
+    "width": 1672,
+    "height": 941
+  },
+  "files": {
+    "original": "mail-hero-v3.png",
+    "desktop": "mail-hero-v3.webp",
+    "mobile": "mail-hero-v3-mobile.webp"
+  },
+  "optimization": {
+    "desktop": {
+      "format": "webp",
+      "quality": 86,
+      "bytes": 55398
+    },
+    "mobile": {
+      "format": "webp",
+      "width": 1000,
+      "height": 563,
+      "quality": 82,
+      "bytes": 18020
+    },
+    "semanticEdits": false
+  }
+}

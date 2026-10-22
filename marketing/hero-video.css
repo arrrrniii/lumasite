@@ -1,0 +1,106 @@
+/* Progressive hero motion. .hero-photo remains the existing artwork stage;
+   its poster is replaced only after the player has produced a usable frame.
+   Valid markup: div.hero-photo > picture.hero-poster + video.hero-video.
+   The toggle is a sibling of the artwork stage inside .photo-hero. */
+.marketing-site .hero-poster {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  opacity: 1;
+  visibility: visible;
+  pointer-events: none;
+  transition: opacity .35s ease, visibility .35s;
+}
+.marketing-site .hero-photo .hero-video {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  border: 0;
+  margin: 0;
+  padding: 0;
+  object-fit: contain;
+  object-position: right center;
+  background: var(--site-bg, #07101d);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  user-select: none;
+  transition: opacity .35s ease, visibility .35s;
+}
+.marketing-site .hero-photo[data-video-ready="true"] > .hero-video {
+  opacity: 1;
+  visibility: visible;
+}
+.marketing-site .hero-photo[data-video-ready="true"] > .hero-poster {
+  opacity: 0;
+  visibility: hidden;
+}
+.marketing-site .hero-video-toggle {
+  position: absolute;
+  z-index: 5;
+  right: 32px;
+  top: 90px;
+  bottom: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 11px 15px;
+  border: 1px solid var(--site-border-accent, #355783);
+  border-radius: 100px;
+  background: color-mix(in srgb, var(--site-surface, #101b2d) 92%, transparent);
+  color: var(--site-text, #f5f8ff);
+  font-family: var(--font-body, sans-serif);
+  font-size: 12px;
+  font-weight: 550;
+  line-height: 1.4;
+  letter-spacing: -.01em;
+  cursor: pointer;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  transition: background .2s ease, border-color .2s ease;
+}
+.marketing-site .hero-video-toggle:hover {
+  background: var(--site-card, #14223a);
+  border-color: var(--site-accent, #4f8cff);
+}
+.marketing-site .hero-video-toggle:focus-visible {
+  outline: 3px solid var(--site-accent-soft, #a7c8ff);
+  outline-offset: 4px;
+}
+.marketing-site .hero-video-toggle svg {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  pointer-events: none;
+}
+.marketing-site .hero-video-toggle[hidden] { display: none !important; }
+
+@media (max-width: 1250px) {
+  .marketing-site .hero-photo .hero-video { object-position: 72% center; }
+}
+@media (max-width: 1100px) {
+  .marketing-site .hero-photo .hero-video { object-fit: contain; object-position: right center; }
+  .marketing-site .hero-video-toggle { right: 22px; top: auto; bottom: 18px; }
+}
+@media (max-width: 600px) {
+  .marketing-site .hero-photo .hero-video { object-fit: cover; object-position: right center; }
+  .marketing-site .hero-video-toggle { right: 16px; bottom: 16px; padding-inline: 13px; }
+}
+@media (prefers-reduced-motion: reduce), (prefers-reduced-data: reduce) {
+  .marketing-site .hero-photo .hero-video,
+  .marketing-site .hero-video-toggle { display: none; }
+  .marketing-site .hero-photo[data-video-ready="true"] > .hero-poster {
+    opacity: 1;
+    visibility: visible;
+  }
+  .marketing-site .hero-poster,
+  .marketing-site .hero-photo .hero-video { transition: none; }
+}

@@ -1,0 +1,218 @@
+{
+  "generator": "built-in image_gen",
+  "mode": "generate",
+  "theme": "SendMailOS satin cobalt metal and smoked-blue glass on midnight navy",
+  "assets": [
+    {
+      "name": "campaign-art-v1",
+      "original": "campaign-art-v1.png",
+      "desktop": "campaign-art-v1.webp",
+      "responsive": "campaign-art-v1-small.webp",
+      "source": "/Users/arnoldkajolli/.codex/generated_images/01a162a9-5e89-70a0-9ca4-5c2155c431e5/exec-9e8db3a6-6fce-4ab1-b114-7d8814f2adb0.png",
+      "prompt": "Use case: stylized-concept. Asset: original feature artwork for SendMailOS email marketing website, in exactly the same material family as its premium cobalt-metal email envelope hero.\nStyle: exceptional photorealistic 3D industrial product photography, tactile satin anodized cobalt-blue metal, slightly softened machined edges, translucent smoked-blue glass, thin icy-blue edge reflections, restrained blue light accents, real global illumination, soft grounded shadow, very subtle studio-floor reflection. Background is seamless uniform midnight navy #07101d. Colors cobalt #3978f6, navy #07101d and tiny ice-blue #a7c8ff highlights. Expensive, precise, calm editorial art direction. No purple, green or orange.\nComposition: landscape 4:3, one central sculptural composition occupying around 70% of the image, all important objects fully inside the frame with 12% breathing room. Objects are large enough to read inside a website feature card at 350px width. Real three-quarter dimensional perspective, crisp and clean.\nConstraints: ARTWORK ONLY. Absolutely no readable text, letters, numbers, logos, screenshot, UI, dashboard, buttons, labels, grid, circuit board, person, watermark, flat/vector/cartoon style, excessive neon bloom or confusing clutter. This is a symbolic still life, not a product interface.\nSubject: email campaigns and announcements. A beautiful open cobalt-blue metal envelope sits at a slight angle. One elegant ivory-tinted frosted glass message sheet rises from it. Three smaller glossy cobalt-blue folded envelopes fan out along ONE graceful luminous blue arc behind the larger envelope, conveying one announcement reaching its audience. Beautifully composed physical objects with real depth, not a diagram or many scattered icons. Main envelope in the lower middle, glass sheet upper middle, small envelopes spaced sparingly. Refined balanced composition.",
+      "optimized": {
+        "original": {
+          "path": "/Users/arnoldkajolli/Desktop/Projects/email-platform/lumasite/marketing/assets/campaign-art-v1.png",
+          "bytes": 1915474,
+          "dimensions": [
+            1448,
+            1086
+          ]
+        },
+        "desktop": {
+          "path": "/Users/arnoldkajolli/Desktop/Projects/email-platform/lumasite/marketing/assets/campaign-art-v1.webp",
+          "bytes": 53750,
+          "dimensions": [
+            1200,
+            900
+          ]
+        },
+        "responsive": {
+          "path": "/Users/arnoldkajolli/Desktop/Projects/email-platform/lumasite/marketing/assets/campaign-art-v1-small.webp",
+          "bytes": 16740,
+          "dimensions": [
+            640,
+            480
+          ]
+        }
+      },
+      "optimization": "WebP quality85 at1200px, quality82 at640px; proportional resizing only"
+    },
+    {
+      "name": "template-art-v1",
+      "original": "template-art-v1.png",
+      "desktop": "template-art-v1.webp",
+      "responsive": "template-art-v1-small.webp",
+      "source": "/Users/arnoldkajolli/.codex/generated_images/01a162a9-5e89-70a0-9ca4-5c2155c431e5/exec-2c8a25e3-9a63-4ed9-93a2-974b233c0011.png",
+      "prompt": "Use case: stylized-concept. Asset: original feature artwork for SendMailOS email marketing website, in exactly the same material family as its premium cobalt-metal email envelope hero.\nStyle: exceptional photorealistic 3D industrial product photography, tactile satin anodized cobalt-blue metal, slightly softened machined edges, translucent smoked-blue glass, thin icy-blue edge reflections, restrained blue light accents, real global illumination, soft grounded shadow, very subtle studio-floor reflection. Background is seamless uniform midnight navy #07101d. Colors cobalt #3978f6, navy #07101d and tiny ice-blue #a7c8ff highlights. Expensive, precise, calm editorial art direction. No purple, green or orange.\nComposition: landscape 4:3, one central sculptural composition occupying around 70% of the image, all important objects fully inside the frame with 12% breathing room. Objects are large enough to read inside a website feature card at 350px width. Real three-quarter dimensional perspective, crisp and clean.\nConstraints: ARTWORK ONLY. Absolutely no readable text, letters, numbers, logos, screenshot, UI, dashboard, buttons, labels, grid, circuit board, person, watermark, flat/vector/cartoon style, excessive neon bloom or confusing clutter. This is a symbolic still life, not a product interface.\nSubject: creating and assembling a beautifully designed email template from editable components. One upright, thin, smoked-blue glass sheet with softly rounded corners floats at a three-quarter angle above a low cobalt metal pedestal. Four tangible modular pieces are hovering a few centimeters in front of this sheet, precisely aligning into an elegant layout: a broad satin-cobalt rectangular header panel, a small frosted-glass square image tile, two narrow pale-blue glass rails, and a small cobalt capsule. Each is a real sculptural object with material thickness and soft shadow. The sheet and pieces feel like a premium architectural model of modular design, not an app screen. A tiny cobalt-metal pointer-arrow sculpture rests beside the pedestal to suggest editing. No text or fake interface controls. Large, exquisite central object.",
+      "optimized": {
+        "original": {
+          "path": "/Users/arnoldkajolli/Desktop/Projects/email-platform/lumasite/marketing/assets/template-art-v1.png",
+          "bytes": 1708425,
+          "dimensions": [
+            1448,
+            1086
+          ]
+        },
+        "desktop": {
+          "path": "/Users/arnoldkajolli/Desktop/Projects/email-platform/lumasite/marketing/assets/template-art-v1.webp",
+          "bytes": 48850,
+          "dimensions": [
+            1200,
+            900
+          ]
+        },
+        "responsive": {
+          "path": "/Users/arnoldkajolli/Desktop/Projects/email-platform/lumasite/marketing/assets/template-art-v1-small.webp",
+          "bytes": 16810,
+          "dimensions": [
+            640,
+            480
+          ]
+        }
+      },
+      "optimization": "WebP quality85 at1200px, quality82 at640px; proportional resizing only"
+    },
+    {
+      "name": "inbox-art-v1",
+      "original": "inbox-art-v1.png",
+      "desktop": "inbox-art-v1.webp",
+      "responsive": "inbox-art-v1-small.webp",
+      "source": "/Users/arnoldkajolli/.codex/generated_images/01a162a9-5e89-70a0-9ca4-5c2155c431e5/exec-a001575f-58eb-4638-b705-98b613176ef2.png",
+      "prompt": "Use case: stylized-concept. Asset: original feature artwork for SendMailOS email marketing website, in exactly the same material family as its premium cobalt-metal email envelope hero.\nStyle: exceptional photorealistic 3D industrial product photography, tactile satin anodized cobalt-blue metal, slightly softened machined edges, translucent smoked-blue glass, thin icy-blue edge reflections, restrained blue light accents, real global illumination, soft grounded shadow, very subtle studio-floor reflection. Background is seamless uniform midnight navy #07101d. Colors cobalt #3978f6, navy #07101d and tiny ice-blue #a7c8ff highlights. Expensive, precise, calm editorial art direction. No purple, green or orange.\nComposition: landscape 4:3, one central sculptural composition occupying around 70% of the image, all important objects fully inside the frame with 12% breathing room. Objects are large enough to read inside a website feature card at 350px width. Real three-quarter dimensional perspective, crisp and clean.\nConstraints: ARTWORK ONLY. Absolutely no readable text, letters, numbers, logos, screenshot, UI, dashboard, buttons, labels, grid, circuit board, person, watermark, flat/vector/cartoon style, excessive neon bloom or confusing clutter. This is a symbolic still life, not a product interface.\nSubject: thoughtful two-way email conversations and a connected shared inbox. TWO large tangible speech-bubble sculptures hover close to each other: the front bubble is thick satin cobalt-blue metal with a neatly cut pointed tail, and the rear bubble is transparent smoked-blue glass with a subtle icy-blue edge. They face toward one another in an elegant balanced arrangement, not a row of app messages. Three tiny blue light beads are embedded subtly in each bubble. A small beautifully folded cobalt-metal envelope rests between and slightly below them, connecting email with a human conversation. A very delicate blue light strand joins the sculptures. Sophisticated physical still life, generous breathing room, clean silhouette and strong legibility at small card scale. NO people, faces, text or a screenshot.",
+      "optimized": {
+        "original": {
+          "path": "/Users/arnoldkajolli/Desktop/Projects/email-platform/lumasite/marketing/assets/inbox-art-v1.png",
+          "bytes": 1842814,
+          "dimensions": [
+            1448,
+            1086
+          ]
+        },
+        "desktop": {
+          "path": "/Users/arnoldkajolli/Desktop/Projects/email-platform/lumasite/marketing/assets/inbox-art-v1.webp",
+          "bytes": 60824,
+          "dimensions": [
+            1200,
+            900
+          ]
+        },
+        "responsive": {
+          "path": "/Users/arnoldkajolli/Desktop/Projects/email-platform/lumasite/marketing/assets/inbox-art-v1-small.webp",
+          "bytes": 20398,
+          "dimensions": [
+            640,
+            480
+          ]
+        }
+      },
+      "optimization": "WebP quality85 at1200px, quality82 at640px; proportional resizing only"
+    },
+    {
+      "name": "workflow-art-v1",
+      "original": "workflow-art-v1.png",
+      "desktop": "workflow-art-v1.webp",
+      "responsive": "workflow-art-v1-small.webp",
+      "source": "/Users/arnoldkajolli/.codex/generated_images/01a162a9-5e89-70a0-9ca4-5c2155c431e5/exec-c68ed2f0-d4ed-4bee-b9c0-168323087ccb.png",
+      "prompt": "Use case: stylized-concept. Asset: original feature artwork for SendMailOS email marketing website, in exactly the same material family as its premium cobalt-metal email envelope hero.\nStyle: exceptional photorealistic 3D industrial product photography, tactile satin anodized cobalt-blue metal, slightly softened machined edges, translucent smoked-blue glass, thin icy-blue edge reflections, restrained blue light accents, real global illumination, soft grounded shadow, very subtle studio-floor reflection. Background is seamless uniform midnight navy #07101d. Colors cobalt #3978f6, navy #07101d and tiny ice-blue #a7c8ff highlights. Expensive, precise, calm editorial art direction. No purple, green or orange.\nComposition: landscape 4:3, one central sculptural composition occupying around 70% of the image, all important objects fully inside the frame with 12% breathing room. Objects are large enough to read inside a website feature card at 350px width. Real three-quarter dimensional perspective, crisp and clean.\nConstraints: ARTWORK ONLY. Absolutely no readable text, letters, numbers, logos, screenshot, UI, dashboard, buttons, labels, grid, circuit board, person, watermark, flat/vector/cartoon style, excessive neon bloom or confusing clutter. This is a symbolic still life, not a product interface.\nSubject: a visual email journey, timing and branching automation, rendered as an exquisite connected physical sculpture. At upper center is one softly rounded cobalt-metal node with a simple sculpted glass dot in its face; it connects via thin rigid luminous-blue curved tubes to a central upright circular satin-blue clock dial with TWO hands and NO numbers. From the clock, two graceful glass-and-blue tubes branch downward toward two small cobalt-metal envelope sculptures on opposite sides. These objects stand at slightly different depths over a reflective navy surface. The physical tubes and separated floating objects form one intentional balanced composition, like a small modern industrial art installation. The main clock and envelopes are large, fully visible and readable. NOT a UI flowchart, no labeled boxes, no lines of code, no text.",
+      "optimized": {
+        "original": {
+          "path": "/Users/arnoldkajolli/Desktop/Projects/email-platform/lumasite/marketing/assets/workflow-art-v1.png",
+          "bytes": 1847456,
+          "dimensions": [
+            1448,
+            1086
+          ]
+        },
+        "desktop": {
+          "path": "/Users/arnoldkajolli/Desktop/Projects/email-platform/lumasite/marketing/assets/workflow-art-v1.webp",
+          "bytes": 60564,
+          "dimensions": [
+            1200,
+            900
+          ]
+        },
+        "responsive": {
+          "path": "/Users/arnoldkajolli/Desktop/Projects/email-platform/lumasite/marketing/assets/workflow-art-v1-small.webp",
+          "bytes": 20760,
+          "dimensions": [
+            640,
+            480
+          ]
+        }
+      },
+      "optimization": "WebP quality85 at1200px, quality82 at640px; proportional resizing only"
+    },
+    {
+      "name": "pixel-art-v1",
+      "original": "pixel-art-v1.png",
+      "desktop": "pixel-art-v1.webp",
+      "responsive": "pixel-art-v1-small.webp",
+      "source": "/Users/arnoldkajolli/.codex/generated_images/01a162a9-5e89-70a0-9ca4-5c2155c431e5/exec-00fcedd5-f282-45a8-9118-fb62c8d3c911.png",
+      "prompt": "Use case: stylized-concept. Asset: original feature artwork for SendMailOS email marketing website, in exactly the same material family as its premium cobalt-metal email envelope hero.\nStyle: exceptional photorealistic 3D industrial product photography, tactile satin anodized cobalt-blue metal, slightly softened machined edges, translucent smoked-blue glass, thin icy-blue edge reflections, restrained blue light accents, real global illumination, soft grounded shadow, very subtle studio-floor reflection. Background is seamless uniform midnight navy #07101d. Colors cobalt #3978f6, navy #07101d and tiny ice-blue #a7c8ff highlights. Expensive, precise, calm editorial art direction. No purple, green or orange.\nComposition: landscape 4:3, one central sculptural composition occupying around 70% of the image, all important objects fully inside the frame with 12% breathing room. Objects are large enough to read inside a website feature card at 350px width. Real three-quarter dimensional perspective, crisp and clean.\nConstraints: ARTWORK ONLY. Absolutely no readable text, letters, numbers, logos, screenshot, UI, dashboard, buttons, labels, grid, circuit board, person, watermark, flat/vector/cartoon style, excessive neon bloom or confusing clutter. This is a symbolic still life, not a product interface.\nSubject: Pixel insights, recognizing a known subscriber and organizing a relevant audience. An upright thick smoked-blue glass square stands at a graceful three-quarter angle. FOUR separate satin-cobalt corner brackets form a distinctive open focus frame around a single small glowing ice-blue glass point in its center. Beneath and just in front of the frame, three small groups of polished blue and frosted-glass tokens sit along ONE fine sweeping light path, implying meaningful audience segments. Each token is a beautifully machined miniature cylindrical disc, not a person or a facial silhouette. The focus-frame is the dominant object, tokens a small supporting accent. Precise central still life, premium tangible materials and beautiful rich reflections. No eye, camera lens, surveillance motif, people, diagrams, UI, text or labels.",
+      "optimized": {
+        "original": {
+          "path": "/Users/arnoldkajolli/Desktop/Projects/email-platform/lumasite/marketing/assets/pixel-art-v1.png",
+          "bytes": 1772604,
+          "dimensions": [
+            1448,
+            1086
+          ]
+        },
+        "desktop": {
+          "path": "/Users/arnoldkajolli/Desktop/Projects/email-platform/lumasite/marketing/assets/pixel-art-v1.webp",
+          "bytes": 51372,
+          "dimensions": [
+            1200,
+            900
+          ]
+        },
+        "responsive": {
+          "path": "/Users/arnoldkajolli/Desktop/Projects/email-platform/lumasite/marketing/assets/pixel-art-v1-small.webp",
+          "bytes": 18554,
+          "dimensions": [
+            640,
+            480
+          ]
+        }
+      },
+      "optimization": "WebP quality85 at1200px, quality82 at640px; proportional resizing only"
+    },
+    {
+      "name": "connection-bg-v1",
+      "original": "connection-bg-v1.png",
+      "desktop": "connection-bg-v1.webp",
+      "responsive": "connection-bg-v1-mobile.webp",
+      "source": "/Users/arnoldkajolli/.codex/generated_images/01a162a9-5e89-70a0-9ca4-5c2155c431e5/exec-282d1c26-12a8-4937-b27f-f07a403cc5e2.png",
+      "prompt": "Use case: stylized-concept.\nAsset: full-width background image for the final call-to-action section of SendMailOS website. Must match its satin cobalt-blue metal email envelope and smoked-blue glass hero.\nPrimary request: a beautifully art-directed dark navy studio composition that visually frames an EMPTY center for large website text. In the lower LEFT corner, a large sculptural cobalt-metal folded email envelope is partly cropped by the left and bottom edges, with refined rounded folds and fine satin texture. In the upper RIGHT corner, a pair of translucent smoked-blue glass message sheets and a smaller folded blue metal envelope are partly cropped by the right edge. One very fine luminous blue light ribbon curves along the OUTER lower edge and then toward the far right, joining the two groups; tiny sparse icy-blue points are on the ribbon. No object or bright streak crosses the middle text area.\nComposition: wide landscape 16:9. The central 60 percent of image WIDTH, between x=20% and x=80%, and central 75 percent of HEIGHT must remain almost completely empty uniform very dark navy #07101d. Objects occupy ONLY the far left and far right margins, intended as atmospheric decorative background framing. Low enough contrast near the center to preserve white and pale-blue headline readability. No central emblem.\nStyle: exceptional photorealistic 3D studio product photography, physical anodized cobalt metal #3978f6, smoked glass, soft white/ice-blue #a7c8ff rim lights, realistic refraction, subtle satin details, restrained luminous accents, very soft navy surface reflections. Calm, expensive, spacious and confident, same premium industrial material world as the hero. No excessive bloom.\nConstraints: image artwork only. NO text, numbers, letters, logos, watermark, UI, webpage, screenshot, badges, labels, faces or people. No purple/green/orange. No diagrams, circuit board or noisy particle field. The empty center is crucial. Objects may bleed outside the frame at the corners but must remain recognizable as elegant email sculptures.",
+      "optimized": {
+        "original": {
+          "path": "/Users/arnoldkajolli/Desktop/Projects/email-platform/lumasite/marketing/assets/connection-bg-v1.png",
+          "bytes": 1655768,
+          "dimensions": [
+            1672,
+            941
+          ]
+        },
+        "desktop": {
+          "path": "/Users/arnoldkajolli/Desktop/Projects/email-platform/lumasite/marketing/assets/connection-bg-v1.webp",
+          "bytes": 63230,
+          "dimensions": [
+            1672,
+            941
+          ]
+        },
+        "responsive": {
+          "path": "/Users/arnoldkajolli/Desktop/Projects/email-platform/lumasite/marketing/assets/connection-bg-v1-mobile.webp",
+          "bytes": 22890,
+          "dimensions": [
+            1000,
+            563
+          ]
+        }
+      },
+      "optimization": "WebP quality86 full-size, quality82 mobile1000px; proportional resizing only"
+    }
+  ],
+  "savedDirectory": "/Users/arnoldkajolli/Desktop/Projects/email-platform/lumasite/marketing/assets"
+}

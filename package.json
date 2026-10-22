@@ -1,0 +1,39 @@
+{
+  "name": "lumasite",
+  "version": "0.1.0",
+  "description": "An independent, self-hosted website studio with native LumaFX and MCP authoring.",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "bin": {
+    "lumasite": "./bin/lumasite.mjs"
+  },
+  "scripts": {
+    "start": "node bin/lumasite.mjs start",
+    "dev": "node src/server.mjs",
+    "test": "node --test tests/*.test.mjs",
+    "test:browser": "node tests/browser.mjs",
+    "test:marketing": "node tests/marketing-browser.mjs",
+    "publish:marketing": "node marketing/publish.mjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.30.0",
+    "express": "5.2.1",
+    "fflate": "0.8.2",
+    "tailwindcss": "4.1.18",
+    "zod": "4.3.6"
+  },
+  "devDependencies": {
+    "playwright": "1.61.1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/arrrrniii/lumasite.git"
+  },
+  "homepage": "https://github.com/arrrrniii/lumasite#readme",
+  "bugs": {
+    "url": "https://github.com/arrrrniii/lumasite/issues"
+  }
+}

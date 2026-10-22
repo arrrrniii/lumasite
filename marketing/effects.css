@@ -1,0 +1,25 @@
+/* Let LumaFX's native corners win over the existing card layout selectors. */
+.marketing-site main [data-fx~="squircle"][data-fx-radius] {
+  border-radius: var(--fx-radius, 28px);
+}
+@supports (corner-shape: squircle) {
+  :root:not([data-fx-nocs]) .marketing-site main [data-fx~="squircle"][data-fx-radius] {
+    corner-shape: squircle;
+    border-radius: calc(var(--fx-radius, 28px) * 1.6);
+  }
+}
+
+/* Readable native shimmer even before the runtime maps data attributes to vars. */
+.marketing-site main h2[data-fx~="shimmer"] {
+  --fx-color: var(--site-accent-soft, #a7c8ff);
+  --fx-color-2: var(--site-text, #f5f8ff);
+  --fx-duration: 4s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .marketing-site main h2[data-fx~="shimmer"] {
+    animation: none;
+    background: none;
+    -webkit-text-fill-color: currentColor;
+  }
+}

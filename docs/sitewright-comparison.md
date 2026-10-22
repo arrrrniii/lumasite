@@ -1,0 +1,29 @@
+# Why build LumaSite independently?
+
+This is a product-fit review of the public Sitewright source at commit [`7a5995ecfb1b19264c3de6cd604f388f5cbda8cd`](https://github.com/sitewright-cms/sitewright/tree/7a5995ecfb1b19264c3de6cd604f388f5cbda8cd), version 0.69.0. No Sitewright implementation was copied into LumaSite. Findings below are documented workflow tradeoffs, not an allegation of vulnerabilities or a claim that a first prototype is a more mature product.
+
+## What Sitewright already does well
+
+The current project already has remote OAuth MCP, project-scoped access, code authoring, Tailwind generation at publish, a component/motion library, media processing, snapshots and restore, custom domains, structured logs, health and readiness endpoints. Its deployment is one container and one persistent directory. It supports client invites, MFA/passkeys/SSO, multilingual content, datasets, forms, payments, site import and several deployment transports.
+
+Those features must not be presented as things LumaSite uniquely invents. See the [README](https://github.com/sitewright-cms/sitewright/blob/7a5995ecfb1b19264c3de6cd604f388f5cbda8cd/README.md) and [deployment guide](https://github.com/sitewright-cms/sitewright/blob/7a5995ecfb1b19264c3de6cd604f388f5cbda8cd/docs/deployment.md).
+
+## Friction relevant to this product
+
+| Documented tradeoff | Why it matters here | LumaSite's simpler approach | Cost of the simplification |
+| --- | --- | --- | --- |
+| The shipped CLI provides `login`, `logout`, `whoami`, `mcp` and `config`; its `mcp` stdio bridge is deprecated. Host process operations are left to Docker or other host tools. | The requested installer must answer “what port, what URL, is it healthy, show logs, restart or stop it?” from one command family. | `init`, `start`, `status`, `health`, `doctor`, `logs`, `restart`, `stop`, `credentials`, `proxy` and `backup` share one data directory. Project creation returns an admin URL and project MCP URL. | This is initially a local single-process supervisor, not a replacement for a production service manager or a cluster scheduler. |
+| Production quick start expects Docker, an encryption key, public URL, proxy configuration and TLS. Custom domain routing and certificates are separate setup responsibilities. | A user naming a project and a domain can reasonably expect a clear next step instead of discovering several independent configuration surfaces. | Native Node startup for local development, optional Docker, explicit port reporting and generated Apache/Caddy configuration. | Exporting configuration cannot point DNS, install certificates or reload Apache by itself. Production setup remains an operator task. |
+| Its authoring vocabulary spans components, datasets, snippets, widgets, templates and slots with Handlebars bindings. This breadth is intentional. | For MCP-first bespoke marketing pages, learning all those concepts can delay the first useful page. | Start with projects, pages, assets and revisions. A page is HTML, CSS and browser JavaScript; Tailwind is generated internally at publish. | LumaSite's first release lacks Sitewright's structured collection and managed widget features. |
+| The source product is a pnpm/Turborepo monorepo with a React editor and TypeScript packages. The runtime image includes headless Chromium and additional image/deployment tools. | It is a large implementation surface to understand or extend for a narrowly focused original product. | Small Node ESM backend, browser-native studio and no bundled screenshot browser in the initial runtime. | Less image optimization, auditing, screenshots and deployment breadth; those need deliberate later work. This is not a benchmark claiming lower resource use. |
+| Sitewright has its own motion and component contracts, rather than the user's LumaFX API. | LumaFX must be a native part of the authoring experience, with correct examples available to MCP clients. | Self-host the user's actual LumaFX runtime, retain `data-fx` attributes, expose a curated recipe library and upstream effect metadata. | Full animation runtime is included initially; per-effect packaging and a richer element inspector can be added later. |
+
+Sources for the CLI and authoring details: [CLI implementation](https://github.com/sitewright-cms/sitewright/blob/7a5995ecfb1b19264c3de6cd604f388f5cbda8cd/packages/cli/src/bin.ts), [authoring model](https://github.com/sitewright-cms/sitewright/blob/7a5995ecfb1b19264c3de6cd604f388f5cbda8cd/docs/authoring-model.md), [architecture](https://github.com/sitewright-cms/sitewright/blob/7a5995ecfb1b19264c3de6cd604f388f5cbda8cd/docs/architecture.md), and [runtime Dockerfile](https://github.com/sitewright-cms/sitewright/blob/7a5995ecfb1b19264c3de6cd604f388f5cbda8cd/apps/api/Dockerfile).
+
+## Scope of the first local release
+
+LumaSite is an original implementation for proving the requested loop: create project, receive URLs and credentials, edit the full page, use LumaFX, upload media, preview, publish, inspect revisions and operate the running process. Browser JavaScript can change at publish without redeploying the engine. Tailwind compilation is an internal publish step; “no redeploy” does not mean “no compilation anywhere.”
+
+The initial studio edits HTML/CSS/JS. It is not yet a visual canvas with element selection, drag-and-drop layout or a no-code style inspector. Media upload/storage is not video transcoding or streaming infrastructure. Local tests do not establish production readiness, multi-tenant isolation at scale, backups under every failure mode, or browser compatibility for every LumaFX effect.
+
+A useful next product milestone is to build a second unrelated website and test the same creation and publishing workflow. A robust installer, explicit diagnostics and working MCP tools are more valuable first than a broad list of unfinished integrations.

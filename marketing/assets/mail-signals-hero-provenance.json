@@ -1,0 +1,66 @@
+{
+  "name": "SendMailOS mail signals hero",
+  "kind": "Original deterministic Canvas motion graphics",
+  "source": "marketing/video/scene.html",
+  "renderer": "marketing/video/render.mjs",
+  "dimensions": {
+    "width": 1280,
+    "height": 720
+  },
+  "durationSeconds": 12,
+  "frameRate": 30,
+  "frames": 360,
+  "loop": "All motion parameterized by a twelve-second period; frame360 is identical to frame0.",
+  "encoding": {
+    "codec": "H.264",
+    "pixelFormat": "yuv420p",
+    "audio": false,
+    "crf": 19,
+    "preset": "slow",
+    "faststart": true
+  },
+  "palette": [
+    "#07101d",
+    "#4f8cff",
+    "#a7c8ff"
+  ],
+  "description": "Symbolic email packets and binary light signals move along cubic routing curves through an API gateway into illustrative delivered message cards. The left44percent is quiet for the website headline.",
+  "realNetworkRequests": false,
+  "externalAssets": [],
+  "generatedWithAIImageOrVideoService": false,
+  "verification": {
+    "frame0Sha256": "78eca14a48f7070cdca4ae0f0de45681e12c23781e8632c8478f7b6aa71e51f4",
+    "frame360Sha256": "78eca14a48f7070cdca4ae0f0de45681e12c23781e8632c8478f7b6aa71e51f4",
+    "loopEndpointsPixelIdentical": true,
+    "actualMotionFrame0vs90": {
+      "meanAbsoluteChannelDifference": 0.30987765842013887,
+      "channelsChangedOver8": 22008
+    },
+    "loopBoundaryFrame359vs0": {
+      "meanAbsoluteChannelDifference": 0.08545871310763889,
+      "channelsChangedOver8": 6323
+    },
+    "videoBytes": 460731,
+    "videoSha256": "9b04bec2d55e887c79f5e94250d322e4d443b2fa078b883b065ab2844234c381",
+    "faststart": true,
+    "completeDecode": "FFmpeg decoded all video frames without errors"
+  },
+  "composition": {
+    "quietHeadlineArea": "Left50percent; bright requestnode begins beyondx640 andbelowheadline at y515.",
+    "requestNodeCenter": {
+      "x": 720,
+      "y": 515
+    },
+    "apiGatewayCenter": {
+      "x": 934,
+      "y": 363
+    }
+  },
+  "files": {
+    "video": "mail-signals-hero.mp4",
+    "poster": "mail-signals-hero-poster.webp",
+    "originalPoster": "mail-signals-hero-poster.png",
+    "contactSheet": "mail-signals-hero-contactsheet.png",
+    "frameProofs": "marketing/video/frames/"
+  }
+}

@@ -1,0 +1,289 @@
+/* A compact, editorial four-part product section. Cards remain single links. */
+.marketing-site .platform-section {
+  padding-block: 76px 84px;
+  background: var(--site-bg, #07101d);
+}
+.marketing-site .platform-section .platform-heading {
+  display: block;
+  width: 100%;
+  max-width: 760px;
+  margin: 0 auto 40px;
+  text-align: center;
+}
+.marketing-site .platform-heading > .eyebrow {
+  display: block;
+  width: auto;
+  max-width: none;
+  margin: 0 auto 18px;
+  text-align: center;
+}
+.marketing-site .platform-heading > h2 {
+  max-width: 15ch;
+  margin-inline: auto;
+  text-align: center;
+}
+.marketing-site .platform-heading > p:last-child {
+  max-width: 49ch;
+  margin: 20px auto 0;
+  font-size: 16px;
+  line-height: 1.65;
+  text-align: center;
+  color: var(--site-muted, #a4b3c9);
+}
+.marketing-site .platform-section .platform-grid {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  align-items: stretch;
+  gap: 24px;
+}
+.marketing-site .platform-section .platform-card {
+  --platform-card-fill: var(--site-surface, #101b2d);
+  grid-column: span 6;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 32px;
+  overflow: hidden;
+  border: 1px solid var(--site-border, #253852);
+  border-radius: 22px;
+  background: var(--platform-card-fill);
+  color: var(--site-text, #f5f8ff);
+  text-decoration: none;
+  box-shadow: none;
+  transition: border-color 180ms ease, background-color 180ms ease;
+}
+.marketing-site .platform-section .platform-card--campaigns {
+  --platform-card-fill: color-mix(in srgb, var(--site-accent, #4f8cff) 5%, var(--site-surface, #101b2d));
+  grid-column: span 7;
+}
+.marketing-site .platform-section .platform-card--automations { grid-column: span 5; }
+.marketing-site .platform-section .platform-card--pixel { grid-column: span 5; }
+.marketing-site .platform-section .platform-card--inbox {
+  --platform-card-fill: color-mix(in srgb, var(--site-accent, #4f8cff) 8%, var(--site-surface, #101b2d));
+  grid-column: span 7;
+}
+/* The category does the job of the old duplicate icon tile. */
+.marketing-site .platform-section .platform-card-head {
+  position: absolute;
+  top: 25px;
+  right: 28px;
+  display: block;
+  margin: 0;
+}
+.marketing-site .platform-section .platform-card-head > .feature-icon { display: none; }
+.marketing-site .platform-section .platform-card-head > .round-arrow {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--site-border, #253852);
+  background: transparent;
+  color: var(--site-accent-soft, #a7c8ff);
+}
+.marketing-site .platform-section .platform-card-category {
+  display: block;
+  padding-right: 45px;
+  margin: 0 0 22px;
+  color: var(--site-accent-soft, #a7c8ff);
+  font-size: 14px;
+  line-height: 1.4;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.marketing-site .platform-section .platform-card > h3 {
+  max-width: 19ch;
+  margin: 0;
+  color: var(--site-text, #f5f8ff);
+  font-size: clamp(32px, 2.7vw, 40px);
+  font-weight: 500;
+  line-height: 1.18;
+  letter-spacing: -.045em;
+  text-wrap: balance;
+}
+.marketing-site .platform-section .platform-card > p {
+  max-width: 44ch;
+  margin: 16px 0 0;
+  color: var(--site-muted, #a4b3c9);
+  font-size: 15px;
+  font-weight: 400;
+  line-height: 1.65;
+}
+/* One unframed illustration stage, with the whole SVG fitted inside it. */
+.marketing-site .platform-section .platform-card .platform-card-visual {
+  flex: 0 0 auto;
+  width: calc(100% + 36px);
+  height: 360px;
+  min-height: 0;
+  padding: 0;
+  margin: 18px -18px 22px;
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.marketing-site .platform-section .platform-card .platform-card-visual > .visual-scene {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  overflow: visible;
+}
+.marketing-site .platform-section .platform-card .visual-scene .visual-topline {
+  flex: 0 0 auto;
+  justify-content: flex-end;
+  min-height: 29px;
+  padding: 0 18px 4px;
+  border: 0;
+  background: transparent;
+}
+.marketing-site .platform-section .platform-card .visual-scene .scene-visual-title { display: none; }
+.marketing-site .platform-section .platform-card .visual-scene .scene-sample-label {
+  display: inline-block;
+  flex: 0 0 auto;
+  color: var(--site-muted, #a4b3c9);
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+.marketing-site .platform-section .platform-card .platform-card-visual .scene-svg {
+  flex: 1 1 0%;
+  width: 100%;
+  height: 0;
+  min-height: 0;
+  aspect-ratio: auto;
+  overflow: visible;
+}
+.marketing-site .platform-section .platform-card-foot {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 18px;
+  padding-top: 22px;
+  margin-top: auto;
+  border-top: 1px solid var(--site-border, #253852);
+}
+.marketing-site .platform-section .platform-card-points {
+  display: grid;
+  gap: 7px;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+.marketing-site .platform-section .platform-card-points > li {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0;
+  color: var(--site-muted, #a4b3c9);
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.5;
+}
+.marketing-site .platform-section .platform-card-points > li::before {
+  content: '';
+  flex: 0 0 auto;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--site-accent, #4f8cff);
+  translate: 0 -2px;
+}
+.marketing-site .platform-section .platform-card .platform-card-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  flex: 0 0 auto;
+  gap: 9px;
+  margin: 0 0 1px;
+  color: var(--site-accent-soft, #a7c8ff);
+  font-size: 13px;
+  font-weight: 550;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+.marketing-site .platform-section .platform-card-link .smo-icon {
+  width: 17px;
+  height: 17px;
+  transition: transform 180ms ease;
+}
+.marketing-site .platform-section .platform-card:hover {
+  border-color: color-mix(in srgb, var(--site-accent, #4f8cff) 65%, var(--site-border, #253852));
+}
+.marketing-site .platform-section .platform-card:hover .round-arrow {
+  background: var(--site-accent, #4f8cff);
+  border-color: var(--site-accent, #4f8cff);
+  color: var(--site-bg, #07101d);
+}
+.marketing-site .platform-section .platform-card:hover .platform-card-link .smo-icon { transform: translateX(3px); }
+.marketing-site .platform-section .platform-card:focus-visible {
+  outline: 3px solid var(--site-accent-soft, #a7c8ff);
+  outline-offset: 5px;
+}
+@media (max-width: 1100px) {
+  .marketing-site .platform-section .platform-grid { gap: 20px; }
+  .marketing-site .platform-section .platform-card { grid-column: span 6; padding: 28px; }
+  .marketing-site .platform-section .platform-card > h3 { font-size: 34px; }
+  .marketing-site .platform-section .platform-card .platform-card-visual { height: 310px; }
+  .marketing-site .platform-section .platform-card-foot { align-items: flex-start; flex-direction: column; gap: 18px; }
+}
+@media (max-width: 850px) {
+  .marketing-site .platform-section { padding-block: 64px 70px; }
+  .marketing-site .platform-section .platform-heading { margin-bottom: 30px; }
+  .marketing-site .platform-section .platform-heading > p:last-child { font-size: 15px; }
+  .marketing-site .platform-section .platform-grid { grid-template-columns: minmax(0, 1fr); gap: 20px; }
+  .marketing-site .platform-section .platform-card { grid-column: auto; padding: 30px; }
+  .marketing-site .platform-section .platform-card > h3 { max-width: 22ch; font-size: 38px; }
+  .marketing-site .platform-section .platform-card .platform-card-visual {
+    width: calc(100% + 28px);
+    height: auto;
+    margin: 18px -14px 22px;
+  }
+  .marketing-site .platform-section .platform-card .platform-card-visual > .visual-scene { height: auto; }
+  .marketing-site .platform-section .platform-card .platform-card-visual .scene-svg {
+    flex: 0 0 auto;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 640 / 430;
+  }
+  .marketing-site .platform-section .platform-card-foot { flex-direction: row; align-items: flex-end; }
+}
+@media (max-width: 540px) {
+  .marketing-site .platform-section { padding-block: 52px 58px; }
+  .marketing-site .platform-section .platform-heading { margin-bottom: 25px; }
+  .marketing-site .platform-heading > .eyebrow { margin-bottom: 15px; font-size: 12px; }
+  .marketing-site .platform-heading > h2 { font-size: 39px; line-height: 1.15; }
+  .marketing-site .platform-heading > p:last-child { margin-top: 17px; font-size: 14px; line-height: 1.65; }
+  .marketing-site .platform-section .platform-grid { gap: 16px; }
+  .marketing-site .platform-section .platform-card { padding: 25px 24px; border-radius: 19px; }
+  .marketing-site .platform-section .platform-card-head { top: 18px; right: 21px; }
+  .marketing-site .platform-section .platform-card-head > .round-arrow { width: 32px; height: 32px; }
+  .marketing-site .platform-section .platform-card-category { margin-bottom: 20px; font-size: 13px; }
+  .marketing-site .platform-section .platform-card > h3 { max-width: 20ch; font-size: 30px; line-height: 1.22; letter-spacing: -.045em; }
+  .marketing-site .platform-section .platform-card > p { margin-top: 13px; font-size: 14px; line-height: 1.65; }
+  .marketing-site .platform-section .platform-card .platform-card-visual { width: calc(100% + 32px); margin: 17px -16px 18px; }
+  .marketing-site .platform-section .platform-card .visual-scene .visual-topline { padding-inline: 9px; min-height: 27px; }
+  .marketing-site .platform-section .platform-card-foot { flex-direction: column; align-items: flex-start; padding-top: 18px; gap: 18px; }
+  .marketing-site .platform-section .platform-card-points { gap: 6px; }
+  .marketing-site .platform-section .platform-card-points > li { font-size: 13px; }
+  .marketing-site .platform-section .platform-card .platform-card-link { font-size: 13px; }
+}
+@media (max-width: 359px) {
+  .marketing-site .platform-section .platform-card { padding-inline: 20px; }
+  .marketing-site .platform-section .platform-card > h3 { font-size: 27px; }
+  .marketing-site .platform-heading > h2 { font-size: 35px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .marketing-site .platform-section .platform-card,
+  .marketing-site .platform-section .platform-card .round-arrow,
+  .marketing-site .platform-section .platform-card-link .smo-icon { transition: none; }
+  .marketing-site .platform-section .platform-card:hover .platform-card-link .smo-icon { transform: none; }
+}

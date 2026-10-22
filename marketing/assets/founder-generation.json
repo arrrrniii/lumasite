@@ -1,0 +1,23 @@
+{
+  "asset": "founder.png",
+  "mode": "built-in image_gen",
+  "intent": "generate",
+  "useCase": "photorealistic-natural",
+  "purpose": "Illustrative homepage story/product card photograph; not a real customer or testimonial.",
+  "prompt": "Use case: photorealistic-natural\nAsset type: supporting editorial photograph for a SendMailOS homepage story card, depicting an illustrative independent founder rather than a real customer or testimonial.\nPrimary request: an independent brand founder, a woman in her early thirties, thoughtfully reviewing her open laptop at a work table in a warm naturally lit creative studio with a richly textured muted forest-green wall.\nComposition/framing: portrait 4:5 or nearly square editorial framing, waist up, the woman positioned around the lower middle-right of the image, generous clean negative space across the upper area for optional website page copy. Show enough of the laptop and table to establish a natural working scene; screen faces away from the camera so there is no visible user interface.\nLighting/mood: soft side-window daylight, quiet concentration, authentic candid premium editorial photography, tactile and lived-in rather than posed corporate stock. Harmonize with warm oak studio photography through a restrained palette of forest green, warm wood and soft cream.\nMaterials/textures: natural skin detail, cream textured top, oak or pale wood table, a simple ceramic cup, subtle warm oak shelving at an edge of the scene. Realistic human anatomy and hands.\nConstraints: one adult woman only. No text, no logos, no watermark, no readable screen content, no visible UI or invented lettering. No on-image quotation or testimonial. No graphic layout, no collage. Photorealistic photographic image only.",
+  "sourceFile": "/Users/arnoldkajolli/.codex/generated_images/01a162c7-2f07-7ac1-be8f-6cdff734059f/exec-3af57002-3b4a-4382-9e6f-f81ea6b11ee4.png",
+  "generatedAt": "2026-10-22",
+  "transparentBackground": false,
+  "outputHint": "Generated images are saved to /Users/arnoldkajolli/.codex/generated_images/01a162c7-2f07-7ac1-be8f-6cdff734059f as /Users/arnoldkajolli/.codex/generated_images/01a162c7-2f07-7ac1-be8f-6cdff734059f/exec-3af57002-3b4a-4382-9e6f-f81ea6b11ee4.png by default.\nIf you need to use a generated image at another path, copy it and leave the original in place unless the user explicitly asks you to delete it.\nThe generated image is already displayed to the user. There is no need to render it in the final response as a Markdown image or file link.",
+  "width": 1122,
+  "height": 1402,
+  "mimeType": "image/png",
+  "sha256": "62a6bac1b69ce73fa21ae2c7b409f1f5015478b58800c0b6fff556d855385548",
+  "verified": {
+    "singleAdultFounder": true,
+    "quietUpperHeadlineSpace": true,
+    "noTextOrLogos": true,
+    "forestGreenStudio": true,
+    "sourceAndWorkspaceMatch": true
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "asset": "team-hero.png",
+  "mode": "built-in image_gen",
+  "intent": "generate",
+  "useCase": "photorealistic-natural",
+  "prompt": "Use case: photorealistic-natural\nAsset type: wide editorial hero photograph for the SendMailOS marketing homepage.\nPrimary request: a premium realistic candid editorial landscape photograph inside a broad modern creative studio with warm oak slat wall panels. A diverse three-person small brand team collaboratively reviews an email campaign on a laptop at a clean white work table.\nComposition/framing: wide landscape composition, approximately 16:9, suitable for a 1536-pixel-wide hero crop. Arrange all three people, the laptop, and most of the table in the right half. The left half is quieter, somewhat darker warm oak wall with generous uninterrupted negative space for an overlaid white website headline. Photograph the real environment with natural human proportions, no dramatic wide-angle distortion.\nLighting/mood: beautiful soft natural daylight from the side, warm and calm, lived-in premium creative studio, an authentic conversation captured between moments rather than a staged corporate stock photograph.\nMaterials/textures: richly textured warm oak wall slats, white table, subtle forest-green fabric accents in clothing or seating, realistic skin and hands, restrained everyday work materials.\nConstraints: exactly three adult collaborators; no text, no logos, no watermark, no readable laptop screen content, no visible interface, no invented lettering. No text overlay is part of this image. Preserve the open darker left half for the page headline; people stay on the right.",
+  "sourceFile": "/Users/arnoldkajolli/.codex/generated_images/01a162c7-2f07-7ac1-be8f-6cdff734059f/exec-269a4809-aeab-4284-9f0e-d9466303ad20.png",
+  "generatedAt": "2026-10-22",
+  "transparentBackground": false,
+  "outputHint": "Generated images are saved to /Users/arnoldkajolli/.codex/generated_images/01a162c7-2f07-7ac1-be8f-6cdff734059f as /Users/arnoldkajolli/.codex/generated_images/01a162c7-2f07-7ac1-be8f-6cdff734059f/exec-269a4809-aeab-4284-9f0e-d9466303ad20.png by default.\nIf you need to use a generated image at another path, copy it and leave the original in place unless the user explicitly asks you to delete it.\nThe generated image is already displayed to the user. There is no need to render it in the final response as a Markdown image or file link.",
+  "width": 1672,
+  "height": 941,
+  "mimeType": "image/png",
+  "sha256": "46f26f916bbe33b545acc2c709aa6fbe616e4f493e65e816a9a079629893d837",
+  "verified": {
+    "threePeople": true,
+    "openLeftHeadlineSpace": true,
+    "noTextOrLogos": true,
+    "warmOakStudio": true,
+    "sourceAndWorkspaceMatch": true
+  }
+}

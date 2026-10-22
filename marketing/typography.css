@@ -1,0 +1,231 @@
+/* Self-hosted type, published as LumaSite media. No font service is contacted
+   by visitors. The publisher replaces the two asset URL placeholders. */
+@font-face {
+  font-family: 'Sora';
+  font-style: normal;
+  font-weight: 100 800;
+  font-display: swap;
+  src: url('__SORA_FONT__') format('woff2');
+  unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+}
+@font-face {
+  font-family: 'DM Sans';
+  font-style: normal;
+  font-weight: 100 1000;
+  font-display: swap;
+  src: url('__DM_SANS_FONT__') format('woff2');
+  unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+}
+:root {
+  --font-display: 'Sora', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-body: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+body, .marketing-site {
+  font-family: var(--font-body);
+  font-size: 17px;
+  font-weight: 400;
+  line-height: 1.65;
+  font-optical-sizing: auto;
+  font-synthesis: none;
+}
+h1, h2, h3, h4, .editable-heading, .story-mail-copy > strong {
+  font-family: var(--font-display);
+  font-weight: 500;
+  letter-spacing: -.04em;
+}
+h1 { font-size: clamp(56px, 6.15vw, 88px); line-height: 1.1; }
+h2 { font-size: clamp(40px, 4vw, 57px); line-height: 1.15; }
+h3 { font-size: 27px; line-height: 1.25; letter-spacing: -.025em; font-weight: 550; }
+h4 { line-height: 1.35; letter-spacing: -.02em; }
+.site-brand, .loader-brand {
+  font-family: var(--font-body);
+  font-weight: 700;
+  letter-spacing: -.055em;
+}
+.desktop-nav, .desktop-nav > a, .nav-trigger, .header-actions, .login-link { font-family: var(--font-body); font-size: 14px; font-weight: 500; }
+.button, .text-link { font-family: var(--font-body); font-size: 14px; font-weight: 600; letter-spacing: -.01em; }
+.button.compact { font-size: 13px; }
+.mega-intro h2 { font-size: 31px; font-weight: 500; line-height: 1.2; letter-spacing: -.035em; }
+.mega-links strong { font-family: var(--font-body); font-size: 14px; font-weight: 600; }
+.mega-links small { font-size: 12px; line-height: 1.55; }
+.eyebrow, .hero-kicker, .menu-caption { font-family: var(--font-body); font-size: 13px; font-weight: 550; letter-spacing: 0; line-height: 1.55; }
+.hero-content h1 { font-family: var(--font-display); font-size: clamp(62px, 5.85vw, 86px); font-weight: 500; line-height: 1.1; letter-spacing: -.045em; }
+.hero-description { font-family: var(--font-body); font-size: 18px; line-height: 1.65; font-weight: 500; letter-spacing: -.01em; }
+.hero-explore { font-size: 13px; font-weight: 500; }
+.hero-free, .hero-side-note, .hero-bottom > a { font-size: 12px; font-weight: 400; line-height: 1.55; }
+.intro-top > p:last-child { font-size: 15px; line-height: 1.65; }
+.outline-label { font-family: var(--font-body); font-size: 12px; font-weight: 500; letter-spacing: -.01em; }
+.editorial-card h2, .inbox-story h2 { font-family: var(--font-display); font-size: clamp(27px, 2.4vw, 35px); font-weight: 500; line-height: 1.2; letter-spacing: -.035em; }
+.editorial-card p { font-size: 14px; line-height: 1.65; font-weight: 400; }
+.story-mail-copy > strong { font-size: 26px; line-height: 1.2; letter-spacing: -.03em; }
+.story-mail-copy > span { font-size: 11px; line-height: 1.5; }
+.reply-toast { font-size: 12px; line-height: 1.5; }
+.center-heading h2 { font-size: clamp(42px, 4.2vw, 60px); font-weight: 500; line-height: 1.15; letter-spacing: -.04em; }
+.center-heading > p:last-child { font-size: 17px; font-weight: 500; line-height: 1.65; }
+.platform-card h3 { font-family: var(--font-display); font-size: 33px; font-weight: 500; line-height: 1.22; letter-spacing: -.035em; }
+.platform-card > p { font-family: var(--font-body); font-size: 16px; font-weight: 400; line-height: 1.65; }
+.platform-card-link { font-size: 13px; font-weight: 550; }
+.copy-stack h2, .split-section h2, .audience-copy h2, .free-heading h2, .faq-section h2, .section-heading h2 { font-size: clamp(40px, 4vw, 57px); font-weight: 500; line-height: 1.16; letter-spacing: -.04em; }
+.copy-stack > p:not(.eyebrow), .audience-copy > p:not(.eyebrow), .free-heading > p:not(.eyebrow) { font-family: var(--font-body); font-size: 17px; font-weight: 400; line-height: 1.75; }
+.inline-benefits, .audience-bottom { font-size: 12px; font-weight: 500; line-height: 1.6; }
+.developer-pills span { font-family: var(--font-body); font-size: 12px; font-weight: 500; }
+.subtle-docs { font-size: 13px; font-weight: 400; }
+.free-offer-top, .free-features, .plan-list { font-size: 14px; line-height: 1.6; }
+.free-pill { font-size: 12px; line-height: 1.5; }
+.free-number, .plan-amount { font-family: var(--font-display); font-weight: 500; letter-spacing: -.05em; line-height: 1.1; }
+.free-number { font-size: 98px; }
+.free-number > span, .plan-amount > span { font-family: var(--font-body); font-size: 16px; font-weight: 500; letter-spacing: -.01em; }
+.free-offer > p, .page-note { font-family: var(--font-body); font-size: 12px; font-weight: 400; line-height: 1.6; }
+.faq-list summary { font-family: var(--font-body); font-size: 17px; font-weight: 500; line-height: 1.55; }
+.faq-list details > div { font-family: var(--font-body); font-size: 16px; font-weight: 400; line-height: 1.75; }
+.last-hello h2 { font-size: clamp(52px, 5.6vw, 80px); font-weight: 500; line-height: 1.14; letter-spacing: -.045em; }
+.last-hello .button + p { font-size: 13px; }
+.page-intro > h1 { font-size: clamp(54px, 6.15vw, 88px); font-weight: 500; line-height: 1.12; letter-spacing: -.045em; }
+.page-intro > p:not(.eyebrow) { font-family: var(--font-body); font-size: 18px; font-weight: 500; line-height: 1.7; }
+.feature-tile h3, .feature-tile > .eyebrow + h3 { font-family: var(--font-display); font-size: 25px; font-weight: 550; line-height: 1.3; letter-spacing: -.025em; }
+.feature-tile p { font-size: 16px; line-height: 1.75; }
+.feature-tile > .eyebrow { font-size: 12px; font-weight: 500; }
+.cta-band h2 { font-size: 51px; font-weight: 500; line-height: 1.16; letter-spacing: -.04em; }
+.cta-band > div > p:not(.eyebrow) { font-size: 16px; line-height: 1.7; }
+.pricing-plan h2 { font-size: 43px; font-weight: 500; line-height: 1.2; letter-spacing: -.035em; }
+.pricing-plan > p:not(.eyebrow):not(.plan-allowance):not(.page-note), .growth-plan > p:not(.eyebrow):not(.page-note) { font-size: 16px; line-height: 1.75; }
+.pricing-plan .page-note, .growth-plan .page-note { font-size: 12px; }
+.plan-amount { font-size: 92px; }
+.plan-allowance { font-size: 18px; font-weight: 500; }
+.footer-column h2 { font-family: var(--font-body); font-size: 14px; line-height: 1.5; font-weight: 650; letter-spacing: -.01em; }
+.footer-column > a, .footer-intro > .text-link { font-size: 13px; font-weight: 400; line-height: 1.6; }
+.footer-intro > p { font-size: 15px; line-height: 1.7; }
+.footer-statement { font-family: var(--font-display); font-size: clamp(30px, 7.15vw, 103px); font-weight: 500; letter-spacing: -.05em; line-height: 1.3; }
+.footer-bottom, .footer-bottom > a, .footer-signoff { font-size: 12px; line-height: 1.6; }
+.mobile-menu-left nav a { font-family: var(--font-display); font-size: clamp(26px, 3vw, 42px); font-weight: 500; letter-spacing: -.035em; line-height: 1.25; }
+.mobile-menu-right > p { font-family: var(--font-display); font-size: 51px; font-weight: 500; line-height: 1.2; letter-spacing: -.04em; }
+.mobile-menu-bottom { font-size: 14px; font-weight: 500; }
+.mobile-menu-right > small, .loader-caption { font-size: 12px; font-weight: 400; }
+.copy-stack code, .code-panel, .code-panel pre, .code-panel code, .api-code {
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+  font-optical-sizing: auto;
+}
+
+@media (min-width: 1650px) {
+  .hero-content h1 { font-size: 94px; }
+}
+@media (max-width: 1250px) {
+  .desktop-nav, .desktop-nav > a, .nav-trigger, .header-actions, .login-link { font-size: 13px; }
+  .editorial-card h2, .inbox-story h2 { font-size: 30px; }
+  .outline-label { font-size: 11px; }
+  .free-number { font-size: 86px; }
+}
+@media (max-width: 1050px) {
+  .hero-content h1 { font-size: 72px; }
+  .editorial-card h2, .inbox-story h2 { font-size: 27px; }
+  .editorial-card p { font-size: 13px; }
+  .outline-label { font-size: 10px; }
+  .platform-card h3 { font-size: 30px; }
+  .platform-card > p { font-size: 15px; }
+  .copy-stack h2, .split-section h2, .audience-copy h2, .free-heading h2 { font-size: 47px; }
+  .free-number { font-size: 74px; }
+  .free-number > span { font-size: 14px; }
+  .free-pill { font-size: 10px; }
+  .cta-band h2 { font-size: 44px; }
+}
+@media (max-width: 850px) {
+  .hero-content h1 { font-size: 64px; }
+  .hero-description { font-size: 17px; }
+  .editorial-card h2, .inbox-story h2 { font-size: 31px; }
+  .outline-label { font-size: 11px; }
+  .platform-card h3 { font-size: 28px; }
+  .platform-card > p { font-size: 15px; }
+  .copy-stack h2, .split-section h2, .audience-copy h2, .free-heading h2 { font-size: 49px; }
+  .free-number { font-size: 102px; }
+  .free-number > span { font-size: 17px; }
+  .free-pill { font-size: 12px; }
+  .free-features { font-size: 13px; }
+  .page-intro > h1 { font-size: 68px; }
+  .page-intro > p:not(.eyebrow) { font-size: 17px; }
+  .pricing-plan h2 { font-size: 35px; }
+  .plan-amount { font-size: 77px; }
+  .plan-list { font-size: 13px; }
+  .footer-statement { font-size: 7.2vw; }
+  .mobile-menu-right > p { font-size: 40px; }
+}
+@media (max-width: 600px) {
+  body, .marketing-site { font-size: 16px; line-height: 1.65; }
+  .site-brand { font-size: 22px; }
+  .home-header .site-brand { font-size: 21px; }
+  .header-actions .button.compact, .home-header .header-actions .login-link { font-size: 12px; }
+  .eyebrow, .hero-kicker, .copy-stack > .eyebrow, .audience-copy > .eyebrow, .free-heading > .eyebrow, .last-hello .eyebrow, .page-intro > .eyebrow { font-size: 12px; font-weight: 500; }
+  .hero-content h1 { font-size: clamp(39px, 10.77vw, 58px); line-height: 1.14; font-weight: 500; letter-spacing: -.045em; }
+  .hero-description { font-size: 17px; font-weight: 500; line-height: 1.65; }
+  .hero-buttons .button, .hero-explore { font-size: 13px; }
+  .hero-free, .hero-bottom > a { font-size: 11px; line-height: 1.6; }
+  .intro-top > .eyebrow { font-size: 12px; }
+  .intro-top > p:last-child { font-size: 15px; line-height: 1.65; }
+  .editorial-card h2, .inbox-story h2 { font-size: 33px; line-height: 1.2; }
+  .editorial-card p { font-size: 15px; line-height: 1.65; }
+  .outline-label { font-size: 11px; }
+  .story-mail-copy > strong { font-size: 27px; }
+  .reply-toast { font-size: 12px; line-height: 1.5; }
+  .center-heading h2 { font-size: 42px; line-height: 1.17; }
+  .center-heading > p:last-child { font-size: 17px; line-height: 1.65; }
+  .platform-card h3 { font-size: 29px; line-height: 1.25; }
+  .platform-card > p { font-size: 16px; line-height: 1.7; }
+  .platform-card-link { font-size: 13px; }
+  .copy-stack h2, .split-section h2, .audience-copy h2, .free-heading h2, .faq-section h2, .section-heading h2 { font-size: 38px; font-weight: 500; line-height: 1.2; letter-spacing: -.04em; }
+  .copy-stack > p:not(.eyebrow), .audience-copy > p:not(.eyebrow), .free-heading > p:not(.eyebrow) { font-size: 16px; line-height: 1.75; }
+  .copy-stack .button, .audience-copy .text-link, .page-intro .button { font-size: 13px; }
+  .inline-benefits, .audience-bottom { font-size: 11px; }
+  .developer-pills span { font-size: 12px; }
+  .subtle-docs { font-size: 12px; }
+  .free-offer-top, .free-features { font-size: 13px; }
+  .free-pill { font-size: 10px; }
+  .free-number { font-size: clamp(76px, 22.5vw, 105px); }
+  .free-number > span { font-size: 16px; }
+  .free-offer .button, .last-hello .button { font-size: 13px; }
+  .free-offer > p, .visual-panel > .page-note { font-size: 11px; }
+  .faq-list summary { font-size: 16px; line-height: 1.6; font-weight: 500; }
+  .faq-list details > div { font-size: 16px; line-height: 1.75; }
+  .last-hello h2 { font-size: 45px; line-height: 1.16; letter-spacing: -.045em; }
+  .last-hello .button + p { font-size: 12px; }
+  .page-intro > h1 { font-size: clamp(42px, 10.8vw, 59px); line-height: 1.15; }
+  .page-intro > p:not(.eyebrow) { font-size: 17px; line-height: 1.7; font-weight: 500; }
+  .section-heading > p:not(.eyebrow) { font-size: 16px; }
+  .feature-tile h3, .feature-tile > .eyebrow + h3 { font-size: 26px; line-height: 1.3; }
+  .feature-tile p { font-size: 16px; line-height: 1.75; }
+  .feature-tile > .eyebrow, .feature-tile .text-link { font-size: 13px; }
+  .cta-band h2 { font-size: 36px; line-height: 1.2; }
+  .cta-band > div > .eyebrow { font-size: 12px; }
+  .cta-band > div > p:not(.eyebrow) { font-size: 16px; line-height: 1.7; }
+  .cta-band .button { font-size: 13px; }
+  .pricing-plan > .eyebrow { font-size: 12px; }
+  .pricing-plan h2 { font-size: 38px; line-height: 1.2; }
+  .pricing-plan > p:not(.eyebrow):not(.plan-allowance):not(.page-note) { font-size: 16px; line-height: 1.75; }
+  .plan-amount { font-size: 86px; }
+  .plan-amount > span { font-size: 13px; }
+  .plan-allowance { font-size: 18px; }
+  .plan-list { font-size: 14px; line-height: 1.65; }
+  .pricing-plan .page-note { font-size: 12px; }
+  .pricing-plan .button { font-size: 14px; }
+  .footer-intro > p { font-size: 15px; }
+  .footer-intro > .text-link { font-size: 13px; }
+  .footer-column h2 { font-size: 14px; font-family: var(--font-body); line-height: 1.5; }
+  .footer-column > a { font-size: 13px; }
+  .footer-statement { font-size: 7.25vw; letter-spacing: -.055em; }
+  .footer-bottom, .footer-bottom > a, .footer-signoff { font-size: 11px; line-height: 1.6; }
+  .mobile-menu-head .site-brand { font-size: 23px; }
+  .menu-caption { font-size: 12px; }
+  .mobile-menu-left nav a { font-size: 27px; line-height: 1.3; letter-spacing: -.035em; }
+  .mobile-menu-right .button { font-size: 13px; }
+  .mobile-menu-bottom { font-size: 13px; }
+  .mobile-menu-right > small { font-size: 11px; }
+}
+@media (max-width: 374px) {
+  .home-header .site-brand { font-size: 19px; }
+  .hero-content h1 { font-size: 38px; }
+  .hero-description { font-size: 16px; }
+  .editorial-card h2, .inbox-story h2 { font-size: 30px; }
+  .copy-stack h2, .split-section h2, .audience-copy h2, .free-heading h2 { font-size: 35px; }
+  .page-intro > h1 { font-size: 40px; }
+  .platform-card h3 { font-size: 27px; }
+  .free-number { font-size: 77px; }
+  .last-hello h2 { font-size: 41px; }
+}

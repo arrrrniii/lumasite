@@ -1,0 +1,78 @@
+/* The hero artwork carries the email subject; the copy gets its own quiet space. */
+.marketing-site .photo-hero {
+  min-height: 730px;
+  height: min(780px, calc(100svh - 32px));
+  background: #07101d;
+}
+.marketing-site .hero-photo img { filter: none; object-position: center; }
+.marketing-site .hero-shade {
+  background: linear-gradient(90deg, #07101d57 0%, #07101d18 43%, transparent 66%), linear-gradient(0deg, #07101d80 0%, transparent 24%);
+}
+.marketing-site .hero-content {
+  width: 62%;
+  max-width: 900px;
+  padding: 152px 64px 145px;
+}
+.marketing-site .hero-content h1 { font-size: clamp(60px, 5vw, 78px); }
+.marketing-site .hero-kicker { margin-bottom: 23px; }
+.marketing-site .hero-description { max-width: 48ch; margin-top: 26px; color: #c5d4ed; }
+.marketing-site .hero-buttons { gap: 22px; margin-top: 30px; }
+.marketing-site .hero-free { margin-top: 18px; }
+.marketing-site .hero-side-note { display: none; }
+.marketing-site .hero-bottom { bottom: 29px; }
+.marketing-site .editorial-grid { gap: 24px; }
+.marketing-site .editorial-card { border-radius: 23px; }
+.marketing-site .editorial-card .outline-label { line-height: 1.45; }
+.marketing-site .editorial-card > p { max-width: 31ch; }
+.marketing-site .editorial-card-bottom > p { max-width: 29ch; }
+.marketing-site .founder-image .reply-toast { left: 16px; right: 16px; padding: 12px; }
+
+@media (min-width: 1650px) {
+  .marketing-site .hero-content { max-width: 1080px; padding-left: max(64px, calc((100vw - 1280px) / 2 - 16px)); }
+  .marketing-site .hero-content h1 { font-size: 82px; }
+}
+@media (max-width: 1250px) {
+  .marketing-site .hero-content { width: 69%; padding-inline: 48px; }
+  .marketing-site .hero-content h1 { font-size: 70px; }
+  .marketing-site .hero-photo img { object-position: left center; }
+  .marketing-site .hero-shade { background: linear-gradient(90deg, #07101dc4 0%, #07101d59 51%, transparent 83%), linear-gradient(0deg, #07101d80 0%, transparent 28%); }
+  .marketing-site .editorial-grid { gap: 18px; }
+}
+@media (max-width: 1050px) {
+  .marketing-site .hero-content { width: 75%; padding-top: 150px; }
+  .marketing-site .hero-content h1 { font-size: 64px; }
+  .marketing-site .hero-description { font-size: 17px; }
+  .marketing-site .hero-buttons { max-width: 390px; }
+}
+@media (max-width: 1100px) {
+  .marketing-site .photo-hero { display: flex; flex-direction: column; height: auto; min-height: 0; }
+  .marketing-site .hero-content { order: 1; width: 100%; max-width: none; padding: 126px 38px 0; }
+  .marketing-site .hero-content h1 { font-size: 64px; max-width: none; }
+  .marketing-site .hero-description { max-width: 40ch; }
+  .marketing-site .hero-buttons { max-width: none; }
+  .marketing-site .hero-photo { position: relative; order: 2; inset: auto; z-index: 0; width: 100%; height: 390px; margin-top: 14px; }
+  .marketing-site .hero-photo img { object-fit: contain; object-position: right center; }
+  .marketing-site .hero-shade { display: none; }
+  .marketing-site .hero-bottom { display: none; }
+}
+@media (max-width: 600px) {
+  .marketing-site .hero-shell { padding: 12px; }
+  .marketing-site .photo-hero { border-radius: 23px; }
+  .marketing-site .hero-content { padding: 116px 22px 0; }
+  .marketing-site .hero-content h1 { font-size: clamp(38px, 10.2vw, 56px); line-height: 1.17; max-width: 14ch; letter-spacing: -.045em; }
+  .marketing-site .hero-kicker { margin-bottom: 19px; }
+  .marketing-site .hero-description { font-size: 16px; line-height: 1.65; max-width: 36ch; margin-top: 22px; }
+  .marketing-site .hero-buttons { gap: 19px; margin-top: 24px; }
+  .marketing-site .hero-buttons .button { min-height: 52px; padding-inline: 20px; gap: 18px; }
+  .marketing-site .hero-free { font-size: 11px; margin-top: 16px; }
+  .marketing-site .hero-photo { height: 300px; margin-top: 8px; }
+  .marketing-site .hero-photo img { object-fit: cover; object-position: right center; }
+  .marketing-site .editorial-grid { gap: 20px; }
+}
+@media (max-width: 374px) {
+  .marketing-site .hero-content { padding-inline: 18px; }
+  .marketing-site .hero-content h1 { font-size: 35px; }
+  .marketing-site .hero-description { font-size: 15px; }
+  .marketing-site .hero-buttons .button { font-size: 12px; gap: 12px; padding-inline: 16px; }
+  .marketing-site .hero-photo { height: 260px; }
+}
