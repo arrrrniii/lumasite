@@ -1,6 +1,8 @@
 # SEO, blog articles, and brand assets
 
-LumaSite 0.2 serves metadata and article content in the initial HTML. Search engines do not need the browser script to run. Publishing a page updates its metadata, sitemap entry, blog listing, and RSS content without restarting the application.
+LumaSite serves metadata and article content in the initial HTML. Search engines do not need the browser script to run. Publishing a page updates its metadata, sitemap entry, blog listing, and RSS content without restarting the application.
+
+For a complete walkthrough with generated HTML, JSON-LD, sitemap, robots, and RSS files, start with [the worked SEO example](seo-example.md). For a sourced feature comparison, see [LumaSite, WordPress, Next.js, and Vite](comparison.md).
 
 ## Website defaults
 

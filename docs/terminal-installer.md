@@ -1,6 +1,8 @@
 # Install LumaSite with npm and terminal setup
 
-LumaSite 0.4 includes a first-run project creator, a packaged `lumasite` command, and an interactive terminal wizard. Node.js 24 or later, npm, and Git must already be installed. The package includes Studio, the CLI, the runtime, and native LumaFX. It excludes live data, credentials, website ZIPs, development dependencies, tests, and the optional SendMailOS marketing source/assets. The full example remains in the GitHub checkout; move an existing website with its project ZIP.
+LumaSite includes a first-run project creator, a packaged `lumasite` command, and an interactive terminal wizard. Node.js 24 or later, npm, and Git must already be installed. The package includes Studio, the CLI, the runtime, and native LumaFX. It excludes live data, credentials, website ZIPs, development dependencies, tests, and the optional SendMailOS marketing source/assets. The full example remains in the GitHub checkout; move an existing website with its project ZIP.
+
+For illustrated example answers, generated URLs, Apache routing, additional websites, and troubleshooting, see [the wizard walkthrough](wizard-walkthrough.md).
 
 ## Create a project with one command
 

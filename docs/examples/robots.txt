@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Disallow: /sites/
+Disallow: /preview/
+Disallow: /admin
+Disallow: /api/
+Disallow: /mcp/
+Sitemap: https://example.com/sitemap.xml

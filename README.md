@@ -1,194 +1,207 @@
 # LumaSite
 
-A standalone, self-hosted website studio built for MCP authoring. Create a named project, attach its domain, and get its admin, website, and authenticated MCP URLs. Edit HTML, Tailwind classes, CSS, browser JavaScript, media, and LumaFX animations; preview and publish a new revision without redeploying the studio.
+**Your websites. Your server. Your workflow.**
 
-LumaSite runs as an independent application. The `marketing/` directory is an optional SendMailOS example; a new instance starts with its own projects, credentials, and media.
+A self-hosted website studio for creating, editing, and publishing through MCP or your browser. Change the page structure, HTML, Tailwind classes, CSS, browser JavaScript, images, and LumaFX animations, then publish a revision without redeploying the Studio application.
 
-## Install from GitHub
+[![Tests](https://github.com/arrrrniii/lumasite/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/arrrrniii/lumasite/actions/workflows/ci.yml)
+[Version 0.5.0](https://github.com/arrrrniii/lumasite/tree/v0.5.0) · Node.js 24+ · Native LumaFX · Streamable HTTP MCP
 
-Requires Node.js 24 or later, npm, Git, and read access to this private repository. Create a project with one command, answer the questions, and let it install the application inside your new folder:
+![LumaSite Studio showing the SendMailOS example, published pages, sitemap, robots.txt and RSS links](docs/images/studio-overview.png)
+
+*Actual Studio screenshot of the optional SendMailOS example. New installations start with their own data and a starter homepage draft.*
+
+[Start with the wizard](#start-with-the-wizard) · [Server walkthrough](docs/wizard-walkthrough.md) · [SEO example](docs/seo-example.md) · [Compare approaches](docs/comparison.md) · [Operations](docs/operations.md)
+
+## What you can do
+
+| Workflow | Included |
+| --- | --- |
+| Design and edit | Native HTML, Tailwind, CSS, browser JavaScript, and reusable sections |
+| Add motion | Vendored LumaFX runtime and an animation recipe library |
+| Manage websites | Multiple named projects, domains, pages, and media in one Studio |
+| Work with agents | A project-specific MCP endpoint and Bearer token |
+| Publish carefully | Save drafts, open signed previews, publish revisions, restore previous versions |
+| Prepare for search | Server-generated metadata, canonical URLs, JSON-LD, sitemap, robots.txt, and RSS |
+| Move to another server | Export a website ZIP and import it into another LumaSite installation |
+| Operate the runtime | Ports, status, health, diagnostics, logs, restart, stop, and backups |
+
+Publishing compiles the page's Tailwind CSS and records a published revision. It does not run a new Studio application build or restart the server. Application code, dependencies, TypeScript, JSX, or bundler-specific imports still require the normal development and deployment workflow. LumaSite publishes browser-ready page code.
+
+## Start with the wizard
+
+You need **Node.js 24+, npm, Git, and Git read access to this private repository**. Authenticate Git first; this is a GitHub installation, not an npm registry publication.
 
 ```sh
 npx --yes "git+https://github.com/arrrrniii/lumasite.git#v0.5.0" create
 ```
 
-It first asks **What is your project named?**, then walks through local/server mode, website name/domain, optional ZIP import, ports, Studio/preview URLs, and proxy configuration. After reviewing the settings, it creates the folder, installs its own runtime/dependencies, initializes credentials, and optionally starts the website. The installed application stays inside the project when npx's temporary installer goes away.
+The first question is **What is your project named?** Choose a new folder such as `my-website`. The wizard then asks for local/server mode, a new website or ZIP import, website name/domain, ports, URLs, and whether to start the app. Server mode also asks about the reverse proxy. Review the summary before it writes the project.
+
+For your first local website, choose:
+
+| Question | Example answer |
+| --- | --- |
+| Project folder | `my-website` |
+| Local or server | `local` |
+| Import ZIP | Press Enter for a new website |
+| Website name | `My Website` |
+| Domain | Press Enter; connect one later |
+| Admin/API/MCP port | `4310` |
+| Website/media port | `4311` |
+| Studio URL | `http://localhost:4310` |
+| Preview URL | `http://localhost:4311` |
+| Start, then create | `y`, then `y` |
+
+The wizard selects available default ports; these numbers are examples. It does not stop another service to reuse its port.
 
 ```sh
 cd my-website
-npm start
 npm run status
+npm run health
 npm run logs
-npm stop
 ```
 
-You can supply the directory directly: append `create my-website`. A generated project includes `package.json`, `package-lock.json`, a local `lumasite.mjs` launcher, README, Git ignore rules, dependencies, and persistent website data. Existing project directories are never overwritten. The future registry shorthand `npx create-lumasite@latest` requires a separate npm publication; the GitHub command above is available now.
+Open the printed Studio URL, sign in with the generated password, and publish the starter homepage. Saving a draft alone does not make a new page public. The project is installed inside your folder and continues working after npx's temporary installer is removed.
 
-For an optional global CLI installation:
+### A complete server example
 
-```sh
-npm install --global git+https://github.com/arrrrniii/lumasite.git
-lumasite setup
-```
+![Illustrated LumaSite server wizard: project name, domain, ports, Studio and preview URLs, Apache, review, and generated addresses](docs/images/wizard-example.png)
 
-This repository is private: Git needs an authenticated account or a read-only deploy key. For HTTPS, configure your Git credential helper first; GitHub CLI users can run `gh auth login` and `gh auth setup-git`. With an SSH deploy key, use `git+ssh://git@github.com/arrrrniii/lumasite.git` instead.
+*Illustrated example using reserved `example.com` addresses. It shows the wizard's real question flow; credentials and project IDs are placeholders.*
 
-The wizard asks for local/server mode, persistent data directory, optional website ZIP, project name/domain, ports, and public URLs. It selects available default ports, creates the administrator and project MCP credentials, and can start the server. Server mode generates an Apache or Caddy configuration for review; DNS, HTTPS, and automatic startup after reboot use your server's existing deployment workflow. Existing installations are never reset.
+Choose `server`, enter your domain, and give the Studio and public preview separate hostnames. LumaSite generates the application, private credentials, connection addresses, and Apache/Caddy configuration. **You enable DNS, the proxy configuration, HTTPS, and startup after reboot through your server setup.**
 
-For a server, start with `lumasite setup --mode server --data-dir /srv/lumasite/data`. Keep data outside the installed npm package so updating the CLI preserves websites. A non-interactive setup is also available; see [terminal setup and package installation](docs/terminal-installer.md).
+| Address in this example | Purpose | Private listener |
+| --- | --- | --- |
+| `https://example.com/` | Published website | `127.0.0.1:4311` |
+| `https://preview.example.com/sites/my-website/` | Published preview | `127.0.0.1:4311` |
+| `https://studio.example.com/admin` | Website Studio | `127.0.0.1:4310` |
+| `https://studio.example.com/mcp/<project-id>` | Authenticated MCP endpoint | `127.0.0.1:4310` |
 
-This is a GitHub package installation. The short command `npm install -g lumasite` requires a separate npm registry publication under a package name you own; no npm registry publication has been made. `private: true` intentionally prevents accidental registry publishing.
+Read the [step-by-step wizard walkthrough](docs/wizard-walkthrough.md), including exact prompts, generated files, an Apache routing example, adding a second website, ZIP import, and troubleshooting. [Terminal installer reference](docs/terminal-installer.md) covers automation and all setup flags.
 
-Alternatively, clone the development repository:
-
-```sh
-git clone https://github.com/arrrrniii/lumasite.git
-cd lumasite
-npm ci --omit=dev
-node bin/lumasite.mjs init --name "My website" --domain example.com
-node bin/lumasite.mjs start
-node bin/lumasite.mjs health
-```
-
-Open **http://localhost:4310/admin** on the same machine. Initialization prints the new administrator password, project MCP token, ports, and URLs. A remote server needs HTTPS and a reverse proxy before its studio and MCP URLs are reachable from your computer.
-
-On a server, keep persistent data outside the checkout with `--data-dir /srv/lumasite/data`. See [fresh-server installation and updates](docs/install-from-github.md) for the full commands, Apache/Caddy setup, and importing a website ZIP. Git stores the application and optional example sources; export/import moves an existing website. Runtime credentials, server data, ZIP exports, and machine-specific publication/preview reports are excluded from this repository.
-
-## Run locally
-
-Requires Node.js 24 or later and npm.
-
-```sh
-cd lumasite
-npm ci
-node bin/lumasite.mjs init --name SendMailOS --domain sendmailos.local
-node bin/lumasite.mjs start
-node bin/lumasite.mjs status
-```
-
-Save the generated administrator password and MCP bearer token printed by `init`. They are also stored in `.lumasite/credentials.json`, readable only by your operating-system user. `init` configures storage; `start` starts the listeners.
-
-Open **http://localhost:4310/admin** and sign in. The generated project includes a starter homepage draft. Save and publish it in the studio, then open the project's local website URL. A project's URLs look like:
+## Understand the project folder
 
 ```text
-Admin:    http://localhost:4310/admin/projects/<project-id>
-MCP:      http://localhost:4310/mcp/<project-id>
-Website:  http://localhost:4311/sites/sendmailos/
+my-website/
+  package.json          npm commands and a pinned LumaSite dependency
+  package-lock.json     reproducible dependencies
+  lumasite.mjs          local CLI launcher; remembers the data directory
+  README.md
+  .gitignore
+  node_modules/         installed application and dependencies
+  .lumasite/            private state, media, credentials, and deployment notes
 ```
 
-The MCP URL is a Streamable HTTP endpoint and requires the project's bearer token. Enter that endpoint and authorization in a compatible MCP client. The URL itself is not a credential.
+Website data is separate from the application dependency. Preserve the data directory and use the same path on each command. Credentials, local state, media, logs, and website ZIPs do not belong in your application Git repository.
 
-The custom domain is saved as project configuration. Local testing works without DNS through `/sites/<slug>/`; entering a domain does not automatically register it or change DNS.
-
-You can optionally run `npm link` and use `lumasite` in place of `node bin/lumasite.mjs`.
-
-## Studio workspace
-
-The Studio opens each website with an Overview: page counts, recent pages, website resources, and shortcuts to editing and media. The navy navigation drawer collapses on mobile. Pages, Media library, Components, Connections, and Runtime share the same controls and self-hosted typography.
-
-Use **Quick links** from any project section, or **Connections → Website links**, to open or copy the published preview, production website, XML sitemap, robots.txt, and RSS feed. Connections also includes the Studio address, authenticated MCP endpoint, domain settings, SEO/branding defaults, and installation ports. Production addresses reflect configuration; they do not verify DNS or TLS.
-
-The page editor has **Open draft** and a private-draft copy button. In Connections, **Get draft link** generates a signed link for the selected page; when needed, **Save & get draft link** saves edits first. Anyone with that link can view the saved draft until it expires. The published preview uses published revisions only. See [the Studio guide](docs/studio.md).
-
-## Commands
-
-All commands accept `--data-dir /absolute/directory`. Otherwise storage defaults to `$LUMASITE_DATA_DIR` or `.lumasite` in the current working directory. Always use the same directory for an instance.
-
-| Command | Purpose |
+| Generated-project command | What it does |
 | --- | --- |
-| `create [directory]` | Ask first-run questions and create an independent npm project |
-| `setup` | Guided terminal setup, including optional website ZIP import |
-| `init --name SendMailOS --domain example.com` | Initialize credentials, ports, and a first project |
-| `project create --name "Second website" --domain second.example` | Create a project and print its URLs and bearer token |
-| `project list` | List projects and generated URLs |
-| `configure --public-url ... --site-url ...` | Change a stopped instance's origins/listeners without resetting its websites |
-| `export --project sendmailos --output sendmailos.zip` | Export one website, its media and revision history without credentials |
-| `import --file sendmailos.zip --slug sendmailos` | Import a new website and generate a fresh MCP connection |
-| `start` | Start the instance in the background and wait for readiness |
-| `status` | Show ports, process ID, URLs, logs, and storage |
-| `health` | Check both listeners and readiness; exits nonzero if unhealthy |
-| `doctor` | Diagnose listeners, process ownership, and storage |
-| `logs --lines 100` | Read recent server logs |
-| `logs --follow` | Stream new log output; Ctrl+C exits the log viewer |
-| `restart` | Stop the verified process and start it again |
-| `stop` | Stop only a process verified as belonging to this instance |
-| `credentials` | Display private local administrator and project credentials |
-| `proxy --format caddy --admin-domain studio.example.com --domain example.com` | Print a reverse-proxy configuration |
-| `backup --output /private/backups/lumasite-snapshot` | Save state, credentials, and media to a new directory |
+| `npm start` | Start the native background runtime |
+| `npm run status` | Show ports, URLs, process identity, and paths |
+| `npm run health` | Check the listeners and readiness |
+| `npm run doctor` | Diagnose the installation |
+| `npm run logs` | Follow the server log; Ctrl+C leaves the viewer |
+| `npm run restart` | Restart this verified installation |
+| `npm stop` | Stop this verified installation |
+| `npm run credentials` | Retrieve private saved credentials on your server |
+| `npm run project:list` | List websites and their generated addresses |
 
-`--json` gives machine-readable output for automation. `logs --follow` emits a text stream and cannot use `--json`.
+Use your supervisor's lifecycle commands if Docker or systemd manages the process. Native `start` does not install a service that starts after reboot.
 
-Set ports and the external studio URL during initialization:
+## Connect MCP and publish
 
-```sh
-node bin/lumasite.mjs init \
-  --data-dir /srv/lumasite/data \
-  --name SendMailOS \
-  --domain sendmailos.com \
-  --public-url https://studio.example.com \
-  --site-url https://preview.example.com \
-  --port 4310 \
-  --site-port 4311
+Copy the endpoint from **Connections → MCP connection**, then configure that URL and its project Bearer token in a client that supports Streamable HTTP. Keep the token in the client's credential settings.
 
-node bin/lumasite.mjs start --data-dir /srv/lumasite/data
+```text
+Read the current project and pages
+  → page_upsert: save an editable draft
+  → preview_url: review the saved draft
+  → page_publish: release a new published revision
 ```
 
-The admin/API/MCP listener defaults to `127.0.0.1:4310`. The public website listener defaults to `127.0.0.1:4311`. They are separate origins so project scripts do not execute inside the authenticated administration origin. Use a reverse proxy for remote access.
+Page saves do not replace the published revision. Updates should include the latest `pageId` and `revision` to detect conflicting edits. A signed preview lasts ten minutes; anyone holding it can view that saved draft until expiry.
 
-## What publishing does
+The Studio's **Overview** lists recent pages and publication counts. **Quick links** and **Connections** expose the website, production domain, sitemap, robots.txt, RSS, Studio address, MCP endpoint, and private draft controls. See [the Studio guide](docs/studio.md).
 
-The studio and MCP use the same project/page operations. Draft HTML, CSS, and browser JavaScript are stored with revisions. Publishing generates the required Tailwind CSS and saves a published revision. Visitors receive the published revision; an unfinished draft does not replace it. Restoring a revision restores the draft and requires publishing to change the live page.
+## SEO and a blog, with real output
 
-Browser-ready JavaScript runs on the public website. Editing arbitrary TypeScript, JSX, Node.js code, or bundler-specific packages is not supported by this release. LumaFX is vendored and served by this application; its presets are available from the studio library. Media uploads support images, audio, and video. This release stores originals locally; it does not implement a video transcoding service.
+![LumaSite SEO workflow: write an article, preview and publish, then generate HTML metadata, JSON-LD, sitemap and RSS](docs/images/seo-publishing.png)
 
-## SEO and blogs
+Page metadata and article HTML are served by the server. The built-in publication flow updates the sitemap, blog listing, and RSS without an application redeploy.
 
-LumaSite 0.2 generates canonical URLs, search descriptions, Open Graph/Twitter cards, icons, language and robots metadata, and safe JSON-LD. Each project has an automatic published-only sitemap, robots file, and RSS feed. Shared defaults are editable in **Connections → SEO and branding**; page and article metadata are editable in **Settings** and through MCP. Drafts and project-path previews remain noindex. Blog articles are native pages with `seo.type: "article"`, and blog-list markers update automatically when articles are published.
+| Feature | How it works |
+| --- | --- |
+| Search title and description | Page settings override shared website defaults |
+| Canonical URLs | Derived from the production domain and page path; optional override |
+| Social sharing | Open Graph and Twitter card tags, image URLs, and image descriptions |
+| Structured data | `Organization`, `WebSite`, `WebPage`, breadcrumbs, and article `BlogPosting` |
+| Sitemap | Published, indexable canonical pages; revision-based `lastmod` and relative priorities |
+| Preview indexing controls | Studio and preview responses carry noindex; sample pages can be noindex |
+| Blog | Native article pages, automatic blog-list blocks, and related articles |
+| RSS | Latest 100 indexable published articles |
 
-The optional SendMailOS example includes a blog index, three noindex sample guides, and favicon-based SVG/PNG logos. See [SEO, articles, branding, and migration](docs/seo-and-blog.md) for the fields, MCP examples, production checks, and editing workflow.
+Start with [the complete SEO example](docs/seo-example.md). It includes [input JSON](docs/examples/seo-input.json), [generated head tags and JSON-LD](docs/examples/seo-head.html), [sitemap XML](docs/examples/sitemap.xml), [robots.txt](docs/examples/robots.txt), and [RSS](docs/examples/feed.xml). The example is generated and checked against LumaSite's real publication code. Image URLs in it are illustrative; use your uploaded assets in a real project.
+
+Set shared defaults in **Connections → SEO and branding**. Edit page and article fields in **Pages → Settings**, or use MCP. Page SEO changes need publication; shared project defaults apply immediately. The optional SendMailOS example contains a blog index and three noindex sample guides.
+
+Technical SEO supports discovery and presentation. It does not guarantee indexing, rankings, or rich results. Google ignores sitemap `priority`; use the guide's production checks and Search Console workflow. [Google's sitemap guidance](https://developers.google.com/search/docs/crawling-indexing/sitemaps/build-sitemap) explains these limits.
+
+## How it compares
+
+| Starting point | Good fit | Main tradeoff |
+| --- | --- | --- |
+| **LumaSite** | Agent-authored marketing sites and blogs with editable page code, native MCP, and a shared Studio | Early product with a smaller feature set; you operate the server |
+| **WordPress** | Publishing workflows, existing themes, and established plugins | Theme/plugin selection determines much of the editing and SEO workflow |
+| **Next.js** | Custom React applications with application-specific rendering and data models | You assemble the CMS/editor, agent tools, and publication workflow |
+| **Vite application** | A custom frontend and build pipeline | CMS, server rendering/prerendering, SEO automation, and authoring are separate choices |
+
+This is a workflow comparison, not a ranking or performance benchmark. WordPress includes XML sitemaps; Next.js supports metadata, sitemaps, and content revalidation; Vite supports SSR integrations. Those features are not unique to LumaSite. See the [sourced comparison and SEO matrix](docs/comparison.md) for scope and tradeoffs, and the separate [pinned Sitewright review](docs/sitewright-comparison.md).
 
 ## Move a website with a ZIP
 
-In the studio, choose **Connections → Export ZIP**. On another installed LumaSite instance, choose **Import ZIP**, select the archive, enter its destination name/slug and optional domain, then import. Published pages stay published, drafts stay drafts, and media links are remapped automatically. The imported project receives a new MCP token; local administrator passwords and project credentials are excluded from the archive.
+1. In the existing Studio, use **Connections → Export ZIP**.
+2. On a new server, run the wizard and supply the ZIP path when asked, or use **Import ZIP** in an existing installation.
+3. Choose the destination name/domain, then enable the server's DNS, HTTPS, and reverse proxy.
+4. Verify published pages, metadata, sitemap, and media. Connect the newly generated MCP endpoint/token.
 
-The equivalent CLI commands are:
+ZIPs include page source, drafts, published revisions, theme, SEO settings, and media. Imports create a new project, remap internal assets, and generate a new project token. Administrator credentials are excluded. See [the production-transfer guide](docs/production-transfer.md).
+
+For a generated project:
 
 ```sh
-node bin/lumasite.mjs export --project sendmailos --output /private/exports/sendmailos.zip
-node bin/lumasite.mjs import --file /private/import/sendmailos.zip --slug sendmailos --domain example.com --link-mode domain
+npm run export -- --project my-website --output /private/exports/my-website.zip
+npm run import -- --file /private/imports/my-website.zip --slug another-website
 ```
 
-The destination must have LumaSite installed and initialized. Import creates a new project and refuses to overwrite a conflicting slug/domain. ZIPs contain website source and drafts, so keep them private. See [the ZIP production-transfer guide](docs/production-transfer.md) for destination setup, domains, Apache, Docker, and the alternative full-instance transfer.
+## Other installation methods
 
-## Docker and production hosting
-
-The included Dockerfile and Compose file provide a starting point. The host setup, certificates, DNS, remote MCP clients, and container deployment must be verified on your target server. Local verification alone does not prove those integrations work in production.
+A global CLI is optional:
 
 ```sh
-docker compose build
-docker compose run --rm lumasite bin/lumasite.mjs init \
-  --host 0.0.0.0 \
-  --name SendMailOS \
-  --domain sendmailos.com \
-  --public-url https://studio.example.com \
-  --site-url https://preview.example.com
-docker compose up -d
-docker compose logs -f
+npm install --global "git+https://github.com/arrrrniii/lumasite.git#v0.5.0"
+lumasite setup
 ```
 
-In a container the service must listen on `0.0.0.0`. Compose publishes both ports on the host's loopback interface, for an Apache or Caddy proxy on that host. Compose runs the server in the foreground and supervises it: use `docker compose stop` or `docker compose restart`, not the detached-process CLI inside the container.
+For development, clone the repository, run `npm ci`, then use `node bin/lumasite.mjs` as the CLI. [Install from GitHub](docs/install-from-github.md) covers a fresh server and upgrades. [Operations](docs/operations.md) covers Apache/Caddy, Docker Compose, backups, and process management. Do not rerun first-time setup to upgrade an initialized instance.
 
-See [operations and deployment](docs/operations.md), [Sitewright comparison](docs/sitewright-comparison.md), and [LumaFX integration](docs/lumafx-integration.md).
+The repository remains private and `private: true` prevents accidental npm publication. A future registry command such as `npx create-lumasite@latest` needs a separate intentional npm release. GitHub HTTPS authentication or a read-only SSH deploy key is required for the installation commands above.
 
-## Verification
+## Scope and verification
+
+LumaSite is an independent application. The `marketing/` directory is the optional SendMailOS example; installing LumaSite does not install another person's live website or credentials. Local uploads store original images, audio, video, and WOFF2 files; no video transcoding service is included.
 
 ```sh
+npm ci
 npm test
+npx playwright install chromium
 npm run test:browser
 npm run test:seo
 npm run test:package
+node scripts/build-docs-assets.mjs
 ```
 
-The CLI tests initialize temporary instances on ephemeral ports, start both listeners, check live project creation, snapshot data, restart and stop the process, follow logs, and verify that unrelated processes cannot be stopped. Browser tests require Playwright's Chromium runtime.
+The runtime checks use temporary data and ports. Package checks install the actual distributable and verify that the generated project's runtime survives removal of its temporary installer. The documentation builder renders the diagrams and verifies example metadata, published-only sitemap/RSS, draft exclusion, noindex exclusion, and preservation of published SEO during draft edits. It never opens an existing instance's data. The Studio screenshot is a separately captured view of the included example.
 
-This is a first local release. It includes operational tools and an extensible publishing foundation; it is not yet a replacement for every WordPress plugin, ecommerce workflow, or managed hosting control panel.
+Visuals, example inputs/outputs, and their generator live in the GitHub checkout. The runtime package keeps its existing allowlist. See [LumaFX integration](docs/lumafx-integration.md), [SEO and blog reference](docs/seo-and-blog.md), and [editing the marketing example](docs/edit-marketing-elements.md).

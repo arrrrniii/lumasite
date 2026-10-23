@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+<channel>
+<title>Example Studio blog</title>
+<link>https://example.com/blog</link>
+<description>Practical email guides from the Example Studio team.</description>
+<item>
+<title>A welcome email people want to open</title>
+<link>https://example.com/blog/welcome-email-checklist</link>
+<guid isPermaLink="true">https://example.com/blog/welcome-email-checklist</guid>
+<description>Write a useful welcome email with a clear subject, one next step, and a reply address your team reads.</description>
+<pubDate>Fri, 23 Oct 2026 08:00:00 GMT</pubDate>
+</item>
+</channel>
+</rss>

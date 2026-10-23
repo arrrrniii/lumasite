@@ -1,0 +1,33 @@
+{
+  "project": {
+    "name": "Example Studio",
+    "slug": "example-studio",
+    "domain": "example.com",
+    "seo": {
+      "siteName": "Example Studio",
+      "description": "Practical email guides from the Example Studio team.",
+      "language": "en",
+      "image": "https://example.com/media/social-card.png",
+      "imageAlt": "A blue envelope beside the Example Studio wordmark",
+      "logo": "https://example.com/media/logo.png",
+      "favicon": "https://example.com/media/favicon.png",
+      "noindex": false
+    }
+  },
+  "article": {
+    "title": "A welcome email people want to open | Example Studio",
+    "slug": "blog/welcome-email-checklist",
+    "description": "Write a useful welcome email with a clear subject, one next step, and a reply address your team reads.",
+    "html": "<main><article><nav aria-label=\"Breadcrumb\"><a href=\"/\">Home</a> / <a href=\"/blog\">Blog</a></nav><header><p>Email guides</p><h1>A welcome email people want to open</h1><p>By Example Studio editorial team</p><time datetime=\"2026-10-23T08:00:00.000Z\">October 23, 2026</time></header><p>A welcome email should help a new subscriber take one useful next step.</p><h2>Make the subject specific</h2><p>Tell readers what they will get from opening the message. Match that promise in the email.</p><h2>Choose one next step</h2><p>Link to a useful guide or a first action. Give that link a clear label.</p><h2>Keep replies connected</h2><p>Use a reply address your team reads and explain how readers can ask for help.</p><p><a href=\"/blog\">Explore more email guides</a></p></article></main>",
+    "css": "body{margin:0;background:#f3f6fb;color:#17243b;font-family:system-ui,sans-serif;line-height:1.8}main{max-width:740px;margin:auto;padding:64px 24px}h1{font-size:44px;line-height:1.15;letter-spacing:-1.5px}h2{margin-top:40px}a{color:#2864eb}nav,time,header>p{font-size:14px;color:#65748b}",
+    "seo": {
+      "type": "article",
+      "headline": "A welcome email people want to open",
+      "author": "Example Studio editorial team",
+      "publishedTime": "2026-10-23T08:00:00.000Z",
+      "image": "https://example.com/media/welcome-email-cover.png",
+      "imageAlt": "An envelope representing a first email to a new subscriber",
+      "noindex": false
+    }
+  }
+}
