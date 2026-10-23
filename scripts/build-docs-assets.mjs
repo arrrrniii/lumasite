@@ -40,7 +40,7 @@ let wizard = rect(0,0,1440,1080,'#f3f6fb',0)
  +rect(48,203,920,680,'#101d32',18)+rect(48,203,920,54,'#1b2b44',18)
  +'<circle cx="75" cy="230" r="6" fill="#ff7777"/><circle cx="96" cy="230" r="6" fill="#ffd17c"/><circle cx="117" cy="230" r="6" fill="#79d6a6"/>'
  +text(149,236,'lumasite create',{size:14,fill:'#b4c4dd',mono:true})
- +text(78,299,'$ npx --yes --package="git+https://github.com/arrrrniii/lumasite.git#v0.8.0" '+String.fromCharCode(92),{size:14,fill:'#f3f6ff',mono:true})
+ +text(78,299,'$ npx --yes --package="git+https://github.com/arrrrniii/lumasite.git#v0.8.1" '+String.fromCharCode(92),{size:14,fill:'#f3f6ff',mono:true})
  +text(78,322,'  lumasite create',{size:14,fill:'#f3f6ff',mono:true})
  +text(78,353,'Create a LumaSite website',{size:19,fill:'#fff',weight:600,mono:true});
 questions.forEach(([question,answer], i) => {

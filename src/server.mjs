@@ -12,6 +12,7 @@ import { exportProject, importProject } from './migration.mjs';
 import { deleteProject } from './project-lifecycle.mjs';
 import { listProjectBackups, readProjectBackup } from './project-backups.mjs';
 import { createOAuthService } from './oauth.mjs';
+import { projectRootPath, productionNavigation } from './public-links.mjs';
 import { productionHost, pageNoindex, sitemapXml, robotsTxt, feedXml, renderBlogBlocks } from './seo.mjs';
 import { VERSION, fail, tokenMatches, passwordMatches, publicInstance, publicProject, initializeInstance, createProject, requireProject, requirePage, getProjectUrls, updateProject, createPage, updatePage, publishPage, restorePage, rotateProjectToken, uploadAsset, getLibrary, getPreviewUrl, verifyPreviewToken, renderDocument } from './service.mjs';
 
@@ -30,7 +31,15 @@ export async function startServers({ dataDir, store: suppliedStore } = {}) {
   const config = initial || { id: null, host: '127.0.0.1', port: Number(process.env.PORT || 4310), sitePort: Number(process.env.LUMASITE_SITE_PORT || 4311), publicUrl: `http://localhost:${process.env.PORT || 4310}` };
   if (process.env.LUMASITE_HOST) config.host = process.env.LUMASITE_HOST;
   const sessions = new Map(), loginAttempts = new Map(), cssCache = new Map();
-  const contentAssets = new Map(), revisionAssetUrls = new Map();
+  const contentAssets = new Map(), revisionAssetUrls = new Map(), navigationCache = new Map();
+  function productionHtml(revision, project, instance) {
+    const key = JSON.stringify([revision.id, project.domain, instance?.sitePublicUrl]);
+    if (!navigationCache.has(key)) {
+      navigationCache.set(key, productionNavigation(revision.page.html, project, instance));
+      if (navigationCache.size > 100) navigationCache.delete(navigationCache.keys().next().value);
+    }
+    return navigationCache.get(key);
+  }
   function publishedAssetUrls(revision) {
     if (revisionAssetUrls.has(revision.id)) return revisionAssetUrls.get(revision.id);
     const urls = {};
@@ -139,7 +148,7 @@ export async function startServers({ dataDir, store: suppliedStore } = {}) {
       options[key] = value;
     }
     const result = await importProject(store, req.body, options);
-    if (result.mode === 'update') { contentAssets.clear(); revisionAssetUrls.clear(); cssCache.clear(); }
+    if (result.mode === 'update') { contentAssets.clear(); revisionAssetUrls.clear(); cssCache.clear(); navigationCache.clear(); }
     log(result.mode === 'update' ? 'project.updated-from-zip' : 'project.imported', { projectId: result.project.id, pages: result.pages, assets: result.assets, revisions: result.revisions });
     res.status(result.mode === 'update' ? 200 : 201).json(result);
   });
@@ -150,7 +159,7 @@ export async function startServers({ dataDir, store: suppliedStore } = {}) {
   });
   admin.post('/api/projects/:id/delete', async (req, res) => {
     const result = await deleteProject(store, req.params.id, req.body);
-    contentAssets.clear(); revisionAssetUrls.clear(); cssCache.clear();
+    contentAssets.clear(); revisionAssetUrls.clear(); cssCache.clear(); navigationCache.clear();
     log('project.deleted', { projectId: result.project.id, backupId: result.backup.id });
     res.json(result);
   });
@@ -262,7 +271,8 @@ export async function startServers({ dataDir, store: suppliedStore } = {}) {
     if (pageNoindex(revision.page, project, noindex)) res.set('X-Robots-Tag', 'noindex,follow');
     else res.removeHeader('X-Robots-Tag');
     const basePath = localPath ? `/sites/${project.slug}/` : '/';
-    const html = renderBlogBlocks(revision.page.html, state, project, basePath, revision.page.slug);
+    const source = !localPath && project.domain === req.hostname ? productionHtml(revision, project, state.instance) : revision.page.html;
+    const html = renderBlogBlocks(source, state, project, basePath, revision.page.slug);
     res.set('Cache-Control', 'no-cache').type('html').send(renderDocument(revision.page, { revisionId: revision.id, theme: revision.theme, assetUrls: publishedAssetUrls(revision), project, instance: state.instance, noindex, html }));
   }
   function seoResource(req, res, project, resource, localPath = false) {
@@ -283,6 +293,13 @@ export async function startServers({ dataDir, store: suppliedStore } = {}) {
     if (localMatch) {
       const project = store.read().projects.find(p => p.slug === localMatch[1]);
       if (!project) fail(404, 'Project not found.');
+      if (project.domain && project.domain === req.hostname) {
+        const target = projectRootPath(req.path, project.slug);
+        if (target === null) return res.status(404).end();
+        const query = req.originalUrl.includes('?') ? req.originalUrl.slice(req.originalUrl.indexOf('?')) : '';
+        res.removeHeader('X-Robots-Tag');
+        return res.status(301).set({ Location: `${target}${query}`, 'Cache-Control': 'no-cache' }).end();
+      }
       if (['robots.txt', 'sitemap.xml', 'feed.xml'].includes(localMatch[2])) return seoResource(req, res, project, localMatch[2], true);
       return servePublished(req, res, project, (localMatch[2] || '').replace(/\/$/, ''));
     }

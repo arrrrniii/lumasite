@@ -8,7 +8,7 @@ For a complete walkthrough with generated HTML, JSON-LD, sitemap, robots, and RS
 
 In **Connections → SEO and branding**, set the site name, language, description, default social image, organization logo, favicon, and Apple touch icon. Use uploaded media URLs or absolute HTTP(S) URLs. These shared defaults apply immediately. A site-wide noindex switch is available for staging websites.
 
-The **Production domain** determines automatic canonical URLs. Configure its DNS, HTTPS, and reverse proxy before going live. Project-path URLs under `/sites/<slug>/`, signed draft previews, and the Studio remain noindex. Local `.local` domains also remain noindex. The software does not register domains or submit a site to search engines.
+The **Production domain** determines automatic canonical URLs. Configure its DNS, HTTPS, and reverse proxy before going live. Project-path URLs under `/sites/<slug>/` remain noindex on the preview origin; on the configured production domain they redirect with 301 to clean paths such as `/pricing`. Navigation links in older ZIP imports adapt automatically from 0.8.1, without republishing. Signed draft previews and the Studio remain noindex. Local `.local` domains also remain noindex. The software does not register domains or submit a site to search engines.
 
 ## Page settings
 

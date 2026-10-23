@@ -63,8 +63,8 @@ For a folder created by the wizard, keep its data directory and upgrade its inst
 ```sh
 cd /path/to/my-website
 npm stop
-node lumasite.mjs backup --output /private/backups/lumasite-before-0.8.0
-npm install "lumasite@git+https://github.com/arrrrniii/lumasite.git#v0.8.0" --omit=dev --ignore-scripts
+node lumasite.mjs backup --output /private/backups/lumasite-before-0.8.1
+npm install "lumasite@git+https://github.com/arrrrniii/lumasite.git#v0.8.1" --omit=dev --ignore-scripts
 npm start
 npm run health
 ```

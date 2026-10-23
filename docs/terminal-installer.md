@@ -11,13 +11,13 @@ Check `node -v` before installing. Updating npm does not update Node.js: Node 20
 The repository is public. No GitHub login is needed for HTTPS installation:
 
 ```sh
-npx --yes --package="git+https://github.com/arrrrniii/lumasite.git#v0.8.0" lumasite create
+npx --yes --package="git+https://github.com/arrrrniii/lumasite.git#v0.8.1" lumasite create
 ```
 
 It asks **What is your project named?**, followed by the setup questions below. Review everything before it creates files. To supply a directory in advance:
 
 ```sh
-npx --yes --package="git+https://github.com/arrrrniii/lumasite.git#v0.8.0" lumasite create my-website
+npx --yes --package="git+https://github.com/arrrrniii/lumasite.git#v0.8.1" lumasite create my-website
 ```
 
 The creator makes a new directory, installs a pinned LumaSite dependency, and initializes a website using its installed runtime. Its server is launched from that project's `node_modules/lumasite` rather than the temporary npx cache. The project continues working after the installer is removed. It does not overwrite an existing directory. Declining the settings review creates no project directory; an interrupted dependency installation retains the new folder for recovery.
@@ -25,10 +25,10 @@ The creator makes a new directory, installs a pinned LumaSite dependency, and in
 The documented `--package=... lumasite create` form names the executable explicitly. To verify the launcher before opening the wizard:
 
 ```sh
-npm exec --yes --package="git+https://github.com/arrrrniii/lumasite.git#v0.8.0" -- lumasite --version
+npm exec --yes --package="git+https://github.com/arrrrniii/lumasite.git#v0.8.1" -- lumasite --version
 ```
 
-It should print `0.8.0`. If it produces no output, retry this version check with npm's `--loglevel=verbose` before `--package` and inspect the exit status (`echo $?`). A missing terminal produces an explicit error from LumaSite; use a real SSH terminal for the guided wizard or provide a directory and `--yes` for automation.
+It should print `0.8.1`. If it produces no output, retry this version check with npm's `--loglevel=verbose` before `--package` and inspect the exit status (`echo $?`). A missing terminal produces an explicit error from LumaSite; use a real SSH terminal for the guided wizard or provide a directory and `--yes` for automation.
 
 The generated folder has:
 
@@ -60,18 +60,18 @@ npm stop
 For automation, supply a directory and `--yes` after `create`; add `--no-start` when preparing data for a supervisor. The outer `npx --yes` accepts npm's package download prompt; the inner `create ... --yes` accepts the creator's settings. For example:
 
 ```sh
-npx --yes --package="git+https://github.com/arrrrniii/lumasite.git#v0.8.0" lumasite create my-website \
+npx --yes --package="git+https://github.com/arrrrniii/lumasite.git#v0.8.1" lumasite create my-website \
   --yes --no-start --name "My website"
 ```
 
-The package also includes a `create-lumasite` executable, usable with `npx --package="git+https://github.com/arrrrniii/lumasite.git#v0.8.0" create-lumasite`. The short public-registry command `npx create-lumasite@latest` is reserved for a future intentional npm publication; it has not been published.
+The package also includes a `create-lumasite` executable, usable with `npx --package="git+https://github.com/arrrrniii/lumasite.git#v0.8.1" create-lumasite`. The short public-registry command `npx create-lumasite@latest` is reserved for a future intentional npm publication; it has not been published.
 
 ## Install directly from the public GitHub repository
 
 A global CLI is optional:
 
 ```sh
-npm install --global "git+https://github.com/arrrrniii/lumasite.git#v0.8.0"
+npm install --global "git+https://github.com/arrrrniii/lumasite.git#v0.8.1"
 lumasite setup
 ```
 
@@ -90,7 +90,7 @@ A working connection prints a commit hash. The original private repository could
 `npm run detect` belongs inside a generated project folder containing its `package.json`. Before creating a project, use the packaged command instead:
 
 ```sh
-npx --yes --package="git+https://github.com/arrrrniii/lumasite.git#v0.8.0" lumasite detect
+npx --yes --package="git+https://github.com/arrrrniii/lumasite.git#v0.8.1" lumasite detect
 ```
 
 ## Walk through terminal setup

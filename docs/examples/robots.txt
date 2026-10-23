@@ -1,6 +1,8 @@
 User-agent: *
 Allow: /
 Disallow: /sites/
+Allow: /sites/example-studio/
+Allow: /sites/example-studio$
 Disallow: /preview/
 Disallow: /admin
 Disallow: /api/

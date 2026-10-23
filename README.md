@@ -5,7 +5,7 @@
 A self-hosted website studio for creating, editing, and publishing through MCP or your browser. Change the page structure, HTML, Tailwind classes, CSS, browser JavaScript, images, and LumaFX animations, then publish a revision without redeploying the Studio application.
 
 [![Tests](https://github.com/arrrrniii/lumasite/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/arrrrniii/lumasite/actions/workflows/ci.yml)
-[Version 0.8.0](https://github.com/arrrrniii/lumasite/tree/v0.8.0) · Node.js 24+ · Native LumaFX · Streamable HTTP MCP
+[Version 0.8.1](https://github.com/arrrrniii/lumasite/tree/v0.8.1) · Node.js 24+ · Native LumaFX · Streamable HTTP MCP
 
 ![LumaSite Studio showing the SendMailOS example, published pages, sitemap, robots.txt and RSS links](docs/images/studio-overview.png)
 
@@ -46,7 +46,7 @@ See the [update, delete, and recovery guide](docs/website-management.md) for the
 You need **Node.js 24+, npm, and Git**. The GitHub repository is public: HTTPS installation does not require a GitHub account, token, or server login. This is a GitHub installation, not an npm registry publication.
 
 ```sh
-npx --yes --package="git+https://github.com/arrrrniii/lumasite.git#v0.8.0" lumasite create
+npx --yes --package="git+https://github.com/arrrrniii/lumasite.git#v0.8.1" lumasite create
 ```
 
 The first question is **What is your project named?** Choose a new folder such as `my-website`. The wizard then asks for local/server mode, a new website or ZIP import, website name/domain, ports, URLs, and whether to start the app. Server mode also asks about the reverse proxy. Review the summary before it writes the project.
@@ -151,6 +151,7 @@ Page metadata and article HTML are served by the server. The built-in publicatio
 | --- | --- |
 | Search title and description | Page settings override shared website defaults |
 | Canonical URLs | Derived from the production domain and page path; optional override |
+| Clean production navigation | Imported project-path links render as root paths on the configured domain; old paths redirect with 301 |
 | Social sharing | Open Graph and Twitter card tags, image URLs, and image descriptions |
 | Structured data | `Organization`, `WebSite`, `WebPage`, breadcrumbs, and article `BlogPosting` |
 | Sitemap | Published, indexable canonical pages; revision-based `lastmod` and relative priorities |
@@ -196,7 +197,7 @@ npm run import -- --file /private/imports/my-website.zip --slug another-website
 A global CLI is optional:
 
 ```sh
-npm install --global "git+https://github.com/arrrrniii/lumasite.git#v0.8.0"
+npm install --global "git+https://github.com/arrrrniii/lumasite.git#v0.8.1"
 lumasite setup
 ```
 

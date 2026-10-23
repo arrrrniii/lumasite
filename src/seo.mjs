@@ -110,7 +110,7 @@ export function sitemapXml(state, project) {
 }
 export function robotsTxt(project, instance, indexable) {
   return indexable && !project.seo?.noindex
-    ? `User-agent: *\nAllow: /\nDisallow: /sites/\nDisallow: /preview/\nDisallow: /admin\nDisallow: /api/\nDisallow: /mcp/\nSitemap: ${new URL('sitemap.xml', siteBase(project, instance)).href}\n`
+    ? `User-agent: *\nAllow: /\nDisallow: /sites/\nAllow: /sites/${project.slug}/\nAllow: /sites/${project.slug}$\nDisallow: /preview/\nDisallow: /admin\nDisallow: /api/\nDisallow: /mcp/\nSitemap: ${new URL('sitemap.xml', siteBase(project, instance)).href}\n`
     : 'User-agent: *\nDisallow: /\n';
 }
 export function feedXml(state, project) {

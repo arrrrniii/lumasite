@@ -233,22 +233,21 @@ Verify the final HTTPS website, all nine pages, images/fonts, studio sign-in, dr
 
 ## Existing links and clean production URLs
 
-The public renderer already supports domain routing: with the project domain set, `/` serves its published homepage and `/campaigns` serves that published page. Media paths and immutable release assets remain valid because IDs are preserved.
+From LumaSite 0.8.1, a project's configured domain serves its homepage at `/` and pages at paths such as `/pricing` and `/developers`. The production renderer adapts navigation links from older ZIP imports automatically: `/sites/sendmailos-live/pricing` becomes `/pricing`. It also handles explicit project-path links on the configured preview origin or the same production domain. Queries and fragments are retained, including `/developers#template-studio`.
 
-For clean production navigation links, run the source publisher against the restored, running instance in domain mode:
+On that project's own domain, old `/sites/<slug>/...` addresses return a **301** to the clean path. On the shared preview origin and localhost, those addresses continue serving the project with noindex. Links to external services or other projects are preserved. Set the exact production hostname in **Connections → Website settings**, and keep `ProxyPreserveHost On` in Apache so LumaSite sees it. Redirect secondary hostnames such as `www` to your primary hostname in the proxy.
+
+This works on existing published pages after upgrading the runtime; it does not require another import or publication. LumaSite rewrites rendered navigation attributes (`href` on anchors/areas and form destinations), while retaining saved HTML, revisions, media, CSS/JavaScript asset URLs, and MCP credentials. Custom JavaScript that constructs project-path URLs still reaches the clean address through the 301; author root paths in that code to avoid an extra request. Canonical URLs and the production sitemap continue using the configured domain.
+
+Use [the upgrade commands](website-management.md#upgrade-an-existing-generated-installation), then check:
 
 ```sh
-cd /srv/lumasite/app
-LUMASITE_DATA_DIR=/srv/lumasite/data \
-LUMASITE_MARKETING_URL_MODE=domain \
-node marketing/publish.mjs
+curl -fsSI https://example.com/pricing
+curl -sSI 'https://example.com/sites/my-website/pricing?plan=pro'
+curl -fsS https://example.com/sitemap.xml
 ```
 
-The publisher uses the preserved private credentials from that data directory and requires an existing `sendmailos` project with its domain set. It contacts `http://127.0.0.1:4310` by default. If the internal admin port differs, also set `LUMASITE_MARKETING_API=http://127.0.0.1:YOUR_ADMIN_PORT`. Run it locally on the server rather than exposing the internal API port. It uploads missing source assets, saves changed drafts, and publishes changed pages without restarting the runtime.
-
-`domain` mode keeps internal links such as `/campaigns` and `/pricing` at the domain root. The default `project` mode produces `/sites/sendmailos/...` links for local testing. External dashboard/documentation URLs, media references, and fragment anchors remain as authored. An existing project-path URL continues to resolve, but production navigation should use the primary domain. Test all nine routes after this one-time publication.
-
-Retain `marketing/published.json` from the matching source release. Before changing pages, the publisher checks both tracked published revision IDs and draft revisions against the server. Studio/MCP changes made outside the source tree cause it to stop. Synchronize those intended edits into canonical source, then reconcile the manifest to the known accepted current revisions before publishing. Do not delete or blindly reset the manifest to bypass its guard. See the [editing guide](edit-marketing-elements.md). Keep this source/report pair with subsequent backups.
+The first request should return 200; the second should return 301 with `Location: /pricing?plan=pro`. Check desktop and mobile menu links, fragment targets, preview URLs, and the production canonical tags after upgrading. Existing CDN caches may need a refresh if they retain older HTML.
 
 ## How navigation works and what affects speed
 
@@ -306,4 +305,4 @@ node bin/lumasite.mjs backup \
 
 Use a new backup destination every time. Native CLI logs are in `/srv/lumasite/data/logs/server.log`; arrange rotation separately. For Docker, use Compose logs/lifecycle commands. For page-content rollback, restore a previous draft in studio History and publish it. For a complete deployment rollback, stop the service and restore the private pre-cutover snapshot into an empty data directory; verify addresses, ownership, health, and media before restarting.
 
-The remaining deployment decisions are the destination server, actual hostnames, DNS/TLS setup, and supervisor choice. ZIP import transfers the website into a fresh project; a private instance snapshot preserves its original identity and credentials. Published pages on their configured production domain allow indexing unless the page or site has noindex enabled. Project-path and signed draft previews retain `noindex`; verify final production response headers, canonicals, sitemap, and image URLs during cutover. See [SEO and blogs](seo-and-blog.md). The existing website does not need to be rebuilt from scratch.
+The remaining deployment decisions are the destination server, actual hostnames, DNS/TLS setup, and supervisor choice. ZIP import transfers the website into a fresh project; a private instance snapshot preserves its original identity and credentials. Published pages on their configured production domain allow indexing unless the page or site has noindex enabled. Project paths on the preview origin and signed draft previews retain `noindex`; verify final production response headers, canonicals, sitemap, and image URLs during cutover. See [SEO and blogs](seo-and-blog.md). The existing website does not need to be rebuilt from scratch.

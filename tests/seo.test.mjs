@@ -53,7 +53,7 @@ test('production SEO resources use published revisions, isolate tenants and prot
  await createPage(store,project.id,{title:'Secret draft',slug:'secret-draft',html:'<h1>Do not expose</h1>',seo:{type:'article'}});
  const other=await createProject(store,{name:'Other',domain:'other.example.com'});const otherPage=store.read().pages.find(p=>p.projectId===other.project.id);await publishPage(store,other.project.id,otherPage.id);
  let response=await f.get('/blog/hello');assert.equal(response.status,200);assert.equal(response.headers.get('x-robots-tag'),null);assert.match(await response.text(),/index,follow,max-image-preview:large/);
- response=await f.get(`/sites/${project.slug}/blog/hello`);assert.match(response.headers.get('x-robots-tag'),/noindex/);assert.match(await response.text(),/https:\/\/seo.example.com\/blog\/hello/);
+ response=await f.get(`/sites/${project.slug}/blog/hello`,'preview.example.com');assert.match(response.headers.get('x-robots-tag'),/noindex/);assert.match(await response.text(),/https:\/\/seo.example.com\/blog\/hello/);
  const preview=new URL(getPreviewUrl(store.read(),project.id,post.id));response=await f.get(preview.pathname+preview.search,'127.0.0.1');assert.match(response.headers.get('x-robots-tag'),/noindex/);assert.match(await response.text(),/noindex,nofollow/);
  const adminRobots=await fetch(`http://127.0.0.1:${f.port}/robots.txt`);assert.match(await adminRobots.text(),/Disallow: \//);assert.match(adminRobots.headers.get('x-robots-tag'),/noindex/);
  const sitemap=await(await f.get('/sitemap.xml')).text();assert.match(sitemap,/https:\/\/seo.example.com\/blog\/hello/);assert.match(sitemap,/<lastmod>/);assert.doesNotMatch(sitemap,/secret-draft|sample|duplicate|other.example.com/);
@@ -65,7 +65,7 @@ test('production SEO resources use published revisions, isolate tenants and prot
  assert.match(await(await f.get('/robots.txt','unknown.example.com')).text(),/Disallow: \//);assert.equal((await f.get('/sitemap.xml','unknown.example.com')).status,404);
  const feed=await(await f.get('/feed.xml')).text();assert.match(feed,/Hello &lt;reader&gt;/);assert.doesNotMatch(feed,/Secret draft|Hidden sample/);
  const listing=await(await f.get('/blog')).text();assert.match(listing,/data-blog-link href="\/blog\/hello"/);assert.match(listing,/Hello &lt;reader&gt;/);assert.doesNotMatch(listing,/secret-draft/);
- const localListing=await(await f.get(`/sites/${project.slug}/blog`)).text();assert.match(localListing,new RegExp(`href="/sites/${project.slug}/blog/hello"`));
+ const localListing=await(await f.get(`/sites/${project.slug}/blog`,'preview.example.com')).text();assert.match(localListing,new RegExp(`href="/sites/${project.slug}/blog/hello"`));
  await updatePage(store,project.id,post.id,{slug:'blog/draft-only',seo:{type:'article',noindex:true}});
  assert.match(await(await f.get('/sitemap.xml')).text(),/blog\/hello/);assert.match(await(await f.get('/blog/hello')).text(),/BlogPosting/);
  await restorePage(store,project.id,post.id,first.revision.id);assert.equal(store.read().pages.find(p=>p.id===post.id).seo.noindex,undefined);
