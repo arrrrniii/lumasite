@@ -13,6 +13,7 @@ import { deleteProject } from './project-lifecycle.mjs';
 import { listProjectBackups, readProjectBackup } from './project-backups.mjs';
 import { createOAuthService } from './oauth.mjs';
 import { projectRootPath, productionNavigation } from './public-links.mjs';
+import { getIntegrations, updateIntegrations } from './integrations.mjs';
 import { productionHost, pageNoindex, sitemapXml, robotsTxt, feedXml, renderBlogBlocks } from './seo.mjs';
 import { VERSION, fail, tokenMatches, passwordMatches, publicInstance, publicProject, initializeInstance, createProject, requireProject, requirePage, getProjectUrls, updateProject, createPage, updatePage, publishPage, restorePage, rotateProjectToken, uploadAsset, getLibrary, getPreviewUrl, verifyPreviewToken, renderDocument } from './service.mjs';
 
@@ -169,6 +170,8 @@ export async function startServers({ dataDir, store: suppliedStore } = {}) {
   });
   admin.get('/api/projects/:id', (req, res) => { const state = store.read(), project = publicProject(requireProject(state, req.params.id)); res.json({ project, urls: getProjectUrls(state, project) }); });
   admin.patch('/api/projects/:id', async (req, res) => res.json(await updateProject(store, req.params.id, req.body)));
+  admin.get('/api/projects/:id/integrations', (req, res) => res.json({ integrations: getIntegrations(requireProject(store.read(), req.params.id)) }));
+  admin.patch('/api/projects/:id/integrations', async (req, res) => res.json(await updateIntegrations(store, req.params.id, req.body)));
   admin.post('/api/projects/:id/token', async (req, res) => res.json(await rotateProjectToken(store, req.params.id)));
   admin.get('/api/projects/:id/pages', (req, res) => { const state = store.read(); requireProject(state, req.params.id); res.json({ pages: state.pages.filter(p => p.projectId === req.params.id) }); });
   admin.post('/api/projects/:id/pages', async (req, res) => res.status(201).json({ page: await createPage(store, req.params.id, req.body) }));
@@ -214,6 +217,7 @@ export async function startServers({ dataDir, store: suppliedStore } = {}) {
 
   publicApp.use((_req, res, next) => { res.set({ 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'no-referrer', 'X-Robots-Tag': 'noindex' }); next(); });
   publicApp.get('/health', (_req, res) => res.json(health()));
+  publicApp.get('/runtime/integrations.js', (_req, res) => res.set('Cache-Control', 'public,max-age=3600').sendFile(path.join(root, 'public/integrations-runtime.js')));
   publicApp.use('/runtime/lumafx', express.static(path.join(root, 'vendor/lumafx'), { index: false, maxAge: '1h' }));
   function media(req, res, next) {
     const snapshot = store.read();
@@ -273,7 +277,7 @@ export async function startServers({ dataDir, store: suppliedStore } = {}) {
     const basePath = localPath ? `/sites/${project.slug}/` : '/';
     const source = !localPath && project.domain === req.hostname ? productionHtml(revision, project, state.instance) : revision.page.html;
     const html = renderBlogBlocks(source, state, project, basePath, revision.page.slug);
-    res.set('Cache-Control', 'no-cache').type('html').send(renderDocument(revision.page, { revisionId: revision.id, theme: revision.theme, assetUrls: publishedAssetUrls(revision), project, instance: state.instance, noindex, html }));
+    res.set('Cache-Control', 'no-cache').type('html').send(renderDocument(revision.page, { revisionId: revision.id, theme: revision.theme, assetUrls: publishedAssetUrls(revision), project, instance: state.instance, noindex, liveIntegrations: !noindex, html }));
   }
   function seoResource(req, res, project, resource, localPath = false) {
     const state = store.read(), production = !localPath && productionHost(project, req.hostname);

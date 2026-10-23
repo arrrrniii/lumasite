@@ -9,7 +9,7 @@
     port: 4310, sitePort: 4311, projects: [], project: null, urls: null,
     pages: [], page: null, baseline: '', dirty: false, view: 'projects',
     sourceTab: 'html', device: 'desktop', previewUrl: '', previewError: '',
-    library: null, libraryTab: 'components', assets: [], revisions: [], connections: [],
+    library: null, libraryTab: 'components', assets: [], revisions: [], connections: [], integrations: null, editTagId: null,
     diagnostics: null, health: null, readiness: null, modal: null,
     formError: '', projectTokens: new Map(), importFile: null, importMode: 'create', backups: [], menuOpen: false,
   };
@@ -249,12 +249,12 @@
 
   function rail() {
     return `<aside class="rail" id="studio-navigation" aria-label="Studio navigation"><div class="rail-brand">${brand()}<button class="btn icon-only mobile-control" data-action="toggle-menu" type="button" aria-label="Close navigation">${icon('close')}</button></div><div class="rail-content"><div><p class="rail-label">Workspace</p><div class="project-picker"><select id="project-select" aria-label="Select website"><option value="">All websites</option>${state.projects.map((project) => `<option value="${escape(project.id)}" ${project.id === state.project?.id ? 'selected' : ''}>${escape(project.name)}</option>`).join('')}</select><button class="new-project" data-action="new-project" type="button">${icon('plus')}New website</button></div></div>
-      <div><p class="rail-label">Website studio</p><nav class="rail-nav" aria-label="Website studio">${state.project ? `${navButton('overview', 'Overview', 'overview')}${navButton('pages', 'Pages', 'pages')}${navButton('media', 'Media library', 'image')}${navButton('library', 'Components', 'layers')}${navButton('connections', 'Connections', 'connect')}` : navButton('projects', 'Your websites', 'folder')}${navButton('runtime', 'Runtime', 'pulse')}</nav></div></div>
+      <div><p class="rail-label">Website studio</p><nav class="rail-nav" aria-label="Website studio">${state.project ? `${navButton('overview', 'Overview', 'overview')}${navButton('pages', 'Pages', 'pages')}${navButton('media', 'Media library', 'image')}${navButton('library', 'Components', 'layers')}${navButton('integrations', 'Integrations', 'code')}${navButton('connections', 'Connections', 'connect')}` : navButton('projects', 'Your websites', 'folder')}${navButton('runtime', 'Runtime', 'pulse')}</nav></div></div>
       <div class="rail-footer"><div class="rail-native">${icon('sparkle')}<div><strong>Made to move.</strong><span>LumaFX is built into every page.</span></div></div><div class="rail-footer-meta"><span>LumaSite ${escape(state.version ? `v${state.version}` : '')}</span>${icon('lock')}</div></div></aside>`;
   }
 
   function shell() {
-    const titles = { projects: 'Your websites', overview: 'Overview', pages: 'Pages', media: 'Media library', library: 'Components', connections: 'Connections', runtime: 'Runtime' };
+    const titles = { projects: 'Your websites', overview: 'Overview', pages: 'Pages', media: 'Media library', library: 'Components', integrations: 'Integrations', connections: 'Connections', runtime: 'Runtime' };
     document.title = `${state.project?.name ? `${state.project.name} · ` : ''}${titles[state.view] || 'Studio'} · LumaSite`;
     return `<div class="shell">${rail()}<button class="nav-scrim" data-action="toggle-menu" type="button" aria-label="Close navigation" tabindex="-1"></button><div class="content"><header class="topbar"><div class="topbar-left"><button class="btn icon-only mobile-control" id="menu-trigger" data-action="toggle-menu" type="button" aria-label="Open navigation" aria-controls="studio-navigation" aria-expanded="${state.menuOpen}">${icon('menu')}</button><div class="breadcrumb"><span>Studio</span>${icon('arrow')}${state.project ? `<strong>${escape(state.project.name)}</strong>${icon('arrow')}` : ''}<span>${titles[state.view] || 'Studio'}</span></div></div><div class="topbar-right">${quickLinks()}${state.project ? external(state.urls?.site, 'Preview website', 'btn small topbar-preview') : ''}<button class="btn icon-only" data-action="import-zip" type="button" aria-label="Import ZIP" title="Import ZIP">${icon('upload')}</button><button class="btn icon-only" data-action="logout" type="button" aria-label="Sign out" title="Sign out">${icon('logout')}</button></div></header><main class="workspace" id="main" tabindex="-1">${workspaceView()}</main><footer class="workspace-footer"><span>${icon('lock')}Private studio</span><span>Design. Connect. Publish.</span></footer></div></div>${modalView()}`;
   }
@@ -266,6 +266,7 @@
     if (state.view === 'media') return mediaView();
     if (state.view === 'library') return libraryView();
     if (state.view === 'connections') return connectionsView();
+    if (state.view === 'integrations') return integrationsView();
     return editorView();
   }
 
@@ -347,6 +348,20 @@
     const seo = state.project.seo || {};
     const field = (key, label, placeholder = '') => `<label>${label}<input name="${key}" value="${escape(seo[key] || '')}" placeholder="${escape(placeholder)}"></label>`;
     return `<section class="surface seo-surface"><div class="surface-header"><div><span class="eyebrow">Search & sharing</span><h2>SEO and branding</h2><p>Shared defaults for this website.</p></div></div><form class="seo-form" data-form="project-seo">${field('siteName', 'Site name', state.project.name)}<label>Site description<textarea name="description" aria-label="Site description" rows="3">${escape(seo.description || '')}</textarea></label>${field('language', 'Website language', 'en')}${field('image', 'Default social image URL')}${field('imageAlt', 'Default social image description')}${field('logo', 'Organization logo URL')}${field('favicon', 'Favicon URL')}${field('appleTouchIcon', 'Apple touch icon URL')}<label class="checkbox-label"><input name="noindex" type="checkbox" ${seo.noindex ? 'checked' : ''}>Keep the whole website out of search results</label><p class="hint">Shared defaults apply immediately. Production indexing requires the configured domain; project-path and draft previews remain noindex.</p><div class="row"><button class="btn" type="submit">Save SEO settings</button></div></form></section>`;
+  }
+
+  function integrationsView() {
+    const settings = state.integrations || {}, tags = settings.customTags || [];
+    return `<div class="integrations-view"><div class="page-heading"><div><h1>Connect your website.</h1><p>Analytics, verification, and custom tags. Configure once for every published page and blog post.</p></div><button class="btn" type="button" data-action="refresh-integrations">${icon('refresh')}Reload settings</button></div>
+      <div class="integration-scope">${icon('globe')}<div><strong>${escape(state.project.domain || 'Add a production domain in Connections')}</strong><span>These tags run on your production domain. Studio, localhost, and preview pages stay free of these tags.</span></div></div>
+      <div class="integration-grid"><section class="surface"><div class="surface-header"><div><h2>Google Analytics & Tag Manager</h2><p>Use a measurement ID or a Tag Manager container.</p></div>${icon('pulse')}</div><form class="stack" data-form="google-integrations"><div class="grid-fields"><label>GA4 measurement ID<input name="googleAnalyticsId" aria-label="GA4 measurement ID" value="${escape(settings.googleAnalyticsId || '')}" placeholder="G-ABC1234567" spellcheck="false" autocomplete="off"><small>From Analytics → Data streams → Web.</small></label><label>Tag Manager container ID<input name="googleTagManagerId" aria-label="Tag Manager container ID" value="${escape(settings.googleTagManagerId || '')}" placeholder="GTM-ABC1234" spellcheck="false" autocomplete="off"><small>From your web container in Tag Manager.</small></label></div><p class="hint">If Tag Manager already manages GA4, leave the GA4 field empty to avoid duplicate measurement.</p><label class="checkbox-label"><input name="trackingEnabled" type="checkbox" ${settings.trackingEnabled ? 'checked' : ''}>Enable Google tracking on production</label><label>Optional tag loading<select name="consentMode" aria-label="Optional tag loading"><option value="banner" ${settings.consentMode !== 'immediate' ? 'selected' : ''}>Ask visitors first — built-in consent banner</option><option value="immediate" ${settings.consentMode === 'immediate' ? 'selected' : ''}>Load immediately — I manage consent separately</option></select><small>Applies to Google tracking and custom tags marked optional. Essential snippets load immediately.</small></label><div class="row"><button class="btn primary" type="submit">Save Google settings</button><span class="hint">Applies immediately to all pages.</span></div></form></section>
+      <section class="surface search-console-surface"><div class="surface-header"><div><h2>Google Search Console</h2><p>Install your URL-prefix verification tag.</p></div>${icon('map')}</div><form class="stack" data-form="search-console"><label>Google verification token or meta tag<textarea name="googleSiteVerification" aria-label="Google verification token or meta tag" rows="4" spellcheck="false" placeholder='&lt;meta name="google-site-verification" content="…"&gt;'>${escape(settings.googleSiteVerification || '')}</textarea><small>Paste the token or the complete meta tag provided by Google.</small></label><div class="row"><button class="btn" type="submit">Save verification tag</button></div></form><div class="verification-next"><span class="pill ${settings.googleSiteVerification ? 'success' : ''}">${settings.googleSiteVerification ? 'Tag configured — verify in Google' : 'Not configured'}</span><p>The meta tag appears in your production page’s head. Finish by clicking Verify in Search Console. A Domain property requires DNS verification.</p>${external('https://search.google.com/search-console', 'Open Search Console')}${state.urls?.production ? `<div class="field-group"><span>Production sitemap</span>${copyField(resourceUrl(state.urls.production, 'sitemap.xml'))}</div>` : ''}</div></section></div>
+      <section class="surface custom-tags-surface"><div class="surface-header"><div><h2>Custom tags & scripts</h2><p>Add pixels, chat widgets, verification tags, or other website snippets.</p></div><button class="btn primary" type="button" data-action="new-custom-tag">${icon('plus')}Add custom tag</button></div>${tags.length ? `<div class="custom-tag-list">${tags.map((tag, index) => `<article class="custom-tag-row"><span class="custom-tag-symbol">${icon('code')}</span><div class="custom-tag-description"><h3>${escape(tag.name)}</h3><p>${{ head: 'Head', bodyStart: 'Start of body', bodyEnd: 'End of body' }[tag.placement]} · ${tag.requiresConsent ? 'Optional' : 'Essential'} · ${tag.enabled ? 'Enabled on production' : 'Disabled'}</p></div><div class="custom-tag-actions"><button class="btn small" type="button" data-action="toggle-custom-tag" data-id="${escape(tag.id)}" aria-label="${tag.enabled ? 'Disable' : 'Enable'} ${escape(tag.name)}">${tag.enabled ? 'Disable' : 'Enable'}</button><button class="btn small" type="button" data-action="edit-custom-tag" data-id="${escape(tag.id)}" aria-label="Edit ${escape(tag.name)}">Edit</button><button class="btn icon-only" type="button" data-action="move-custom-tag" data-id="${escape(tag.id)}" data-direction="-1" aria-label="Move ${escape(tag.name)} up" ${index === 0 ? 'disabled' : ''}>↑</button><button class="btn icon-only" type="button" data-action="move-custom-tag" data-id="${escape(tag.id)}" data-direction="1" aria-label="Move ${escape(tag.name)} down" ${index === tags.length - 1 ? 'disabled' : ''}>↓</button><button class="btn small danger" type="button" data-action="delete-custom-tag" data-id="${escape(tag.id)}" aria-label="Delete ${escape(tag.name)}">Delete</button></div></article>`).join('')}</div>` : `<div class="integration-empty">${icon('code')}<div><h3>Your next integration goes here.</h3><p>Paste a snippet, choose its position, and control it from one place.</p></div></div>`}<p class="hint tag-public-note">Snippets are public website code. Keep private API keys, passwords, and MCP tokens out of them. Code is displayed here without running inside Studio.</p></section></div>`;
+  }
+
+  function customTagModal() {
+    const tag = state.integrations?.customTags.find(t => t.id === state.editTagId);
+    return `<dialog class="dialog wide" aria-labelledby="dialog-title"><div class="dialog-header"><h2 id="dialog-title">${tag ? 'Edit custom tag' : 'Add custom tag'}</h2><button class="btn icon-only" type="button" data-action="close-modal" aria-label="Close">${icon('close')}</button></div><p>Applies to every published page on this website’s production domain.</p><form data-form="custom-tag"><div id="form-error" class="form-error" role="alert" hidden></div><label>Tag name<input name="name" value="${escape(tag?.name || '')}" maxlength="100" required placeholder="For example, support chat"></label><label>Position<select name="placement">${[['head', 'Head'], ['bodyStart', 'Start of body'], ['bodyEnd', 'End of body']].map(([key, label]) => `<option value="${key}" ${tag?.placement === key ? 'selected' : ''}>${label}</option>`).join('')}</select></label><label>HTML or script snippet<textarea name="code" class="mono" rows="10" maxlength="65536" spellcheck="false" required placeholder="Paste the complete snippet, including script tags">${escape(tag?.code || '')}</textarea></label><label class="checkbox-label"><input name="enabled" type="checkbox" ${!tag || tag.enabled ? 'checked' : ''}>Enabled on production</label><label class="checkbox-label"><input name="requiresConsent" type="checkbox" ${!tag || tag.requiresConsent ? 'checked' : ''}>Optional — load after consent when the banner is enabled</label><p class="hint">Verification meta tags and essential functionality should not wait for optional consent. Changes take effect when you save.</p><div class="dialog-actions"><button class="btn" type="button" data-action="close-modal">Cancel</button><button class="btn primary" type="submit">Save custom tag</button></div></form></dialog>`;
   }
 
   function mediaType(asset) {
@@ -510,6 +525,7 @@
 
   function modalView() {
     if (!state.modal) return '';
+    if (state.modal === 'custom-tag') return customTagModal();
     if (state.modal === 'import') return importModal();
     if (state.modal === 'delete-website') return deleteWebsiteModal();
     if (state.modal === 'recovery-zips') return recoveryModal();
@@ -550,6 +566,7 @@
     ]);
     state.menuOpen = false;
     state.project = details.project;
+    state.integrations = null;
     state.urls = details.urls;
     state.pages = pages.pages || [];
     state.page = state.pages[0] || null;
@@ -564,6 +581,7 @@
     if (view === 'media') await loadAssets();
     if (view === 'library') await loadLibrary();
     if (view === 'connections') await loadConnections();
+    if (view === 'integrations') await loadIntegrations();
     render();
     if (state.page && view === 'pages') await refreshPreview();
   }
@@ -637,6 +655,7 @@
     if (view === 'media') await loadAssets();
     if (view === 'library') await loadLibrary();
     if (view === 'connections') await loadConnections();
+    if (view === 'integrations') await loadIntegrations();
     if (view === 'runtime') await loadRuntime();
     state.menuOpen = false;
     state.view = view;
@@ -660,6 +679,20 @@
     await loadAssets();
     render();
     toast(`${uploaded} ${uploaded === 1 ? 'file uploaded' : 'files uploaded'}. Copy a URL to use it in your page.`);
+  }
+
+  async function loadIntegrations() {
+    const response = await api(projectPath('/integrations'));
+    state.integrations = response.integrations;
+    state.project.integrations = response.integrations;
+    updateProjectCollection();
+  }
+
+  async function saveIntegrationSettings(patch) {
+    const response = await api(projectPath('/integrations'), { method: 'PATCH', body: { ...patch, expectedRevision: state.integrations.revision } });
+    state.integrations = response.integrations;
+    state.project.integrations = response.integrations;
+    updateProjectCollection();
   }
 
   async function exportWebsite() {
@@ -796,6 +829,25 @@
       toast('Revision restored to your draft. Publish to make it live.');
     },
     'refresh-connections': async () => { await loadConnections(); render(); },
+    'refresh-integrations': async () => { await loadIntegrations(); render(); toast('Integration settings reloaded.'); },
+    'new-custom-tag': () => { state.editTagId = null; state.modal = 'custom-tag'; render(); },
+    'edit-custom-tag': element => { state.editTagId = element.dataset.id; state.modal = 'custom-tag'; render(); },
+    'toggle-custom-tag': async element => {
+      await saveIntegrationSettings({ customTags: state.integrations.customTags.map(tag => tag.id === element.dataset.id ? { ...tag, enabled: !tag.enabled } : tag) });
+      render(); toast('Custom tag updated.');
+    },
+    'delete-custom-tag': async element => {
+      const tag = state.integrations.customTags.find(t => t.id === element.dataset.id);
+      if (!window.confirm(`Remove ${tag.name} from every production page?`)) return;
+      await saveIntegrationSettings({ customTags: state.integrations.customTags.filter(t => t.id !== tag.id) });
+      render(); toast('Custom tag deleted.');
+    },
+    'move-custom-tag': async element => {
+      const tags = [...state.integrations.customTags], index = tags.findIndex(t => t.id === element.dataset.id), next = index + Number(element.dataset.direction);
+      if (index < 0 || next < 0 || next >= tags.length) return;
+      [tags[index], tags[next]] = [tags[next], tags[index]];
+      await saveIntegrationSettings({ customTags: tags }); render();
+    },
     'revoke-connection': async element => { await api(projectPath(`/connections/${encodeURIComponent(element.dataset.id)}/revoke`), { method: 'POST', body: {} }); await loadConnections(); render(); toast('App access revoked. Reconnect through OAuth to allow access again.'); },
     'rotate-token': async () => {
       if (!window.confirm('Generate a new project token? Existing Bearer tokens and OAuth app connections will stop working. MCP clients will need to reconnect.')) return;
@@ -810,7 +862,7 @@
 
   // These actions only change local UI state; running them outside the network
   // lock preserves keyboard focus and keeps file picker activation synchronous.
-  const localActions = new Set(['toggle-menu', 'new-project', 'import-zip', 'update-zip', 'delete-website', 'new-page', 'close-modal', 'source-tab', 'device', 'library-tab', 'apply-snippet', 'choose-files']);
+  const localActions = new Set(['toggle-menu', 'new-project', 'import-zip', 'update-zip', 'delete-website', 'new-page', 'close-modal', 'source-tab', 'device', 'library-tab', 'apply-snippet', 'choose-files', 'new-custom-tag', 'edit-custom-tag']);
 
   app.addEventListener('click', (event) => {
     const element = event.target.closest('[data-action]');
@@ -903,6 +955,20 @@
         updateProjectCollection();
         render();
         toast('SEO defaults saved.');
+      }
+      if (form.dataset.form === 'google-integrations') {
+        await saveIntegrationSettings({ googleAnalyticsId: values.googleAnalyticsId, googleTagManagerId: values.googleTagManagerId, trackingEnabled: form.elements.trackingEnabled.checked, consentMode: values.consentMode });
+        render(); toast('Google settings saved for all production pages.');
+      }
+      if (form.dataset.form === 'search-console') {
+        await saveIntegrationSettings({ googleSiteVerification: values.googleSiteVerification });
+        render(); toast('Verification tag saved. Finish verification in Google Search Console.');
+      }
+      if (form.dataset.form === 'custom-tag') {
+        const previous = state.integrations.customTags.find(t => t.id === state.editTagId);
+        const tag = { ...(previous ? { id: previous.id } : {}), name: values.name, placement: values.placement, code: values.code, enabled: form.elements.enabled.checked, requiresConsent: form.elements.requiresConsent.checked };
+        const customTags = previous ? state.integrations.customTags.map(t => t.id === previous.id ? tag : t) : [...state.integrations.customTags, tag];
+        await saveIntegrationSettings({ customTags }); state.modal = null; render(); toast('Custom tag saved for all production pages.');
       }
       if (form.dataset.form === 'project-settings') {
         const response = await api(projectPath(), { method: 'PATCH', body: values });

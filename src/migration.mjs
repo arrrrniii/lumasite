@@ -7,6 +7,7 @@ import {promisify} from 'node:util';
 import {zip} from 'fflate';
 import {z} from 'zod';
 import {pageSeoSchema,projectSeoSchema,siteBase} from './seo.mjs';
+import {integrationSettingsSchema} from './integrations.mjs';
 import {fail,tokenHash,publicProject,getProjectUrls,getPreviewUrl,rememberProjectToken} from './service.mjs';
 import {confirmProject,projectFingerprint,assertUnchanged,saveProjectBackup,discardProjectBackup,backupSummary} from './project-backups.mjs';
 
@@ -23,7 +24,7 @@ const route=z.string().max(300).refine(v=>!v||(/^[a-z0-9]+(?:[/-][a-z0-9]+)*$/.t
 const pageSchema=z.object({id,projectId:id,slug:route,title:name(200),description:z.string().max(500),seo:pageSeoSchema.optional(),html:source,css:source,js:source,updatedAt:stamp,revision:z.number().int().min(1).max(2147483647),publishedRevisionId:id.nullable()}).strict();
 const revisionSchema=z.object({id,projectId:id,pageId:id,createdAt:stamp,number:z.number().int().min(1).max(2147483647),page:pageSchema,theme,compiledCss:code(8*1024*1024)}).strict();
 const assetSchema=z.object({id,projectId:id,name:z.string().max(200),filename:z.string().max(45),mime:z.string().refine(v=>extensions.has(v)),size:z.number().int().min(1).max(MIGRATION_LIMITS.media),createdAt:stamp,url:z.string().max(100)}).strict();
-const projectSchema=z.object({id,name:name(100),slug,domain,theme,seo:projectSeoSchema.optional(),createdAt:stamp,updatedAt:stamp}).strict();
+const projectSchema=z.object({id,name:name(100),slug,domain,theme,seo:projectSeoSchema.optional(),integrations:integrationSettingsSchema.optional(),createdAt:stamp,updatedAt:stamp}).strict();
 const payloadSchema=z.object({schemaVersion:z.literal(1),project:projectSchema,pages:z.array(pageSchema).max(1000),revisions:z.array(revisionSchema).max(5000),assets:z.array(assetSchema).max(MIGRATION_LIMITS.entries-2)}).strict();
 const fileSchema=z.object({path:z.string().max(100),size:z.number().int().min(0).max(MIGRATION_LIMITS.json),sha256:z.string().regex(/^[a-f0-9]{64}$/)}).strict();
 const manifestSchema=z.object({format:z.literal('lumasite-project'),version:z.literal(1),createdAt:stamp,projectFile:z.literal('project.json'),files:z.array(fileSchema).min(1).max(MIGRATION_LIMITS.entries-1)}).strict();
@@ -85,7 +86,7 @@ export async function inspectProjectArchive(buffer){
 async function readMedia(store,a){const file=await open(path.join(store.dataDir,'media',a.projectId,a.filename),constants.O_RDONLY|constants.O_NOFOLLOW);try{const s=await file.stat();if(!s.isFile()||s.size!==a.size||s.size>MIGRATION_LIMITS.media)fail(400,'Project media is missing, changed or exceeds the supported size.');return await file.readFile();}finally{await file.close();}}
 export async function exportProject(store,projectId){
  const state=store.read(),p=state.projects.find(p=>p.id===projectId);if(!p)fail(404,'Project not found.');
- const payload=graph(parsed(payloadSchema,{schemaVersion:1,project:pick(p,['id','name','slug','domain','theme','seo','createdAt','updatedAt']),pages:state.pages.filter(p=>p.projectId===projectId).map(p=>pick(p,pageKeys)),revisions:state.revisions.filter(r=>r.projectId===projectId).map(r=>({...pick(r,['id','projectId','pageId','createdAt','number','theme','compiledCss']),page:pick(r.page,pageKeys)})),assets:state.assets.filter(a=>a.projectId===projectId).map(a=>pick(a,['id','projectId','name','filename','mime','size','createdAt','url']))},'project data'));
+ const payload=graph(parsed(payloadSchema,{schemaVersion:1,project:pick(p,['id','name','slug','domain','theme','seo','integrations','createdAt','updatedAt']),pages:state.pages.filter(p=>p.projectId===projectId).map(p=>pick(p,pageKeys)),revisions:state.revisions.filter(r=>r.projectId===projectId).map(r=>({...pick(r,['id','projectId','pageId','createdAt','number','theme','compiledCss']),page:pick(r.page,pageKeys)})),assets:state.assets.filter(a=>a.projectId===projectId).map(a=>pick(a,['id','projectId','name','filename','mime','size','createdAt','url']))},'project data'));
  const content=Buffer.from(JSON.stringify(payload));rejectTokens(content.toString());if(content.length>MIGRATION_LIMITS.json)fail(413,'Project content exceeds the 128 MiB JSON limit.');
  let credentials={};try{credentials=JSON.parse(await readFile(path.join(store.dataDir,'credentials.json'),'utf8'));}catch(e){if(e.code!=='ENOENT')throw e;}
  let oauth={};try{oauth=JSON.parse(await readFile(path.join(store.dataDir,'oauth.json'),'utf8'));}catch(e){if(e.code!=='ENOENT')throw e;}
@@ -141,6 +142,8 @@ export async function importProject(store,buffer,options={}){
   return value;
  };
  if(project.seo)project.seo=rewriteSeo(project.seo);
+ if(updating){if(existing.integrations)project.integrations=structuredClone(existing.integrations);else delete project.integrations;}
+ else if(project.integrations)project.integrations={...project.integrations,trackingEnabled:false,googleSiteVerification:'',revision:0,updatedAt:null,customTags:project.integrations.customTags.map(tag=>({...tag,enabled:false,code:rewrite(tag.code)}))};
  for(const p of [...pages,...revisions.map(r=>r.page)])if(p.seo)p.seo=rewriteSeo(p.seo);
 
  graph(parsed(payloadSchema,{schemaVersion:1,project:publicProject(project),pages,revisions,assets},'remapped project'));

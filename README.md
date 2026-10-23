@@ -5,7 +5,7 @@
 A self-hosted website studio for creating, editing, and publishing through MCP or your browser. Change the page structure, HTML, Tailwind classes, CSS, browser JavaScript, images, and LumaFX animations, then publish a revision without redeploying the Studio application.
 
 [![Tests](https://github.com/arrrrniii/lumasite/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/arrrrniii/lumasite/actions/workflows/ci.yml)
-[Version 0.8.1](https://github.com/arrrrniii/lumasite/tree/v0.8.1) · Node.js 24+ · Native LumaFX · Streamable HTTP MCP
+[Version 0.9.0](https://github.com/arrrrniii/lumasite/tree/v0.9.0) · Node.js 24+ · Native LumaFX · Streamable HTTP MCP
 
 ![LumaSite Studio showing the SendMailOS example, published pages, sitemap, robots.txt and RSS links](docs/images/studio-overview.png)
 
@@ -23,6 +23,7 @@ A self-hosted website studio for creating, editing, and publishing through MCP o
 | Work with agents | Website-scoped OAuth for ChatGPT, revocable app connections, and manual Bearer tokens |
 | Publish carefully | Save drafts, open signed previews, publish revisions, restore previous versions |
 | Prepare for search | Server-generated metadata, canonical URLs, JSON-LD, sitemap, robots.txt, and RSS |
+| Connect website tools | Shared GA4, Tag Manager, Search Console verification and custom snippets; optional consent banner |
 | Move to another server | Export a website ZIP and import it into another LumaSite installation |
 | Recover website content | Private recovery ZIP saved before each update or deletion |
 | Operate the runtime | Proxy detection, ports, status, health, diagnostics, logs, restart, stop, and backups |
@@ -35,6 +36,10 @@ From **Connections**, copy the website’s MCP Server URL. In ChatGPT → Plugin
 
 [OAuth setup and troubleshooting](docs/oauth.md) covers discovery, Apache/Virtualmin exceptions, and upgrading an existing installation.
 
+## Website integrations
+
+Open **Integrations** to configure Google Analytics, Tag Manager, Search Console verification, and custom snippets for every published page and blog post. Settings apply without republishing pages. Optional tags wait for a consent choice by default; previews and Studio receive none of these shared tags. Manage the same settings with `integrations_get` and `integrations_update`. See [the integration guide](docs/integrations.md).
+
 ## Update or delete an existing website
 
 In Studio, open **Connections → Manage website**. Choose **Update from ZIP** to replace website content while preserving its name, domain, slug, project ID, and MCP credentials. The import dialog also supports creating a separate website. **Delete website** removes the selected website and disables its MCP connection. Both actions require typing its exact slug and save a private recovery ZIP first.
@@ -46,7 +51,7 @@ See the [update, delete, and recovery guide](docs/website-management.md) for the
 You need **Node.js 24+, npm, and Git**. The GitHub repository is public: HTTPS installation does not require a GitHub account, token, or server login. This is a GitHub installation, not an npm registry publication.
 
 ```sh
-npx --yes --package="git+https://github.com/arrrrniii/lumasite.git#v0.8.1" lumasite create
+npx --yes --package="git+https://github.com/arrrrniii/lumasite.git#v0.9.0" lumasite create
 ```
 
 The first question is **What is your project named?** Choose a new folder such as `my-website`. The wizard then asks for local/server mode, a new website or ZIP import, website name/domain, ports, URLs, and whether to start the app. Server mode also asks about the reverse proxy. Review the summary before it writes the project.
@@ -197,7 +202,7 @@ npm run import -- --file /private/imports/my-website.zip --slug another-website
 A global CLI is optional:
 
 ```sh
-npm install --global "git+https://github.com/arrrrniii/lumasite.git#v0.8.1"
+npm install --global "git+https://github.com/arrrrniii/lumasite.git#v0.9.0"
 lumasite setup
 ```
 

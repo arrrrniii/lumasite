@@ -16,6 +16,7 @@ LumaSite 0.7.0 supports both **Create a new website** and **Update an existing w
 | MCP endpoint and existing Bearer token | Preserved; clients stay connected |
 | Pages, drafts, selected published revisions, history | Replaced by the ZIP’s content |
 | Media, theme, site SEO and page SEO | Replaced and references remapped |
+| Website integration settings | Preserved from the destination |
 | Other websites and their credentials | Preserved |
 | Page, revision and media IDs | Regenerated; old editor/preview references expire |
 | Previous destination content | Saved in a private recovery ZIP |
@@ -63,8 +64,8 @@ For a folder created by the wizard, keep its data directory and upgrade its inst
 ```sh
 cd /path/to/my-website
 npm stop
-node lumasite.mjs backup --output /private/backups/lumasite-before-0.8.1
-npm install "lumasite@git+https://github.com/arrrrniii/lumasite.git#v0.8.1" --omit=dev --ignore-scripts
+node lumasite.mjs backup --output /private/backups/lumasite-before-0.9.0
+npm install "lumasite@git+https://github.com/arrrrniii/lumasite.git#v0.9.0" --omit=dev --ignore-scripts
 npm start
 npm run health
 ```

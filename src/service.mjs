@@ -5,8 +5,9 @@ import { atomicWrite } from './store.mjs';
 import { compilePageCss } from './compiler.mjs';
 import { homePage, escapeHtml, components } from './templates.mjs';
 import { validateSeo, renderSeo } from './seo.mjs';
+import { integrationMarkup } from './integrations.mjs';
 
-export const VERSION = '0.8.1';
+export const VERSION = '0.9.0';
 export function fail(status, message) { throw Object.assign(new Error(message), { status }); }
 export const tokenHash = token => createHash('sha256').update(String(token)).digest('hex');
 export function tokenMatches(token, hash) {
@@ -258,7 +259,7 @@ export async function getLibrary() {
   catch (error) { if (error.code !== 'ENOENT') throw error; }
   return { components, animations, lumafx };
 }
-export function renderDocument(page, { theme = {}, revisionId, preview = false, token = '', assetUrls, project, instance, noindex = false, html = page.html } = {}) {
+export function renderDocument(page, { theme = {}, revisionId, preview = false, token = '', assetUrls, project, instance, noindex = false, liveIntegrations = false, html = page.html } = {}) {
   const id = revisionId || `${page.id}-${page.revision}`;
   const prefix = preview ? `/preview-assets/${page.projectId}/${page.id}` : `/release-assets/${id}`;
   const themeCss = Object.entries(theme).map(([key, value]) => `${key}:${value}`).join(';');
@@ -266,5 +267,6 @@ export function renderDocument(page, { theme = {}, revisionId, preview = false, 
   const query = preview ? `?token=${encodeURIComponent(token)}&revision=${page.revision}` : '';
   const cssUrl = !preview && assetUrls?.css || `${prefix}.css${query}`;
   const jsUrl = !preview && assetUrls?.js || `${prefix}.js${query}`;
-  return `<!doctype html><html lang="${escapeHtml(metadata.language)}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">${metadata.head}<link rel="stylesheet" href="/runtime/lumafx/lumafx.css"><link rel="stylesheet" href="${escapeHtml(cssUrl)}"><style>:root{${themeCss}}</style><script src="/runtime/lumafx/lumafx.global.js"></script></head><body>${html}<script type="module" src="${escapeHtml(jsUrl)}"></script></body></html>`;
+  const integrations = integrationMarkup(project, liveIntegrations && !preview);
+  return `<!doctype html><html lang="${escapeHtml(metadata.language)}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">${integrations.head}${metadata.head}<link rel="stylesheet" href="/runtime/lumafx/lumafx.css"><link rel="stylesheet" href="${escapeHtml(cssUrl)}"><style>:root{${themeCss}}</style><script src="/runtime/lumafx/lumafx.global.js"></script></head><body>${integrations.bodyStart}${html}<script type="module" src="${escapeHtml(jsUrl)}"></script>${integrations.bodyEnd}</body></html>`;
 }

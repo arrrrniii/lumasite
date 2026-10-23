@@ -4,7 +4,7 @@ LumaSite 0.8.0 adds OAuth to each website’s existing MCP endpoint. Older relea
 
 ## Connect a website
 
-1. Upgrade the server to 0.8.1 or later and verify that the Studio URL uses HTTPS.
+1. Upgrade the server to 0.9.0 or later and verify that the Studio URL uses HTTPS.
 2. Open the intended website in Studio → **Connections** and copy its MCP Server URL, such as `https://studio.example.com/mcp/<project-id>`.
 3. In ChatGPT → Plugins → Add custom MCP server, paste that URL and choose **OAuth**. Leave manual client credentials empty to use dynamic client registration.
 4. Sign in to your LumaSite Studio when prompted. Check the app name, callback origin, website name and domain. Choose **Allow website access**.
@@ -82,8 +82,8 @@ Both should return 200 with JSON. A 401 on `/mcp/PROJECT_ID` before login is exp
 ```sh
 cd /path/to/my-website
 npm stop
-node lumasite.mjs backup --output /private/backups/lumasite-before-0.8.1
-npm install "lumasite@git+https://github.com/arrrrniii/lumasite.git#v0.8.1" --omit=dev --ignore-scripts
+node lumasite.mjs backup --output /private/backups/lumasite-before-0.9.0
+npm install "lumasite@git+https://github.com/arrrrniii/lumasite.git#v0.9.0" --omit=dev --ignore-scripts
 npm start
 npm run health
 ```

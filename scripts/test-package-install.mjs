@@ -25,7 +25,7 @@ async function ports() {
 try {
   const [archive] = JSON.parse((await run(npm, ['pack', '--json', '--pack-destination', directory], source)).stdout);
   const files = archive.files.map(file => file.path);
-  for (const needed of ['bin/lumasite.mjs', 'bin/create-lumasite.mjs', 'src/create.mjs', 'src/setup.mjs', 'src/bootstrap.mjs', 'src/server.mjs', 'src/public-links.mjs', 'src/oauth.mjs', 'public/oauth.html', 'public/oauth.css', 'public/oauth.js', 'src/project-backups.mjs', 'src/project-lifecycle.mjs', 'src/server-detection.mjs', 'public/admin.html', 'public/fonts/dmsansvariable.woff2', 'public/fonts/soravariable.woff2', 'public/fonts/DMSans-OFL.txt', 'public/fonts/Sora-OFL.txt', 'vendor/lumafx/lumafx.global.js', 'vendor/lumafx/LICENSE']) assert.ok(files.includes(needed), `Missing package file: ${needed}`);
+  for (const needed of ['bin/lumasite.mjs', 'bin/create-lumasite.mjs', 'src/create.mjs', 'src/setup.mjs', 'src/bootstrap.mjs', 'src/server.mjs', 'src/public-links.mjs', 'src/integrations.mjs', 'public/integrations-runtime.js', 'src/oauth.mjs', 'public/oauth.html', 'public/oauth.css', 'public/oauth.js', 'src/project-backups.mjs', 'src/project-lifecycle.mjs', 'src/server-detection.mjs', 'public/admin.html', 'public/fonts/dmsansvariable.woff2', 'public/fonts/soravariable.woff2', 'public/fonts/DMSans-OFL.txt', 'public/fonts/Sora-OFL.txt', 'vendor/lumafx/lumafx.global.js', 'vendor/lumafx/LICENSE']) assert.ok(files.includes(needed), `Missing package file: ${needed}`);
   assert.equal(files.some(file => /(^|\/)(?:\.lumasite|node_modules|marketing|test-results|\.env|credentials\.json|oauth\.json|state\.json)(?:\/|$)/.test(file) || /\.(zip|log|pem|key)$/.test(file)), false);
   await run(npm, ['install', '--global', '--prefix', prefix, '--omit=dev', '--ignore-scripts', '--no-audit', '--no-fund', path.join(directory, archive.filename)]);
   assert.match((await run(bin, ['--help'])).stdout, /Guided terminal installer/);
@@ -65,6 +65,11 @@ try {
   const publish = await fetch(`http://127.0.0.1:${port}/api/projects/${projectId}/pages/${page.id}/publish`, { method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' }, body: '{}' });
   assert.equal(publish.status, 200, 'Installed Tailwind compiler can publish a page');
   assert.equal((await fetch(`http://127.0.0.1:${sitePort}/sites/installed-package/`)).status, 200);
+  const integrationRoute = `${adminOrigin}/api/projects/${projectId}/integrations`;
+  const integrationSave = await fetch(integrationRoute, { method: 'PATCH', headers: { ...headers, 'Content-Type': 'application/json' }, body: JSON.stringify({ googleAnalyticsId: 'G-PACK12345', expectedRevision: 0 }) });
+  assert.equal(integrationSave.status, 200);
+  assert.equal((await (await fetch(integrationRoute, { headers })).json()).integrations.googleAnalyticsId, 'G-PACK12345');
+  assert.equal((await fetch(`http://127.0.0.1:${sitePort}/runtime/integrations.js`)).status, 200);
   // An authenticated MCP initialize confirms runtime SDK files/dependencies were included.
   const mcp = await fetch(`http://127.0.0.1:${port}/mcp/${projectId}`, { method: 'POST', headers: { ...auth, 'Content-Type': 'application/json', Accept: 'application/json, text/event-stream' }, body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'initialize', params: { protocolVersion: '2025-03-26', capabilities: {}, clientInfo: { name: 'package-install-test', version: '1.0.0' } } }) });
   assert.equal(mcp.status, 200);
