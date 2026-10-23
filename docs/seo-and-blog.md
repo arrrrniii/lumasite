@@ -32,7 +32,7 @@ https://example.com/robots.txt
 https://example.com/feed.xml
 ```
 
-Each project has its own resources. Shared preview hosts cannot retrieve an aggregate of every project's pages. The sitemap uses absolute canonical URLs and the actual published revision time for `lastmod`; it excludes drafts, noindex pages, and pages whose canonical points elsewhere. It intentionally omits `priority` and `changefreq`. The RSS feed includes the latest 100 indexable articles.
+Each project has its own resources. Shared preview hosts cannot retrieve an aggregate of every project's pages. The sitemap uses absolute canonical URLs and the actual published revision time for `lastmod`; it excludes drafts, noindex pages, and pages whose canonical points elsewhere. Each URL includes `priority`: `1.0` for the homepage, `0.8` for other top-level pages, and `0.6` for articles or nested pages. These are relative hints within the site; Google ignores `priority` values. `changefreq` is omitted. The RSS feed includes the latest 100 indexable articles.
 
 For local inspection, use `/sites/<slug>/sitemap.xml`, `/sites/<slug>/robots.txt`, or `/sites/<slug>/feed.xml`. These preview resources remain noindex; the sitemap still shows the configured production URLs. A public preview project's robots resource disallows crawling.
 

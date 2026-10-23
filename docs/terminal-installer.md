@@ -7,13 +7,13 @@ LumaSite 0.4 includes a first-run project creator, a packaged `lumasite` command
 With Git authenticated to the private repository, run:
 
 ```sh
-npx --yes "git+https://github.com/arrrrniii/lumasite.git#v0.4.0" create
+npx --yes "git+https://github.com/arrrrniii/lumasite.git#v0.4.1" create
 ```
 
 It asks **What is your project named?**, followed by the setup questions below. Review everything before it creates files. To supply a directory in advance:
 
 ```sh
-npx --yes "git+https://github.com/arrrrniii/lumasite.git#v0.4.0" create my-website
+npx --yes "git+https://github.com/arrrrniii/lumasite.git#v0.4.1" create my-website
 ```
 
 The creator makes a new directory, installs a pinned LumaSite dependency, and initializes a website using its installed runtime. Its server is launched from that project's `node_modules/lumasite` rather than the temporary npx cache. The project continues working after the installer is removed. It does not overwrite an existing directory. Declining the settings review creates no project directory; an interrupted dependency installation retains the new folder for recovery.
@@ -48,11 +48,11 @@ npm stop
 For automation, supply a directory and `--yes` after `create`; add `--no-start` when preparing data for a supervisor. The outer `npx --yes` accepts npm's package download prompt; the inner `create ... --yes` accepts the creator's settings. For example:
 
 ```sh
-npx --yes "git+https://github.com/arrrrniii/lumasite.git#v0.4.0" create my-website \
+npx --yes "git+https://github.com/arrrrniii/lumasite.git#v0.4.1" create my-website \
   --yes --no-start --name "My website"
 ```
 
-The package also includes a `create-lumasite` executable, usable with `npx --package="git+https://github.com/arrrrniii/lumasite.git#v0.4.0" create-lumasite`. The short public-registry command `npx create-lumasite@latest` is reserved for a future intentional npm publication; it has not been published.
+The package also includes a `create-lumasite` executable, usable with `npx --package="git+https://github.com/arrrrniii/lumasite.git#v0.4.1" create-lumasite`. The short public-registry command `npx create-lumasite@latest` is reserved for a future intentional npm publication; it has not been published.
 
 ## Install directly from the private GitHub repository
 

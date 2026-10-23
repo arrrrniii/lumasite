@@ -57,6 +57,10 @@ test('production SEO resources use published revisions, isolate tenants and prot
  const preview=new URL(getPreviewUrl(store.read(),project.id,post.id));response=await f.get(preview.pathname+preview.search,'127.0.0.1');assert.match(response.headers.get('x-robots-tag'),/noindex/);assert.match(await response.text(),/noindex,nofollow/);
  const adminRobots=await fetch(`http://127.0.0.1:${f.port}/robots.txt`);assert.match(await adminRobots.text(),/Disallow: \//);assert.match(adminRobots.headers.get('x-robots-tag'),/noindex/);
  const sitemap=await(await f.get('/sitemap.xml')).text();assert.match(sitemap,/https:\/\/seo.example.com\/blog\/hello/);assert.match(sitemap,/<lastmod>/);assert.doesNotMatch(sitemap,/secret-draft|sample|duplicate|other.example.com/);
+ assert.match(sitemap,/<url><loc>https:\/\/seo\.example\.com\/<\/loc><lastmod>[^<]+<\/lastmod><priority>1\.0<\/priority><\/url>/);
+ assert.match(sitemap,/<url><loc>https:\/\/seo\.example\.com\/blog<\/loc><lastmod>[^<]+<\/lastmod><priority>0\.8<\/priority><\/url>/);
+ assert.match(sitemap,/<url><loc>https:\/\/seo\.example\.com\/blog\/hello<\/loc><lastmod>[^<]+<\/lastmod><priority>0\.6<\/priority><\/url>/);
+ assert.equal((sitemap.match(/<priority>/g)||[]).length,(sitemap.match(/<url>/g)||[]).length);
  const robots=await(await f.get('/robots.txt')).text();assert.match(robots,/Sitemap: https:\/\/seo.example.com\/sitemap.xml/);
  assert.match(await(await f.get('/robots.txt','unknown.example.com')).text(),/Disallow: \//);assert.equal((await f.get('/sitemap.xml','unknown.example.com')).status,404);
  const feed=await(await f.get('/feed.xml')).text();assert.match(feed,/Hello &lt;reader&gt;/);assert.doesNotMatch(feed,/Secret draft|Hidden sample/);

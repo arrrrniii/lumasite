@@ -1,6 +1,6 @@
 {
   "name": "lumasite",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "An independent, self-hosted website studio with native LumaFX and MCP authoring.",
   "private": true,
   "license": "UNLICENSED",

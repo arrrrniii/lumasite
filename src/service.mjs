@@ -6,7 +6,7 @@ import { compilePageCss } from './compiler.mjs';
 import { homePage, escapeHtml, components } from './templates.mjs';
 import { validateSeo, renderSeo } from './seo.mjs';
 
-export const VERSION = '0.4.0';
+export const VERSION = '0.4.1';
 export function fail(status, message) { throw Object.assign(new Error(message), { status }); }
 export const tokenHash = token => createHash('sha256').update(String(token)).digest('hex');
 export function tokenMatches(token, hash) {

@@ -9,7 +9,7 @@ LumaSite runs as an independent application. The `marketing/` directory is an op
 Requires Node.js 24 or later, npm, Git, and read access to this private repository. Create a project with one command, answer the questions, and let it install the application inside your new folder:
 
 ```sh
-npx --yes "git+https://github.com/arrrrniii/lumasite.git#v0.4.0" create
+npx --yes "git+https://github.com/arrrrniii/lumasite.git#v0.4.1" create
 ```
 
 It first asks **What is your project named?**, then walks through local/server mode, website name/domain, optional ZIP import, ports, Studio/preview URLs, and proxy configuration. After reviewing the settings, it creates the folder, installs its own runtime/dependencies, initializes credentials, and optionally starts the website. The installed application stays inside the project when npx's temporary installer goes away.
