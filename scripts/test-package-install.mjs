@@ -109,6 +109,7 @@ try {
   const appPackage = JSON.parse(await fs.readFile(path.join(app, 'package.json'), 'utf8'));
   assert.equal(appPackage.scripts.start, 'node lumasite.mjs start');
   assert.equal(appPackage.scripts.detect, 'node lumasite.mjs detect');
+  assert.equal(appPackage.scripts.backup, 'node lumasite.mjs backup');
   assert.ok(await fs.stat(path.join(app, 'package-lock.json')));
   await assert.rejects(fs.access(path.join(app, '.setup-import.zip')), { code: 'ENOENT' });
   const runRecord = JSON.parse(await fs.readFile(path.join(app, 'private data/run.json')));
@@ -119,7 +120,21 @@ try {
   assert.equal((await fetch(`http://127.0.0.1:${appPort}/admin`)).status, 200);
   assert.equal((await fetch(`http://127.0.0.1:${appSitePort}/sites/${created.projects[0].slug}/`)).status, 200, 'Creator imports published website revisions');
   assert.equal(JSON.parse((await run(process.execPath, [path.join(app, 'lumasite.mjs'), 'detect', '--json'])).stdout).ports.length, 2);
-  console.log(JSON.stringify({ package: archive.name, version: archive.version, files: files.length, bytes: archive.size, globalInstall: 'passed', setup: 'passed', studio: 'passed', publish: 'passed', mcp: 'passed', oauth: 'passed', update: 'passed', delete: 'passed', recovery: 'passed', create: 'passed', independentRuntime: 'passed' }));
+  // Run the same short backup command shown in the generated README, then check
+  // Git ignores actual private output, including a custom data path with spaces.
+  const fullBackup = JSON.parse((await run(npm, ['run', '--silent', 'backup', '--', '--json'], app)).stdout);
+  assert.equal(fullBackup.status, 'saved');
+  const createdReadme = await fs.readFile(path.join(app, 'README.md'), 'utf8');
+  assert.ok(createdReadme.includes(`Installed version: **${archive.version}**`));
+  assert.ok(createdReadme.includes(`http://localhost:${appPort}/admin`));
+  assert.ok(createdReadme.includes('Forms & email'));
+  assert.ok(createdReadme.includes('npm run backup'));
+  await run('git', ['init', '--quiet'], app);
+  for (const file of ['private data/credentials.json', 'lumasite-backup-example/credentials.json', 'backups/snapshot/forms.sqlite', 'exports/site.zip', 'smtp.key', 'forms.sqlite-wal']) {
+    await run('git', ['check-ignore', '--', file], app);
+  }
+  assert.equal((await run('git', ['status', '--porcelain', '--untracked-files=all'], app)).stdout.includes('lumasite-backup-'), false);
+  console.log(JSON.stringify({ package: archive.name, version: archive.version, files: files.length, bytes: archive.size, globalInstall: 'passed', setup: 'passed', studio: 'passed', publish: 'passed', mcp: 'passed', oauth: 'passed', update: 'passed', delete: 'passed', recovery: 'passed', create: 'passed', independentRuntime: 'passed', projectBackup: 'passed', privateGitIgnore: 'passed' }));
 } finally {
   await run(process.execPath, [path.join(app, 'lumasite.mjs'), 'stop', '--json']).catch(() => {});
   await run(bin, ['stop', '--data-dir', dataDir, '--json']).catch(() => {});

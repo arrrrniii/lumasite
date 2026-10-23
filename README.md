@@ -5,13 +5,35 @@
 A self-hosted website studio for creating, editing, and publishing through MCP or your browser. Change the page structure, HTML, Tailwind classes, CSS, browser JavaScript, images, and LumaFX animations, then publish a revision without redeploying the Studio application.
 
 [![Tests](https://github.com/arrrrniii/lumasite/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/arrrrniii/lumasite/actions/workflows/ci.yml)
-[Version 0.11.0](https://github.com/arrrrniii/lumasite/tree/v0.11.0) · Node.js 24+ · Native LumaFX · Streamable HTTP MCP
+[Version 0.11.1](https://github.com/arrrrniii/lumasite/releases/tag/v0.11.1) · Node.js 24+ · Native LumaFX · Streamable HTTP MCP
+
+## Install in one command
+
+You need **Node.js 24 or later, npm, and Git**. Run this in a terminal on your laptop or server; no GitHub account or global LumaSite installation is needed:
+
+```sh
+npx --yes --package="git+https://github.com/arrrrniii/lumasite.git#v0.11.1" lumasite create
+```
+
+1. Name a new project folder, such as `my-website`.
+2. Choose **local** to try it, or **server** to enter your domain, Studio/preview URLs, and proxy choice.
+3. Review the settings and confirm. Open the printed **Studio URL**, sign in with the generated password, and publish your first page.
+
+```sh
+cd my-website
+npm run status
+npm run health
+```
+
+The wizard installs the application inside your project, generates private credentials and a website-scoped MCP URL, and writes a project README with your addresses and commands. A fresh installation starts with its own starter website. To bring an existing LumaSite website, select its exported ZIP during setup.
+
+Server mode detects Apache/Caddy/Traefik and prepares proxy configuration. **DNS, HTTPS, enabling the proxy, and startup after reboot are server setup steps.** See [the illustrated wizard](docs/wizard-walkthrough.md) or [installation and upgrades](docs/install-from-github.md).
+
+[Local answers](#start-with-the-wizard) · [Server example](#a-complete-server-example) · [SMTP and forms](docs/forms-and-email.md) · [Global layout](docs/global-layout.md) · [Analytics and tags](docs/integrations.md) · [SEO example](docs/seo-example.md) · [Operations](docs/operations.md)
 
 ![LumaSite Studio showing the SendMailOS example, published pages, sitemap, robots.txt and RSS links](docs/images/studio-overview.png)
 
 *Actual Studio screenshot of the optional SendMailOS example. New installations start with their own data and a starter homepage draft.*
-
-[Start with the wizard](#start-with-the-wizard) · [Server walkthrough](docs/wizard-walkthrough.md) · [SEO example](docs/seo-example.md) · [Compare approaches](docs/comparison.md) · [Operations](docs/operations.md)
 
 ## What you can do
 
@@ -62,13 +84,7 @@ See the [update, delete, and recovery guide](docs/website-management.md) for the
 
 ## Start with the wizard
 
-You need **Node.js 24+, npm, and Git**. The GitHub repository is public: HTTPS installation does not require a GitHub account, token, or server login. This is a GitHub installation, not an npm registry publication.
-
-```sh
-npx --yes --package="git+https://github.com/arrrrniii/lumasite.git#v0.11.0" lumasite create
-```
-
-The first question is **What is your project named?** Choose a new folder such as `my-website`. The wizard then asks for local/server mode, a new website or ZIP import, website name/domain, ports, URLs, and whether to start the app. Server mode also asks about the reverse proxy. Review the summary before it writes the project.
+Run the [installation command above](#install-in-one-command) from a real terminal. The first question is **What is your project named?** Choose a new folder such as `my-website`. The wizard then asks for local/server mode, a new website or ZIP import, website name/domain, ports, URLs, and whether to start the app. Server mode also asks about the reverse proxy. Review the summary before it writes the project.
 
 For your first local website, choose:
 
@@ -142,8 +158,11 @@ Website data is separate from the application dependency. Preserve the data dire
 | `npm stop` | Stop this verified installation |
 | `npm run credentials` | Retrieve private saved credentials on your server |
 | `npm run project:list` | List websites and their generated addresses |
+| `npm run backup` | Save a private full-instance backup, including forms and SMTP encryption key |
 
 Use your supervisor's lifecycle commands if Docker or systemd manages the process. Native `start` does not install a service that starts after reboot.
+
+To upgrade the application later, follow [the generated-project upgrade steps](docs/website-management.md#upgrade-an-existing-generated-installation). Keep your data directory and existing credentials; first-time creation is for new installations. New v0.11.1 projects include the `backup` npm script; older projects can use `node lumasite.mjs backup`.
 
 ## Connect MCP and publish
 
@@ -216,7 +235,7 @@ npm run import -- --file /private/imports/my-website.zip --slug another-website
 A global CLI is optional:
 
 ```sh
-npm install --global "git+https://github.com/arrrrniii/lumasite.git#v0.11.0"
+npm install --global "git+https://github.com/arrrrniii/lumasite.git#v0.11.1"
 lumasite setup
 ```
 

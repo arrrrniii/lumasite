@@ -22,3 +22,6 @@ marketing/published.json
 marketing/preview.json
 !package-lock.json
 oauth.json
+forms.sqlite*
+smtp.key
+lumasite-backup-*/

@@ -8,6 +8,8 @@ Use an absolute `--data-dir` for scripts and services. A typical directory conta
 state.json          Instance, projects, drafts, and published revisions
 credentials.json    Private administrator password/API token and project tokens
 oauth.json          Private OAuth client credentials and hashed grants/tokens
+forms.sqlite        Private form submissions, SMTP settings, and delivery queue
+smtp.key            Private key for encrypted SMTP passwords; keep with the database
 media/              Uploaded originals grouped by project
 project-backups/    Private recovery ZIPs from website updates and deletions
 logs/server.log     Native CLI server stdout and stderr
@@ -149,7 +151,9 @@ lumasite backup \
   --output /srv/private-backups/lumasite-2026-10-22
 ```
 
-The destination must be new and outside the live data directory. A snapshot includes a consistent `state.json`, credentials, and immutable media. It excludes process IDs, logs, and lifecycle locks. It contains secrets; protect it like the live data directory. An `INCOMPLETE` marker means the backup failed and must not be treated as a restore point.
+The destination must be new and outside the live data directory. A snapshot includes a consistent `state.json`, administrator/project credentials, OAuth state, immutable media, recovery ZIPs, and any forms database and SMTP encryption key. The CLI uses SQLite's backup API to capture the database; do not copy a live `forms.sqlite` file alone or separate it from `smtp.key`. It excludes process IDs, logs, and lifecycle locks. It contains secrets and private submissions; protect it like the live data directory. An `INCOMPLETE` marker means the backup failed and must not be treated as a restore point.
+
+Projects created with v0.11.1 or later can run `npm run backup` from their project folder. It selects a new timestamped destination beside the data directory, or accepts `npm run backup -- --output /absolute/private-backups/before-update-001`. Generated Git ignore rules exclude default backup folders. Older generated projects can use `node lumasite.mjs backup`.
 
 For maximum certainty, stop the instance before a full operational backup. Restore by stopping the destination instance, copying the snapshot contents into an empty private data directory, excluding `backup.json`, confirming file ownership/permissions, and running `start --data-dir /restored/path`. Do not run the original and restored instance simultaneously on the same domains or ports. Verify `health`, project previews, published pages, and uploaded media after restoring.
 

@@ -1,24 +1,66 @@
-# Install LumaSite on another server
+# Install LumaSite from GitHub
 
 The GitHub repository contains the studio, CLI, native LumaFX runtime, tests, Docker configuration, and an optional SendMailOS marketing example. Each installation creates its own credentials and project IDs. Existing websites move separately through **Export ZIP → Import ZIP**.
 
-## Install the application
+## Recommended: create a project with the wizard
 
-For a packaged command and terminal wizard, see [npm installation and guided setup](terminal-installer.md):
+Install **Node.js 24 or later, npm, and Git**, then run:
 
 ```sh
-npm install --global git+https://github.com/arrrrniii/lumasite.git
-lumasite setup --mode server --data-dir /srv/lumasite/data
+npx --yes --package="git+https://github.com/arrrrniii/lumasite.git#v0.11.1" lumasite create
 ```
 
-The repository is public, so HTTPS installation does not require GitHub authentication. The clone-based workflow below is also available.
+The repository is public. You do not need a GitHub account, access token, global CLI, or npm registry account. This is the tested GitHub package command; it explicitly selects the `lumasite` executable.
 
-Use Node.js 24 or later, npm, and Git. Run these commands as the operating-system user that will own the application and its data. Create the `/srv/lumasite` directory with appropriate ownership first.
+1. Enter a new project folder, for example `my-website`.
+2. Choose **local** for a laptop trial, or **server** for a production installation.
+3. Leave the ZIP question empty for a new website, or enter an exported LumaSite ZIP path.
+4. Enter the website name. Server mode also asks for the domain, Studio/preview URLs, ports, and reverse proxy.
+5. Review the settings and confirm. The wizard installs dependencies, creates private credentials and MCP access, and optionally starts the app.
 
 ```sh
-git clone https://github.com/arrrrniii/lumasite.git /srv/lumasite/app
+cd my-website
+npm run status
+npm run health
+```
+
+Open the printed **Studio URL**, sign in with the generated administrator password, and publish the starter homepage under **Pages**. A draft is not public until published. The installed runtime stays inside your project after npx's temporary cache is removed. Your generated `README.md` records addresses, commands, feature guides, and recovery steps.
+
+[See the illustrated questions and answers](wizard-walkthrough.md). [All flags and unattended setup](terminal-installer.md).
+
+### Finish server routing
+
+The default Studio/API/MCP listener is `127.0.0.1:4310`, and the separate website/media listener is `127.0.0.1:4311`. The wizard chooses available defaults. Use the actual ports shown in its summary.
+
+For `example.com`, the usual routing is:
+
+| DNS name | Proxy destination | Purpose |
+| --- | --- | --- |
+| `studio.example.com` | `127.0.0.1:4310` | Studio and authenticated MCP |
+| `preview.example.com` | `127.0.0.1:4311` | Website previews and media |
+| `example.com` | `127.0.0.1:4311` | Published website at clean paths such as `/pricing` |
+
+Point the DNS records at your server. Review the generated configuration in `.lumasite/deployment/`, activate it in your existing proxy, configure HTTPS, and arrange startup after reboot with a supervisor. The installer detects proxies and prepares files; it does not change DNS, replace existing sites, issue certificates, or install a boot service. Read [Apache/Caddy/Traefik operations](operations.md) and [server detection](server-detection.md).
+
+### Configure the website in Studio
+
+| Area | Next step |
+| --- | --- |
+| Connections | Copy MCP/preview/sitemap links; set domain, SEO defaults, logo, and favicon |
+| Global layout | Share the header, footer, CSS, and JavaScript across pages |
+| Integrations | Add Analytics, Tag Manager, Search Console verification, or custom snippets |
+| Forms & email | Create a form and save SMTP sender/recipient settings; test before enabling notifications |
+
+See [forms and SMTP](forms-and-email.md), [global layout](global-layout.md), [integrations](integrations.md), and the [SEO example](seo-example.md). A new installation contains its own data; SendMailOS is an optional source example.
+
+## Alternative: clone the application source
+
+Use this when you want to operate a Git checkout directly. It is an alternative to the project creator, not an extra step after it. Run as the operating-system user that will own the application/data. Prepare `/srv/lumasite` with appropriate ownership first. These examples use the CLI inside the checkout rather than the generated project's `npm run` scripts.
+
+```sh
+git clone --branch v0.11.1 --depth 1 https://github.com/arrrrniii/lumasite.git /srv/lumasite/app
 cd /srv/lumasite/app
-npm ci --omit=dev
+npm ci --omit=dev --ignore-scripts
 
 node bin/lumasite.mjs init \
   --data-dir /srv/lumasite/data \
@@ -53,7 +95,9 @@ Review and install the generated configuration using [the Apache/Caddy/Traefik o
 
 ## Import an existing website
 
-Initialize the destination once. Its initial project and the imported website must have different slugs/domains; `import` creates a new project and refuses to overwrite an existing one. For example, initialize with `--name "Starter"` and omit `--domain` when the next step is importing your existing website.
+For a new installation, select the ZIP during the recommended wizard flow; this avoids creating an extra starter website. In an existing Studio, choose **Import ZIP → Create a new website**, or **Connections → Manage website → Update from ZIP** to replace the selected website while preserving its identity and credentials. [Update and recovery guide](website-management.md).
+
+The clone-based CLI example below creates a new project, so its slug/domain must be unused. If preparing a checkout for this workflow, initialize with `--name "Starter"` and omit `--domain` before importing the intended domain.
 
 Upload the private ZIP archive outside the application checkout, then run:
 
@@ -87,21 +131,35 @@ node bin/lumasite.mjs stop --data-dir /srv/lumasite/data
 
 ## Update the application
 
-For a native CLI-managed installation, take a private backup and stop the instance before updating the application:
+For a project created by the wizard, run from its folder:
+
+```sh
+cd /path/to/my-website
+npm stop
+node lumasite.mjs backup --output /absolute/private-backups/before-0.11.1
+npm install "lumasite@git+https://github.com/arrrrniii/lumasite.git#v0.11.1" --omit=dev --ignore-scripts
+npm start
+npm run health
+```
+
+This example targets v0.11.1; select the intended version from [releases](https://github.com/arrrrniii/lumasite/releases). The direct `backup` command works with older generated folders too. New v0.11.1 projects also include `npm run backup`.
+
+For the alternative Git-checkout installation:
 
 ```sh
 cd /srv/lumasite/app
+node bin/lumasite.mjs stop --data-dir /srv/lumasite/data
 node bin/lumasite.mjs backup \
   --data-dir /srv/lumasite/data \
   --output /srv/lumasite/backups/before-update-001
-node bin/lumasite.mjs stop --data-dir /srv/lumasite/data
-git pull --ff-only
-npm ci --omit=dev
+git fetch --tags origin
+git checkout --detach v0.11.1
+npm ci --omit=dev --ignore-scripts
 node bin/lumasite.mjs start --data-dir /srv/lumasite/data
 node bin/lumasite.mjs health --data-dir /srv/lumasite/data
 ```
 
-Use a new backup directory each time. Keep the source checkout free of server-specific edits so a fast-forward update can succeed. The separate data directory survives application updates. Read release notes before upgrading; do not rerun `init` as an update or restore command. If an upgrade fails, preserve the backup and use the previous application revision rather than reinitializing the data.
+Use a new private backup directory each time; it includes credentials, any form submissions, and the SMTP encryption key. Preserve your data directory across updates. Keep a source checkout free of server-specific edits. Use your supervisor's stop/start commands for Docker/systemd. Read release notes before upgrading; do not rerun `create`, `setup`, or `init` as an update or restore command. If an upgrade fails, preserve the backup and use the previous application revision rather than reinitializing the data.
 
 Editing and publishing website HTML/CSS/JavaScript through Studio/MCP does not need this application-update procedure.
 

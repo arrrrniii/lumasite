@@ -51,6 +51,91 @@ function processResult(command, args, { cwd, env, progress, label }) {
   });
 }
 
+function projectReadme(plan, dataDir) {
+  const docs = `https://github.com/arrrrniii/lumasite/blob/v${VERSION}/docs`;
+  return `# ${plan.name}
+
+An editable LumaSite website with Studio, MCP, Tailwind, and native LumaFX.
+Installed version: **${VERSION}**. Run commands from this project folder.
+
+## Open your website
+
+| Address | Purpose |
+| --- | --- |
+| ${plan.publicUrl}/admin | Studio: sign in with the generated administrator password |
+| ${plan.sitePublicUrl} | Isolated website/preview origin |
+${plan.domain ? `| https://${plan.domain}/ | Production website |\n` : ''}
+Open **Connections** in Studio for the exact website preview, MCP URL, sitemap,
+robots.txt, and RSS links. **Quick links** also provides these addresses.
+Use \`npm run credentials\` only in a private terminal to retrieve saved credentials.
+
+## Publish your first page
+
+1. Open **Pages** and edit the starter homepage, or import a website ZIP.
+2. Save a draft, open its preview, then choose **Publish**.
+3. Connect an agent using the website's MCP URL from **Connections**.
+
+A new homepage starts as a draft. A ZIP import keeps its published revisions.
+Website edits publish without rebuilding or redeploying the Studio application.
+
+| Studio area | What to configure |
+| --- | --- |
+| Global layout | Shared header, footer, CSS, and JavaScript |
+| Connections | Website/domain, SEO defaults, branding, and MCP access |
+| Integrations | Analytics, Search Console verification, Tag Manager, and other snippets |
+| Forms & email | Form fields, private submissions, SMTP sender/recipients, and delivery tests |
+
+SMTP needs your own server credentials. Save them in Studio, test the connection,
+and enable notifications when ready. [Forms and email guide](${docs}/forms-and-email.md).
+Before adding more pages, [set up a global layout](${docs}/global-layout.md).
+
+## Everyday commands
+
+| Command | Purpose |
+| --- | --- |
+| \`npm start\` | Start this installation, or show its existing process |
+| \`npm run status\` | Show ports, addresses, logs, and storage |
+| \`npm run health\` | Check both listeners |
+| \`npm run doctor\` | Diagnose configuration and runtime |
+| \`npm run detect\` | Inspect Apache, Caddy, Traefik, and ports 80/443 |
+| \`npm run logs\` | Follow logs; Ctrl+C closes the log viewer |
+| \`npm run restart\` | Restart this installation |
+| \`npm stop\` | Stop this installation |
+| \`npm run backup\` | Make a private full-instance snapshot in a new directory |
+| \`npm run project:list\` | List websites and connection addresses |
+
+Persistent data: \`${dataDir}\`.
+Keep this directory across application updates. It contains private credentials,
+website revisions/media, OAuth connections, and any form submissions or SMTP settings.
+Full backups include the forms database and its encryption key; website ZIPs exclude
+private submissions and SMTP credentials.
+
+## Server setup
+
+${plan.mode === 'server' ? 'The wizard generated deployment notes and any selected proxy configuration in your private data directory. Enable the reviewed proxy configuration, point DNS to this server, and configure HTTPS for Studio, preview, and website domains.' : 'This installation is local. To move online, create a server installation and transfer your website with Export ZIP → Import ZIP.'}
+
+Use a supervisor for automatic startup after reboot. Native \`npm start\` does not
+install a boot-time service. If Docker/systemd manages the process, use its
+lifecycle commands. [Deployment and operations](${docs}/operations.md).
+
+## Updates and recovery
+
+For an application upgrade, stop the runtime, take a private backup, install the
+chosen release, start again, and check health. Follow the
+[generated-project upgrade guide](${docs}/website-management.md#upgrade-an-existing-generated-installation)
+and [release notes](https://github.com/arrrrniii/lumasite/releases).
+Do not rerun first-time creation to upgrade an initialized instance.
+
+Reinstall the locked dependencies with \`npm ci --omit=dev --ignore-scripts\`.
+For an interrupted first setup, run \`npm install\`, then \`npm run setup\`.
+An initialized instance is never reset by setup.
+
+The generated Git ignore rules exclude data, backups, credentials, and exports.
+Keep those files private when sharing your project. The reusable application source
+and installation guide live at [arrrrniii/lumasite](https://github.com/arrrrniii/lumasite).
+`;
+}
+
 /** packageSpec can point at a packed release for offline/internal distribution. */
 export async function createWebsite(selected, options, {
   input = process.stdin, output = process.stdout, errors = process.stderr, env = process.env,
@@ -67,7 +152,7 @@ export async function createWebsite(selected, options, {
   await newDirectory(directory);
   await fs.mkdir(path.dirname(directory), { recursive: true });
   await fs.mkdir(directory, { mode: 0o700 });
-  const scripts = Object.fromEntries(['start', 'setup', 'status', 'health', 'doctor', 'restart', 'stop', 'logs', 'credentials', 'export', 'import', 'detect'].map(command => [command, `node lumasite.mjs ${command}`]));
+  const scripts = Object.fromEntries(['start', 'setup', 'status', 'health', 'doctor', 'restart', 'stop', 'logs', 'credentials', 'export', 'import', 'detect', 'backup'].map(command => [command, `node lumasite.mjs ${command}`]));
   scripts.logs = 'node lumasite.mjs logs --follow';
   scripts['project:list'] = 'node lumasite.mjs project list';
   const pkg = { name: plan.slug, version: '1.0.0', private: true, type: 'module', engines: { node: '>=24' }, scripts, dependencies: { lumasite: packageSpec } };
@@ -75,12 +160,11 @@ export async function createWebsite(selected, options, {
   const wrapper = `import { launchCli } from 'lumasite/src/bootstrap.mjs';\nimport path from 'node:path';\nimport { fileURLToPath } from 'node:url';\nconst args = process.argv.slice(2);\nif (!args.some(arg => arg === '--data-dir' || arg.startsWith('--data-dir='))) args.push('--data-dir', path.resolve(fileURLToPath(new URL('.', import.meta.url)), ${JSON.stringify(relativeData)}));\nprocess.exitCode = await launchCli(args);\n`;
   const ignoredData = relativeData && !relativeData.startsWith(`..${path.sep}`) && !path.isAbsolute(relativeData)
     ? `/${relativeData.split(path.sep).join('/').replace(/[\\*?[\]!# ]/g, '\\$&')}/\n` : '';
-  const ignore = `node_modules/\n.lumasite/\n${ignoredData}.env\n.env.*\n*.zip\n*.tgz\n*.log\n.DS_Store\n.setup-import.zip\n`;
+  const ignore = `node_modules/\n.lumasite/\n${ignoredData}backups/\nexports/\nlumasite-backup-*/\ncredentials.json\noauth.json\nstate.json\nsmtp.key\nforms.sqlite*\n.env\n.env.*\n*.zip\n*.tgz\n*.log\n.DS_Store\n.setup-import.zip\n`;
   await fs.writeFile(path.join(directory, 'package.json'), JSON.stringify(pkg, null, 2) + '\n', { flag: 'wx' });
   await fs.writeFile(path.join(directory, 'lumasite.mjs'), wrapper, { flag: 'wx' });
   await fs.writeFile(path.join(directory, '.gitignore'), ignore, { flag: 'wx' });
-  const readme = `# ${plan.name}\n\nA LumaSite website with native LumaFX, Studio, and MCP.\n\nRun commands from this directory:\n\n\`\`\`sh\nnpm start\nnpm run status\nnpm run health\nnpm run detect\nnpm run logs\nnpm run restart\nnpm stop\n\`\`\`\n\nStudio: ${plan.publicUrl}/admin\nPreview: ${plan.sitePublicUrl}\nPersistent data: ${dataDir}\n\nUse Studio or MCP to edit and publish pages. A new homepage starts as a draft; an imported ZIP preserves published pages. Credentials stay in the private data directory. Reinstall dependencies with \`npm ci\`; website data is separate from \`node_modules\`.\n\nFor an interrupted first setup, run \`npm install\`, then \`npm run setup\`. An initialized instance is never reset by setup. Use \`npm run credentials\` to retrieve its saved connection credentials privately.\n\n${plan.mode === 'server' ? 'Enable your generated proxy configuration, point DNS to this server, and configure HTTPS. Use a process supervisor for automatic startup after reboot.\n' : ''}`;
-  await fs.writeFile(path.join(directory, 'README.md'), readme, { flag: 'wx' });
+  await fs.writeFile(path.join(directory, 'README.md'), projectReadme(plan, dataDir), { flag: 'wx' });
   const progress = options.json ? errors : output;
   let temporaryZip;
   try {

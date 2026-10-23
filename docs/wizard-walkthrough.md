@@ -1,6 +1,6 @@
 # From the wizard to a working website
 
-The first-run creator makes an application folder, installs LumaSite, and prepares a website. This walkthrough matches v0.11.0's `create` command. The lower-level `setup` command also asks for a data directory; `create` uses `<project-folder>/.lumasite` by default, or an explicit `--data-dir`.
+The first-run creator makes an application folder, installs LumaSite, and prepares a website. This walkthrough matches v0.11.1's `create` command. The lower-level `setup` command also asks for a data directory; `create` uses `<project-folder>/.lumasite` by default, or an explicit `--data-dir`.
 
 ![Illustrated server wizard and the website, Studio, and MCP addresses it prepares](images/wizard-example.png)
 
@@ -13,7 +13,7 @@ Use Node.js 24 or later, npm, and Git. The repository is public; the HTTPS comma
 Start the creator from the parent directory where you want the new project:
 
 ```sh
-npx --yes --package="git+https://github.com/arrrrniii/lumasite.git#v0.11.0" lumasite create
+npx --yes --package="git+https://github.com/arrrrniii/lumasite.git#v0.11.1" lumasite create
 ```
 
 The outer `--yes` accepts npm's download prompt. It does not skip the creator's questions. The separate `create my-website --yes ...` form is for automation.
@@ -140,6 +140,7 @@ Run these in the generated project folder:
 | `npm stop` | Stop this managed instance |
 | `npm run credentials` | Retrieve saved credentials privately |
 | `npm run project:list` | List this instance's websites |
+| `npm run backup` | Save a private full-instance snapshot (projects created with v0.11.1+) |
 
 When a supervisor owns the process, use that supervisor's stop/start/restart commands. Do not run setup again to update the application; use the [upgrade workflow](install-from-github.md#update-the-application).
 
