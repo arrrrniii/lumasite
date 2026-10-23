@@ -25,7 +25,7 @@ async function ports() {
 try {
   const [archive] = JSON.parse((await run(npm, ['pack', '--json', '--pack-destination', directory], source)).stdout);
   const files = archive.files.map(file => file.path);
-  for (const needed of ['bin/lumasite.mjs', 'bin/create-lumasite.mjs', 'src/create.mjs', 'src/setup.mjs', 'src/bootstrap.mjs', 'src/server.mjs', 'src/public-links.mjs', 'src/integrations.mjs', 'src/layout.mjs', 'src/layout-extract.mjs', 'public/integrations-runtime.js', 'src/oauth.mjs', 'public/oauth.html', 'public/oauth.css', 'public/oauth.js', 'src/project-backups.mjs', 'src/project-lifecycle.mjs', 'src/server-detection.mjs', 'public/admin.html', 'public/fonts/dmsansvariable.woff2', 'public/fonts/soravariable.woff2', 'public/fonts/DMSans-OFL.txt', 'public/fonts/Sora-OFL.txt', 'vendor/lumafx/lumafx.global.js', 'vendor/lumafx/LICENSE']) assert.ok(files.includes(needed), `Missing package file: ${needed}`);
+  for (const needed of ['bin/lumasite.mjs', 'bin/create-lumasite.mjs', 'src/create.mjs', 'src/setup.mjs', 'src/bootstrap.mjs', 'src/server.mjs', 'src/public-links.mjs', 'src/integrations.mjs', 'src/layout.mjs', 'src/forms.mjs', 'src/forms-db.mjs', 'src/forms-model.mjs', 'src/smtp.mjs', 'public/forms-runtime.js', 'public/forms-runtime.css', 'src/layout-extract.mjs', 'public/integrations-runtime.js', 'src/oauth.mjs', 'public/oauth.html', 'public/oauth.css', 'public/oauth.js', 'src/project-backups.mjs', 'src/project-lifecycle.mjs', 'src/server-detection.mjs', 'public/admin.html', 'public/fonts/dmsansvariable.woff2', 'public/fonts/soravariable.woff2', 'public/fonts/DMSans-OFL.txt', 'public/fonts/Sora-OFL.txt', 'vendor/lumafx/lumafx.global.js', 'vendor/lumafx/LICENSE']) assert.ok(files.includes(needed), `Missing package file: ${needed}`);
   assert.equal(files.some(file => /(^|\/)(?:\.lumasite|node_modules|marketing|test-results|\.env|credentials\.json|oauth\.json|state\.json)(?:\/|$)/.test(file) || /\.(zip|log|pem|key)$/.test(file)), false);
   await run(npm, ['install', '--global', '--prefix', prefix, '--omit=dev', '--ignore-scripts', '--no-audit', '--no-fund', path.join(directory, archive.filename)]);
   assert.match((await run(bin, ['--help'])).stdout, /Guided terminal installer/);
@@ -78,6 +78,15 @@ try {
   assert.equal(layoutPublished.status, 200);
   const layoutSnapshot = (await layoutPublished.json()).layout.published;
   assert.equal((await fetch(`http://127.0.0.1:${sitePort}/layout-assets/${layoutSnapshot.id}.css`)).status, 200);
+  const formsRoute = `${adminOrigin}/api/projects/${projectId}/forms`, smtpRoute = `${adminOrigin}/api/projects/${projectId}/smtp`;
+  assert.equal((await fetch(formsRoute, { headers })).status, 200);
+  const savedForm = await fetch(formsRoute, { method: 'POST', headers: layoutHeaders, body: JSON.stringify({ name: 'Contact form' }) }); assert.equal(savedForm.status, 200);
+  assert.equal((await fetch(smtpRoute, { method: 'PATCH', headers: layoutHeaders, body: JSON.stringify({ host: 'smtp.example.com', username: 'pack-user', password: 'pack-private-password-123', fromEmail: 'website@example.com', to: ['owner@example.com'], enabled: false }) })).status, 200);
+  const smtpSettings = (await (await fetch(smtpRoute, { headers })).json()).smtp; assert.equal(smtpSettings.hasPassword, true); assert.equal(smtpSettings.password, undefined);
+  for (const asset of ['forms.js','forms.css']) assert.equal((await fetch(`http://127.0.0.1:${sitePort}/runtime/${asset}`)).status, 200);
+  const privateBackup = path.join(directory, 'private-full-backup');
+  await run(bin, ['backup', '--output', privateBackup, '--data-dir', dataDir, '--json']);
+  assert.ok((await fs.stat(path.join(privateBackup, 'forms.sqlite'))).size > 0); assert.equal((await fs.readFile(path.join(privateBackup, 'smtp.key'))).length, 32);
   // An authenticated MCP initialize confirms runtime SDK files/dependencies were included.
   const mcp = await fetch(`http://127.0.0.1:${port}/mcp/${projectId}`, { method: 'POST', headers: { ...auth, 'Content-Type': 'application/json', Accept: 'application/json, text/event-stream' }, body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'initialize', params: { protocolVersion: '2025-03-26', capabilities: {}, clientInfo: { name: 'package-install-test', version: '1.0.0' } } }) });
   assert.equal(mcp.status, 200);

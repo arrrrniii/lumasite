@@ -1,0 +1,11 @@
+import { DatabaseSync, backup } from 'node:sqlite';
+import { chmodSync, existsSync, copyFileSync, constants } from 'node:fs';
+import path from 'node:path';
+export function openFormsDb(file){const db=new DatabaseSync(file,{timeout:5000});chmodSync(file,0o600);if(db.prepare('PRAGMA user_version').get().user_version>1){db.close();throw new Error('This private form database needs a newer LumaSite runtime.');}db.exec(`PRAGMA foreign_keys=ON; PRAGMA secure_delete=ON; PRAGMA journal_mode=DELETE;
+CREATE TABLE IF NOT EXISTS smtp_settings(project_id TEXT PRIMARY KEY,revision INTEGER NOT NULL,config TEXT NOT NULL,password TEXT,updated_at TEXT NOT NULL) STRICT;
+CREATE TABLE IF NOT EXISTS submissions(id TEXT PRIMARY KEY,project_id TEXT NOT NULL,form_id TEXT NOT NULL,form_name TEXT NOT NULL,created_at TEXT NOT NULL,status TEXT NOT NULL,fields TEXT NOT NULL,labels TEXT NOT NULL,reply_to TEXT NOT NULL,email_status TEXT NOT NULL,attempts INTEGER NOT NULL,next_attempt_at INTEGER NOT NULL,lease_until INTEGER NOT NULL,last_error TEXT NOT NULL,message_id TEXT NOT NULL,idempotency_key TEXT NOT NULL,fingerprint TEXT NOT NULL,UNIQUE(project_id,form_id,idempotency_key)) STRICT;
+CREATE INDEX IF NOT EXISTS submissions_project ON submissions(project_id,created_at DESC,id DESC);
+CREATE INDEX IF NOT EXISTS submissions_queue ON submissions(email_status,next_attempt_at,lease_until); PRAGMA user_version=1;`);return db;}
+export async function backupFormsDb(file,target){const db=new DatabaseSync(file,{readOnly:true,timeout:5000});try{await backup(db,target);chmodSync(target,0o600);const key=path.join(path.dirname(file),'smtp.key');if(existsSync(key))copyFileSync(key,path.join(path.dirname(target),'smtp.key'),constants.COPYFILE_EXCL);else{const saved=new DatabaseSync(target,{readOnly:true});try{if(saved.prepare('SELECT count(*) AS total FROM smtp_settings WHERE password IS NOT NULL').get().total)throw new Error('The SMTP encryption key is missing.');}finally{saved.close();}}}finally{db.close();}}
+
+export function purgeFormsProject(file,id){if(!existsSync(file))return;const db=openFormsDb(file);try{db.exec('BEGIN IMMEDIATE');db.prepare('DELETE FROM submissions WHERE project_id=?').run(id);db.prepare('DELETE FROM smtp_settings WHERE project_id=?').run(id);db.exec('COMMIT');}finally{db.close();}}

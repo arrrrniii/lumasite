@@ -20,6 +20,7 @@ export async function deleteProject(store, projectId, options = {}) {
   // The active project is already gone. Cleanup failures must not make a
   // successful deletion look like a failed operation that should be retried.
   const warnings = [];
+  try { const { purgeFormsProject } = await import('./forms-db.mjs'); purgeFormsProject(path.join(store.dataDir, 'forms.sqlite'), projectId); } catch { warnings.push('Private form data cleanup needs attention on the server.'); }
   try { await rememberProjectToken(store, projectId, null); } catch { warnings.push('Saved credential cleanup needs attention; the deleted MCP endpoint is already disabled.'); }
   try { await rm(path.join(store.dataDir, 'media', projectId), { recursive: true, force: true }); } catch { warnings.push('Old media cleanup needs attention; these files are no longer served.'); }
   return { status: 'deleted', project: publicProject(project), backup: backupSummary(backup), warnings };

@@ -1,6 +1,6 @@
 {
   "name": "lumasite",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "description": "An independent, self-hosted website studio with native LumaFX and MCP authoring.",
   "private": true,
   "license": "UNLICENSED",
@@ -38,18 +38,21 @@
     "test:oauth": "node tests/oauth-browser.mjs",
     "test:oauth-apache": "node tests/oauth-apache.mjs",
     "test:integrations": "node tests/integrations-browser.mjs",
-    "test:layout": "node tests/layout-browser.mjs"
+    "test:layout": "node tests/layout-browser.mjs",
+    "test:forms": "node tests/forms-browser.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.30.0",
     "express": "5.2.1",
     "fflate": "0.8.2",
+    "nodemailer": "10.2.1",
     "parse5": "8.0.1",
     "tailwindcss": "4.1.18",
     "zod": "4.3.6"
   },
   "devDependencies": {
     "playwright": "1.61.1",
+    "smtp-server": "3.21.1",
     "yaml": "2.9.1"
   },
   "repository": {

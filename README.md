@@ -5,7 +5,7 @@
 A self-hosted website studio for creating, editing, and publishing through MCP or your browser. Change the page structure, HTML, Tailwind classes, CSS, browser JavaScript, images, and LumaFX animations, then publish a revision without redeploying the Studio application.
 
 [![Tests](https://github.com/arrrrniii/lumasite/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/arrrrniii/lumasite/actions/workflows/ci.yml)
-[Version 0.10.0](https://github.com/arrrrniii/lumasite/tree/v0.10.0) · Node.js 24+ · Native LumaFX · Streamable HTTP MCP
+[Version 0.11.0](https://github.com/arrrrniii/lumasite/tree/v0.11.0) · Node.js 24+ · Native LumaFX · Streamable HTTP MCP
 
 ![LumaSite Studio showing the SendMailOS example, published pages, sitemap, robots.txt and RSS links](docs/images/studio-overview.png)
 
@@ -24,6 +24,7 @@ A self-hosted website studio for creating, editing, and publishing through MCP o
 | Work with agents | Website-scoped OAuth for ChatGPT, revocable app connections, and manual Bearer tokens |
 | Publish carefully | Save drafts, open signed previews, publish revisions, restore previous versions |
 | Prepare for search | Server-generated metadata, canonical URLs, JSON-LD, sitemap, robots.txt, and RSS |
+| Collect submissions | Native contact/application forms, private inbox, SMTP notifications, retry and test controls |
 | Connect website tools | Shared GA4, Tag Manager, Search Console verification and custom snippets; optional consent banner |
 | Move to another server | Export a website ZIP and import it into another LumaSite installation |
 | Recover website content | Private recovery ZIP saved before each update or deletion |
@@ -43,6 +44,12 @@ Open **Global layout** to edit shared header/footer HTML, CSS, and JavaScript. S
 
 Use `layout_get`, `layout_update`, `layout_publish`, and `layout_restore` through MCP. Existing sites can use `layout_extract` to inspect matching copies, then migrate them atomically with a recovery ZIP. It preserves unpublished page edits and page-specific code. [The layout guide](docs/global-layout.md) explains slots, versions, extraction, and ZIP transfers.
 
+## Forms and email
+
+Open **Forms & email** to create native contact/application forms and review private submissions. Configure your SMTP server, sender and fixed recipients in **SMTP settings**, then test the connection or send a test email. Submissions are saved before delivery and remain available if SMTP fails. Manage form definitions through MCP and add generated form HTML to any page. [Forms and SMTP guide](docs/forms-and-email.md).
+
+Website ZIPs carry form definitions; private submissions and SMTP credentials stay on the destination server. Full private backups include the SQLite database and its encryption key.
+
 ## Website integrations
 
 Open **Integrations** to configure Google Analytics, Tag Manager, Search Console verification, and custom snippets for every published page and blog post. Settings apply without republishing pages. Optional tags wait for a consent choice by default; previews and Studio receive none of these shared tags. Manage the same settings with `integrations_get` and `integrations_update`. See [the integration guide](docs/integrations.md).
@@ -58,7 +65,7 @@ See the [update, delete, and recovery guide](docs/website-management.md) for the
 You need **Node.js 24+, npm, and Git**. The GitHub repository is public: HTTPS installation does not require a GitHub account, token, or server login. This is a GitHub installation, not an npm registry publication.
 
 ```sh
-npx --yes --package="git+https://github.com/arrrrniii/lumasite.git#v0.10.0" lumasite create
+npx --yes --package="git+https://github.com/arrrrniii/lumasite.git#v0.11.0" lumasite create
 ```
 
 The first question is **What is your project named?** Choose a new folder such as `my-website`. The wizard then asks for local/server mode, a new website or ZIP import, website name/domain, ports, URLs, and whether to start the app. Server mode also asks about the reverse proxy. Review the summary before it writes the project.
@@ -209,7 +216,7 @@ npm run import -- --file /private/imports/my-website.zip --slug another-website
 A global CLI is optional:
 
 ```sh
-npm install --global "git+https://github.com/arrrrniii/lumasite.git#v0.10.0"
+npm install --global "git+https://github.com/arrrrniii/lumasite.git#v0.11.0"
 lumasite setup
 ```
 

@@ -386,6 +386,8 @@ async function backup(dataDir, output) {
     for (const entry of await fs.readdir(dataDir, { withFileTypes: true })) {
       if (['logs', 'run.json', '.control.lock', 'state.json'].includes(entry.name) || entry.name.endsWith('.tmp')) continue;
       if (entry.isSymbolicLink()) throw new Error(`Cannot back up symbolic link ${entry.name}.`);
+      if (['forms.sqlite-journal', 'forms.sqlite-wal', 'forms.sqlite-shm', 'smtp.key'].includes(entry.name)) continue;
+      if (entry.name === 'forms.sqlite') { const { backupFormsDb } = await import('./forms-db.mjs'); await backupFormsDb(path.join(dataDir, entry.name), path.join(target, entry.name)); continue; }
       await fs.cp(path.join(dataDir, entry.name), path.join(target, entry.name), { recursive: true, errorOnExist: true, force: false });
     }
     await savePrivateJson(path.join(target, 'state.json'), state);

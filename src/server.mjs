@@ -1,4 +1,8 @@
 import express from 'express';
+import { createFormsService, formClientAddress } from './forms.mjs';
+import { listForms, upsertForm, formEmbed } from './forms-model.mjs';
+import { smtpError } from './smtp.mjs';
+import { escapeHtml } from './templates.mjs';
 import { createServer } from 'node:http';
 import { access, readFile, mkdir, open } from 'node:fs/promises';
 import { constants } from 'node:fs';
@@ -28,7 +32,7 @@ function listen(server, port, host) {
 }
 function close(server) { return new Promise(resolve => { server.close(resolve); server.closeAllConnections(); }); }
 
-export async function startServers({ dataDir, store: suppliedStore } = {}) {
+export async function startServers({ dataDir, store: suppliedStore, formsOptions = {} } = {}) {
   const store = suppliedStore || await openStore(dataDir || process.env.LUMASITE_DATA_DIR || path.resolve('.lumasite'));
   const initial = store.read().instance;
   const config = initial || { id: null, host: '127.0.0.1', port: Number(process.env.PORT || 4310), sitePort: Number(process.env.LUMASITE_SITE_PORT || 4311), publicUrl: `http://localhost:${process.env.PORT || 4310}` };
@@ -68,6 +72,7 @@ export async function startServers({ dataDir, store: suppliedStore } = {}) {
     }
     return null;
   }
+  const forms = createFormsService(store, formsOptions);
   const admin = express(), publicApp = express();
   const oauth = await createOAuthService(store, config.publicUrl);
   admin.disable('x-powered-by'); publicApp.disable('x-powered-by');
@@ -127,7 +132,7 @@ export async function startServers({ dataDir, store: suppliedStore } = {}) {
       }
       if (!authorized) return res.status(401).set('WWW-Authenticate', oauth.challenge(project.id)).json({ error: 'Connect with OAuth in ChatGPT, or use this website’s Bearer token in a client that supports custom headers.' });
     }
-    await handleMcp(req, res, store, project.id);
+    await handleMcp(req, res, store, project.id, forms);
   });
   admin.use('/api', (req, res, next) => {
     if (!authenticated(req)) return res.status(401).json({ error: 'Sign in to LumaSite first.' });
@@ -172,6 +177,18 @@ export async function startServers({ dataDir, store: suppliedStore } = {}) {
   });
   admin.get('/api/projects/:id', (req, res) => { const state = store.read(), project = publicProject(requireProject(state, req.params.id)); res.json({ project, urls: getProjectUrls(state, project) }); });
   admin.patch('/api/projects/:id', async (req, res) => res.json(await updateProject(store, req.params.id, req.body)));
+  const website = req => requireProject(store.read(), req.params.id);
+  admin.get('/api/projects/:id/forms', (req, res) => res.json(listForms(store.read(), req.params.id)));
+  admin.post('/api/projects/:id/forms', async (req, res) => res.json(await upsertForm(store, req.params.id, req.body)));
+  admin.get('/api/projects/:id/forms/:formId/embed', (req, res) => res.json(formEmbed(store.read(), req.params.id, req.params.formId)));
+  admin.get('/api/projects/:id/smtp', (req, res) => { website(req); res.json({ smtp: forms.smtp.get(req.params.id) }); });
+  admin.patch('/api/projects/:id/smtp', async (req, res) => { website(req); res.json({ smtp: await forms.smtp.update(req.params.id, req.body) }); });
+  admin.post('/api/projects/:id/smtp/verify', async (req, res) => { website(req); try { res.json(await forms.smtp.verify(req.params.id)); } catch (e) { fail(400, smtpError(e)); } });
+  admin.post('/api/projects/:id/smtp/test', async (req, res) => { const p = website(req); try { res.json(await forms.smtp.test(p.id, p.name)); } catch (e) { fail(400, smtpError(e)); } });
+  admin.get('/api/projects/:id/submissions', (req, res) => res.json(forms.list(req.params.id, req.query)));
+  admin.get('/api/projects/:id/submissions/:submissionId', (req, res) => res.json({ submission: forms.get(req.params.id, req.params.submissionId) }));
+  admin.patch('/api/projects/:id/submissions/:submissionId', (req, res) => res.json(forms.status(req.params.id, req.params.submissionId, req.body.status)));
+  admin.post('/api/projects/:id/submissions/:submissionId/retry', (req, res) => res.json(forms.retry(req.params.id, req.params.submissionId)));
   admin.get('/api/projects/:id/layout', (req, res) => res.json(layoutSummary(store.read(), req.params.id)));
   admin.patch('/api/projects/:id/layout', async (req, res) => res.json(await updateLayout(store, req.params.id, req.body)));
   admin.post('/api/projects/:id/layout/publish', async (req, res) => res.json(await publishLayout(store, req.params.id, req.body)));
@@ -225,6 +242,8 @@ export async function startServers({ dataDir, store: suppliedStore } = {}) {
   publicApp.use((_req, res, next) => { res.set({ 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'no-referrer', 'X-Robots-Tag': 'noindex' }); next(); });
   publicApp.get('/health', (_req, res) => res.json(health()));
   publicApp.get('/runtime/integrations.js', (_req, res) => res.set('Cache-Control', 'public,max-age=3600').sendFile(path.join(root, 'public/integrations-runtime.js')));
+  publicApp.get('/runtime/forms.css', (_req, res) => res.set('Cache-Control', 'public,max-age=3600').sendFile(path.join(root, 'public/forms-runtime.css')));
+  publicApp.get('/runtime/forms.js', (_req, res) => res.set('Cache-Control', 'public,max-age=3600').sendFile(path.join(root, 'public/forms-runtime.js')));
   publicApp.use('/runtime/lumafx', express.static(path.join(root, 'vendor/lumafx'), { index: false, maxAge: '1h' }));
   function media(req, res, next) {
     const snapshot = store.read();
@@ -317,6 +336,19 @@ export async function startServers({ dataDir, store: suppliedStore } = {}) {
     if (!project) return req.path === '/robots.txt' ? res.type('text').send('User-agent: *\nDisallow: /\n') : res.status(404).end();
     return seoResource(req, res, project, req.path.slice(1));
   });
+  publicApp.post('/forms/:projectId/:formId', (req, res, next) => {
+    const p = requireProject(store.read(), req.params.projectId);
+    if (!productionHost(p, req.hostname)) fail(403, 'Forms only accept submissions on this website’s production domain.');
+    if (req.headers.origin) { let origin; try { origin = new URL(req.headers.origin); } catch { fail(403, 'Invalid form origin.'); } if (!['http:', 'https:'].includes(origin.protocol) || origin.host !== req.get('host')) fail(403, 'This origin cannot submit this form.'); }
+    if (!req.is('application/json') && !req.is('application/x-www-form-urlencoded')) fail(415, 'Send JSON or form-encoded fields.');
+    res.set('Cache-Control', 'no-store'); next();
+  }, express.json({ limit: '24kb' }), express.urlencoded({ extended: false, limit: '24kb', parameterLimit: 30 }), (req, res) => {
+    const json = req.is('application/json'); let body = req.body;
+    if (!json) { const { _lumasite_hp, _lumasite_id, ...fields } = body; body = { fields, _lumasite_hp, idempotencyKey: _lumasite_id }; }
+    const result = forms.submit(req.params.projectId, req.params.formId, body, { client: formClientAddress(req) });
+    if (json) return res.json(result);
+    res.type('html').send(`<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>Form received</title></head><body><main style="font:18px system-ui;max-width:640px;margin:80px auto;padding:24px"><h1>${escapeHtml(result.message)}</h1><a href="/">Return to website</a></main></body></html>`);
+  });
   publicApp.use((req, res, next) => {
     if (req.method !== 'GET' && req.method !== 'HEAD') return res.status(405).end();
     const localMatch = req.path.match(/^\/sites\/([^/]+)(?:\/(.*))?$/);
@@ -344,9 +376,10 @@ export async function startServers({ dataDir, store: suppliedStore } = {}) {
   let adminPort, sitePort;
   try { adminPort = await listen(adminServer, config.port, config.host); sitePort = await listen(siteServer, config.sitePort, config.host); }
   catch (error) { await Promise.all([close(adminServer), close(siteServer)]); throw error; }
+  forms.start();
   ready = true;
   log('server.started', { ...health(), adminUrl: config.publicUrl, siteUrl: store.read().instance?.sitePublicUrl || `http://localhost:${sitePort}`, dataDir: store.dataDir });
-  return { store, adminServer, siteServer, ports: { admin: adminPort, site: sitePort }, async close() { ready = false; await Promise.all([close(adminServer), close(siteServer)]); log('server.stopped'); } };
+  return { store, adminServer, siteServer, ports: { admin: adminPort, site: sitePort }, async close() { ready = false; await Promise.all([close(adminServer), close(siteServer)]); await forms.close(); log('server.stopped'); } };
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

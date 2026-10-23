@@ -9,7 +9,7 @@
     port: 4310, sitePort: 4311, projects: [], project: null, urls: null,
     pages: [], page: null, baseline: '', dirty: false, view: 'projects',
     sourceTab: 'html', device: 'desktop', previewUrl: '', previewError: '',
-    library: null, libraryTab: 'components', assets: [], revisions: [], connections: [], integrations: null, layout: null, layoutTab: 'header', layoutDirty: false, layoutPreviewUrl: '', layoutPreviewPageId: '', editTagId: null,
+    forms: [], smtp: null, formsTab: 'forms', editNativeForm: null, submissions: [], submissionsTotal: 0, submissionsCursor: null, submission: null, library: null, libraryTab: 'components', assets: [], revisions: [], connections: [], integrations: null, layout: null, layoutTab: 'header', layoutDirty: false, layoutPreviewUrl: '', layoutPreviewPageId: '', editTagId: null,
     diagnostics: null, health: null, readiness: null, modal: null,
     formError: '', projectTokens: new Map(), importFile: null, importMode: 'create', backups: [], menuOpen: false,
   };
@@ -249,12 +249,12 @@
 
   function rail() {
     return `<aside class="rail" id="studio-navigation" aria-label="Studio navigation"><div class="rail-brand">${brand()}<button class="btn icon-only mobile-control" data-action="toggle-menu" type="button" aria-label="Close navigation">${icon('close')}</button></div><div class="rail-content"><div><p class="rail-label">Workspace</p><div class="project-picker"><select id="project-select" aria-label="Select website"><option value="">All websites</option>${state.projects.map((project) => `<option value="${escape(project.id)}" ${project.id === state.project?.id ? 'selected' : ''}>${escape(project.name)}</option>`).join('')}</select><button class="new-project" data-action="new-project" type="button">${icon('plus')}New website</button></div></div>
-      <div><p class="rail-label">Website studio</p><nav class="rail-nav" aria-label="Website studio">${state.project ? `${navButton('overview', 'Overview', 'overview')}${navButton('pages', 'Pages', 'pages')}${navButton('media', 'Media library', 'image')}${navButton('library', 'Components', 'layers')}${navButton('layout', 'Global layout', 'layers')}${navButton('integrations', 'Integrations', 'code')}${navButton('connections', 'Connections', 'connect')}` : navButton('projects', 'Your websites', 'folder')}${navButton('runtime', 'Runtime', 'pulse')}</nav></div></div>
+      <div><p class="rail-label">Website studio</p><nav class="rail-nav" aria-label="Website studio">${state.project ? `${navButton('overview', 'Overview', 'overview')}${navButton('pages', 'Pages', 'pages')}${navButton('media', 'Media library', 'image')}${navButton('library', 'Components', 'layers')}${navButton('layout', 'Global layout', 'layers')}${navButton('forms', 'Forms & email', 'pages')}${navButton('integrations', 'Integrations', 'code')}${navButton('connections', 'Connections', 'connect')}` : navButton('projects', 'Your websites', 'folder')}${navButton('runtime', 'Runtime', 'pulse')}</nav></div></div>
       <div class="rail-footer"><div class="rail-native">${icon('sparkle')}<div><strong>Made to move.</strong><span>LumaFX is built into every page.</span></div></div><div class="rail-footer-meta"><span>LumaSite ${escape(state.version ? `v${state.version}` : '')}</span>${icon('lock')}</div></div></aside>`;
   }
 
   function shell() {
-    const titles = { projects: 'Your websites', overview: 'Overview', pages: 'Pages', media: 'Media library', library: 'Components', integrations: 'Integrations', layout: 'Global layout', connections: 'Connections', runtime: 'Runtime' };
+    const titles = { projects: 'Your websites', overview: 'Overview', pages: 'Pages', media: 'Media library', library: 'Components', integrations: 'Integrations', layout: 'Global layout', forms: 'Forms & email', connections: 'Connections', runtime: 'Runtime' };
     document.title = `${state.project?.name ? `${state.project.name} · ` : ''}${titles[state.view] || 'Studio'} · LumaSite`;
     return `<div class="shell">${rail()}<button class="nav-scrim" data-action="toggle-menu" type="button" aria-label="Close navigation" tabindex="-1"></button><div class="content"><header class="topbar"><div class="topbar-left"><button class="btn icon-only mobile-control" id="menu-trigger" data-action="toggle-menu" type="button" aria-label="Open navigation" aria-controls="studio-navigation" aria-expanded="${state.menuOpen}">${icon('menu')}</button><div class="breadcrumb"><span>Studio</span>${icon('arrow')}${state.project ? `<strong>${escape(state.project.name)}</strong>${icon('arrow')}` : ''}<span>${titles[state.view] || 'Studio'}</span></div></div><div class="topbar-right">${quickLinks()}${state.project ? external(state.urls?.site, 'Preview website', 'btn small topbar-preview') : ''}<button class="btn icon-only" data-action="import-zip" type="button" aria-label="Import ZIP" title="Import ZIP">${icon('upload')}</button><button class="btn icon-only" data-action="logout" type="button" aria-label="Sign out" title="Sign out">${icon('logout')}</button></div></header><main class="workspace" id="main" tabindex="-1">${workspaceView()}</main><footer class="workspace-footer"><span>${icon('lock')}Private studio</span><span>Design. Connect. Publish.</span></footer></div></div>${modalView()}`;
   }
@@ -268,6 +268,7 @@
     if (state.view === 'connections') return connectionsView();
     if (state.view === 'integrations') return integrationsView();
     if (state.view === 'layout') return layoutView();
+    if (state.view === 'forms') return formsView();
     return editorView();
   }
 
@@ -349,6 +350,42 @@
     const seo = state.project.seo || {};
     const field = (key, label, placeholder = '') => `<label>${label}<input name="${key}" value="${escape(seo[key] || '')}" placeholder="${escape(placeholder)}"></label>`;
     return `<section class="surface seo-surface"><div class="surface-header"><div><span class="eyebrow">Search & sharing</span><h2>SEO and branding</h2><p>Shared defaults for this website.</p></div></div><form class="seo-form" data-form="project-seo">${field('siteName', 'Site name', state.project.name)}<label>Site description<textarea name="description" aria-label="Site description" rows="3">${escape(seo.description || '')}</textarea></label>${field('language', 'Website language', 'en')}${field('image', 'Default social image URL')}${field('imageAlt', 'Default social image description')}${field('logo', 'Organization logo URL')}${field('favicon', 'Favicon URL')}${field('appleTouchIcon', 'Apple touch icon URL')}<label class="checkbox-label"><input name="noindex" type="checkbox" ${seo.noindex ? 'checked' : ''}>Keep the whole website out of search results</label><p class="hint">Shared defaults apply immediately. Production indexing requires the configured domain; project-path and draft previews remain noindex.</p><div class="row"><button class="btn" type="submit">Save SEO settings</button></div></form></section>`;
+  }
+
+  function formsView() {
+    const tabs = [['forms','Forms'],['submissions','Submissions'],['smtp','SMTP settings']];
+    return `<div class="page-heading"><div><h1>Forms that reach you.</h1><p>Collect messages privately and send notifications with your own SMTP server.</p></div><button class="btn primary" data-action="new-native-form" type="button">${icon('plus')}Create form</button></div><div class="section-tabs" aria-label="Forms and email">${tabs.map(([key,label])=>`<button type="button" data-action="forms-tab" data-tab="${key}" class="${state.formsTab===key?'active':''}">${label}</button>`).join('')}</div>${state.formsTab==='smtp'?smtpView():state.formsTab==='submissions'?submissionsView():nativeFormsList()}`;
+  }
+  function nativeFormsList() {
+    const smtp = state.smtp;
+    return `<div class="info-note">${icon('info')}<span>${smtp?.enabled ? 'Email notifications use your saved SMTP sender and recipients.' : 'Submissions are stored privately. Configure and enable SMTP to receive notification emails.'} <button class="text-button" type="button" data-action="forms-tab" data-tab="smtp">Open SMTP settings</button></span></div><div class="native-forms-list">${state.forms.length?state.forms.map(f=>`<section class="surface"><div class="surface-header"><div><h2>${escape(f.name)}</h2><p>${f.fields.length} fields · ${f.notify?'Email notifications on':'Email notifications off'}</p></div><span class="pill ${f.enabled?'success':''}">${f.enabled?'Enabled':'Disabled'}</span></div><p class="hint">${f.fields.map(x=>escape(x.label)).join(' · ')}</p><div class="row"><button class="btn small" data-action="edit-native-form" data-id="${escape(f.id)}" type="button">Edit form</button><button class="btn small" data-action="copy-native-form" data-id="${escape(f.id)}" type="button">${icon('copy')}Copy form HTML</button>${state.page?`<button class="btn small" data-action="insert-native-form" data-id="${escape(f.id)}" type="button">Add to selected page</button>`:''}</div></section>`).join(''):`<section class="surface empty-state"><h2>Your first form starts here.</h2><p>Create a contact or application form, add its HTML to a page, then publish that page. Your SMTP password stays on this server.</p><button class="btn primary" type="button" data-action="new-native-form">Create form</button></section>`}</div>`;
+  }
+  function smtpView() {
+    const s = state.smtp;
+    return `<section class="surface smtp-settings"><div class="surface-header"><div><h2>Your outgoing email</h2><p>Used only for form notifications and tests you send from Studio.</p></div><span class="pill ${s.enabled?'success':''}">${s.enabled?'Enabled':'Disabled'}</span></div><form class="stack" data-form="smtp-settings" id="smtp-settings"><div class="grid-fields"><label>SMTP host<input name="host" aria-label="SMTP host" value="${escape(s.host)}" placeholder="smtp.example.com" autocomplete="off"></label><label>SMTP port<input name="port" aria-label="SMTP port" type="number" min="1" max="65535" required value="${s.port}"></label><label>Connection security<select name="security"><option value="starttls" ${s.security==='starttls'?'selected':''}>STARTTLS — usually port 587</option><option value="tls" ${s.security==='tls'?'selected':''}>TLS — usually port 465</option></select></label><label>SMTP username<input name="username" aria-label="SMTP username" value="${escape(s.username)}" autocomplete="off"></label><label>SMTP password<input name="password" aria-label="SMTP password" type="password" autocomplete="new-password" placeholder="${s.hasPassword?'Saved — leave empty to keep it':'Enter SMTP password'}"><small>${s.hasPassword?'A password is saved. Its value is never returned to the dashboard or MCP.':'Stored encrypted on this server.'}</small></label><label>Sender name<input name="fromName" aria-label="Sender name" value="${escape(s.fromName)}" placeholder="${escape(state.project.name)}"></label><label>From email<input name="fromEmail" aria-label="From email" type="email" value="${escape(s.fromEmail)}" placeholder="website@example.com"><small>Use a sender accepted by your SMTP provider.</small></label><label>Send notifications to<input name="to" aria-label="Send notifications to" value="${escape(s.to.join(', '))}" placeholder="you@example.com"><small>Up to five fixed addresses, separated by commas. Visitors cannot choose recipients.</small></label></div><label class="checkbox-label"><input name="enabled" type="checkbox" ${s.enabled?'checked':''}>Enable form notification emails</label><label class="checkbox-label"><input name="clearPassword" type="checkbox">Remove the saved SMTP password</label><div class="row"><button class="btn primary" type="submit">Save SMTP settings</button><button class="btn" data-action="verify-smtp" type="button">Test connection</button><button class="btn" data-action="test-smtp-email" type="button">Send test email</button></div><p class="hint">Tests save these settings first. A successful send means SMTP accepted the message; check your recipient inbox. Form submissions remain saved even if email fails.</p></form></section>`;
+  }
+  const emailStatus = value => ({pending:'Queued',sending:'Sending',sent:'Accepted by SMTP',failed:'Needs attention',not_configured:'SMTP not configured',disabled:'Notifications off'})[value]||value;
+  function submissionsView() {
+    return `<section class="surface submissions-surface"><div class="surface-header"><div><h2>Private submissions</h2><p>${state.submissionsTotal} saved · Showing the latest ${state.submissions.length}. These records are excluded from website ZIPs and public pages.</p></div><button class="btn small" type="button" data-action="refresh-submissions">${icon('refresh')}Refresh</button></div><div class="native-submissions">${state.submissions.length?state.submissions.map(s=>`<button class="native-submission" data-action="view-submission" data-id="${escape(s.id)}" type="button"><span><strong>${escape(s.formName)}</strong><small>${escape(formatDate(s.createdAt))} · ${escape(s.status)}</small></span><span class="native-submission-preview">${escape(String(Object.values(s.fields)[0]??''))}</span><span class="pill ${s.emailStatus==='sent'?'success':''}">${emailStatus(s.emailStatus)}</span>${icon('arrow')}</button>`).join(''):'<p class="hint">No submissions yet. Enable a form and add it to a published page on your production domain. Previews cannot submit.</p>'}</div>${state.submissionsCursor?'<button class="btn small" data-action="older-submissions" type="button">Load older submissions</button>':''}</section>`;
+  }
+  function nativeFormModal() {
+    const f=state.editNativeForm;
+    return `<dialog class="dialog wide" aria-labelledby="dialog-title"><div class="dialog-header"><h2 id="dialog-title">${f.id?'Edit form':'Create form'}</h2><button class="btn icon-only" data-action="close-modal" type="button" aria-label="Close">${icon('close')}</button></div><form data-form="native-form"><div id="form-error" class="form-error" hidden></div><label>Form name<input name="name" value="${escape(f.name)}" required maxlength="100"></label><label>Success message<input name="successMessage" value="${escape(f.successMessage)}" required maxlength="500"></label><div class="native-field-list">${f.fields.map((field,index)=>`<fieldset><legend>Field ${index+1}</legend><div class="grid-fields"><label>Field key<input data-native-field="key" data-index="${index}" value="${escape(field.key)}" required pattern="[a-z][a-z0-9_]{0,39}"></label><label>Label<input data-native-field="label" data-index="${index}" value="${escape(field.label)}" required maxlength="100"></label><label>Type<select data-native-field="type" data-index="${index}">${['text','email','textarea','select','checkbox'].map(type=>`<option ${type===field.type?'selected':''}>${type}</option>`).join('')}</select></label><label>Maximum length<input type="number" min="1" max="10000" data-native-field="maxLength" data-index="${index}" value="${field.maxLength||1000}"></label></div><label class="checkbox-label"><input type="checkbox" data-native-field="required" data-index="${index}" ${field.required?'checked':''}>Required</label><label>Options for select fields, one per line<textarea rows="2" data-native-field="options" data-index="${index}">${escape((field.options||[]).join('\n'))}</textarea></label><button class="btn small danger" data-action="remove-native-field" data-index="${index}" type="button" ${f.fields.length<=1?'disabled':''}>Remove field</button></fieldset>`).join('')}</div><button class="btn small" data-action="add-native-field" type="button" ${f.fields.length>=20?'disabled':''}>${icon('plus')}Add field</button><label>Reply-to field<select name="replyToField"><option value="">No reply-to</option>${f.fields.filter(x=>x.type==='email').map(x=>`<option value="${escape(x.key)}" ${x.key===f.replyToField?'selected':''}>${escape(x.label)}</option>`).join('')}</select><small>Replies to notifications will go to this visitor email. The sender stays your configured From email.</small></label><label class="checkbox-label"><input name="enabled" type="checkbox" ${f.enabled?'checked':''}>Enable submissions on the production domain</label><label class="checkbox-label"><input name="notify" type="checkbox" ${f.notify?'checked':''}>Email new submissions using Studio SMTP</label><button class="btn primary" type="submit">Save form</button></form></dialog>`;
+  }
+  function submissionModal() {
+    const s=state.submission;
+    return `<dialog class="dialog wide" aria-labelledby="dialog-title"><div class="dialog-header"><h2 id="dialog-title">${escape(s.formName)}</h2><button class="btn icon-only" data-action="close-modal" type="button" aria-label="Close">${icon('close')}</button></div><p>${escape(formatDate(s.createdAt))} · ${escape(s.status)}</p><dl class="submission-fields">${Object.entries(s.fields).map(([key,value])=>`<div><dt>${escape(s.labels[key]||key)}</dt><dd>${escape(typeof value==='boolean'?(value?'Yes':'No'):value)}</dd></div>`).join('')}</dl><p><strong>${emailStatus(s.emailStatus)}</strong> · ${s.attempts} SMTP attempts</p>${s.lastError?`<p class="form-error">${escape(s.lastError)}</p>`:''}<div class="row"><button class="btn small" type="button" data-action="submission-status" data-status="read">Mark as read</button><button class="btn small" type="button" data-action="submission-status" data-status="archived">Archive</button>${['failed','not_configured','disabled'].includes(s.emailStatus)?'<button class="btn primary small" data-action="retry-submission" type="button">Retry email</button>':''}</div></dialog>`;
+  }
+  async function loadForms() {
+    const [f,s,records]=await Promise.all([api(projectPath('/forms')),api(projectPath('/smtp')),api(projectPath('/submissions'))]);
+    state.forms=f.forms;state.smtp=s.smtp;state.submissions=records.submissions;state.submissionsTotal=records.total;state.submissionsCursor=records.nextCursor;
+  }
+  async function saveSmtpForm() {
+    const form=document.getElementById('smtp-settings'),data=Object.fromEntries([...form.elements].filter(e=>e.name).map(e=>[e.name,e.value]));
+    const patch={host:data.host,port:Number(data.port),security:data.security,username:data.username,fromName:data.fromName,fromEmail:data.fromEmail,to:data.to.split(',').map(s=>s.trim()).filter(Boolean),enabled:form.elements.enabled.checked,clearPassword:form.elements.clearPassword.checked,expectedRevision:state.smtp.revision};
+    if(data.password)patch.password=data.password;
+    const result=await api(projectPath('/smtp'),{method:'PATCH',body:patch});state.smtp=result.smtp;
+    form.elements.password.value='';form.elements.clearPassword.checked=false;
   }
 
   function layoutView() {
@@ -545,6 +582,8 @@
   }
 
   function modalView() {
+    if (state.modal === 'native-form') return nativeFormModal();
+    if (state.modal === 'submission') return submissionModal();
     if (!state.modal) return '';
     if (state.modal === 'custom-tag') return customTagModal();
     if (state.modal === 'import') return importModal();
@@ -605,6 +644,7 @@
     if (view === 'connections') await loadConnections();
     if (view === 'integrations') await loadIntegrations();
     if (view === 'layout') await loadLayout();
+    if (view === 'forms') await loadForms();
     render();
     if (state.page && view === 'pages') await refreshPreview();
   }
@@ -682,6 +722,7 @@
     if (view === 'connections') await loadConnections();
     if (view === 'integrations') await loadIntegrations();
     if (view === 'layout') await loadLayout();
+    if (view === 'forms') await loadForms();
     if (view === 'runtime') await loadRuntime();
     state.menuOpen = false;
     state.view = view;
@@ -855,6 +896,20 @@
       toast('Revision restored to your draft. Publish to make it live.');
     },
     'refresh-connections': async () => { await loadConnections(); render(); },
+    'forms-tab': async element => { state.formsTab = element.dataset.tab; await loadForms(); render(); },
+    'new-native-form': () => { state.editNativeForm = { name: 'Contact form', enabled: false, notify: true, replyToField: 'email', successMessage: 'Thank you. Your message has been received.', fields: [{key:'name',label:'Name',type:'text',required:true,maxLength:1000,options:[]},{key:'email',label:'Email',type:'email',required:true,maxLength:254,options:[]},{key:'message',label:'Message',type:'textarea',required:true,maxLength:5000,options:[]}] }; state.modal='native-form'; render(); },
+    'edit-native-form': element => { state.editNativeForm=structuredClone(state.forms.find(f=>f.id===element.dataset.id));state.modal='native-form';render(); },
+    'add-native-field': () => { state.editNativeForm.fields.push({key:'field_'+(state.editNativeForm.fields.length+1),label:'New field',type:'text',required:false,maxLength:1000,options:[]});render(); },
+    'remove-native-field': element => { state.editNativeForm.fields.splice(Number(element.dataset.index),1);render(); },
+    'copy-native-form': async element => { const result=await api(projectPath('/forms/'+element.dataset.id+'/embed'));await clipboard(result.html);toast('Form HTML copied. Add it to a page and publish.'); },
+    'insert-native-form': async element => { const result=await api(projectPath('/forms/'+element.dataset.id+'/embed'));state.page.html+='\n'+result.html;updateDirty();state.view='pages';render();toast('Form added to the selected page draft. Save and publish to make it live.'); },
+    'verify-smtp': async () => { await saveSmtpForm();await api(projectPath('/smtp/verify'),{method:'POST',body:{}});render();toast('SMTP connection and authentication succeeded.'); },
+    'test-smtp-email': async () => { await saveSmtpForm();await api(projectPath('/smtp/test'),{method:'POST',body:{}});render();toast('Test email accepted by SMTP. Check your recipient inbox.'); },
+    'older-submissions': async () => { const result=await api(projectPath('/submissions')+'?before='+encodeURIComponent(state.submissionsCursor));state.submissions.push(...result.submissions);state.submissionsCursor=result.nextCursor;render(); },
+    'refresh-submissions': async () => { await loadForms();render(); },
+    'view-submission': async element => { state.submission=(await api(projectPath('/submissions/'+element.dataset.id))).submission;state.modal='submission';render(); },
+    'submission-status': async element => { state.submission=(await api(projectPath('/submissions/'+state.submission.id),{method:'PATCH',body:{status:element.dataset.status}})).submission;await loadForms();render(); },
+    'retry-submission': async () => { state.submission=(await api(projectPath('/submissions/'+state.submission.id+'/retry'),{method:'POST',body:{}})).submission;await loadForms();render();toast('Notification queued for another SMTP attempt.'); },
     'layout-tab': element => { state.layoutTab = element.dataset.tab; render(); },
     'save-layout': async () => { await persistLayout(); render(); toast('Layout draft saved. Your live website is unchanged.'); },
     'publish-layout': async () => { if (state.layoutDirty) await persistLayout(); state.layout = await api(projectPath('/layout/publish'), { method: 'POST', body: { expectedRevision: state.layout.layout.revision } }); render(); toast('Layout published to every linked page.'); },
@@ -987,6 +1042,11 @@
         render();
         toast('SEO defaults saved.');
       }
+      if (form.dataset.form === 'smtp-settings') { await saveSmtpForm();render();toast('SMTP settings saved privately on this server.'); }
+      if (form.dataset.form === 'native-form') {
+        const f=state.editNativeForm,body={...(f.id?{formId:f.id,expectedRevision:f.revision}:{}),name:values.name,successMessage:values.successMessage,replyToField:values.replyToField,enabled:form.elements.enabled.checked,notify:form.elements.notify.checked,fields:f.fields};
+        await api(projectPath('/forms'),{method:'POST',body});state.modal=null;await loadForms();render();toast('Form saved. Add its HTML to a page and publish.');
+      }
       if (form.dataset.form === 'google-integrations') {
         await saveIntegrationSettings({ googleAnalyticsId: values.googleAnalyticsId, googleTagManagerId: values.googleTagManagerId, trackingEnabled: form.elements.trackingEnabled.checked, consentMode: values.consentMode });
         render(); toast('Google settings saved for all production pages.');
@@ -1013,6 +1073,9 @@
   });
 
   app.addEventListener('input', (event) => {
+    const nativeField=event.target.dataset.nativeField;
+    if(nativeField && state.editNativeForm){const target=state.editNativeForm.fields[Number(event.target.dataset.index)];target[nativeField]=nativeField==='required'?event.target.checked:nativeField==='maxLength'?Number(event.target.value):nativeField==='options'?event.target.value.split('\n').map(s=>s.trim()).filter(Boolean):event.target.value;const select=document.querySelector('[data-form="native-form"] select[name="replyToField"]');if(select&&['type','key','label'].includes(nativeField)){const fields=state.editNativeForm.fields.filter(x=>x.type==='email');select.innerHTML='<option value="">No reply-to</option>'+fields.map(x=>`<option value="${escape(x.key)}" ${x.key===state.editNativeForm.replyToField?'selected':''}>${escape(x.label)}</option>`).join('');state.editNativeForm.replyToField=select.value;}}
+    if(state.modal==='native-form' && event.target.name && ['name','successMessage','replyToField','enabled','notify'].includes(event.target.name))state.editNativeForm[event.target.name]=event.target.type==='checkbox'?event.target.checked:event.target.value;
     const layoutField = event.target.dataset.layoutField;
     if (layoutField && state.layout) { state.layout.layout.draft[layoutField] = event.target.value; state.layoutDirty = true; document.getElementById('layout-draft-status').textContent = 'Unsaved changes'; }
     const field = event.target.dataset.pageField;

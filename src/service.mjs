@@ -8,7 +8,7 @@ import { validateSeo, renderSeo } from './seo.mjs';
 import { integrationMarkup } from './integrations.mjs';
 import { composeLayout, pageLayout, layoutModeSchema, layoutClassSchema, parseLayout } from './layout.mjs';
 
-export const VERSION = '0.10.0';
+export const VERSION = '0.11.0';
 export function fail(status, message) { throw Object.assign(new Error(message), { status }); }
 export const tokenHash = token => createHash('sha256').update(String(token)).digest('hex');
 export function tokenMatches(token, hash) {
@@ -53,7 +53,7 @@ function domainName(value) {
 function pageSlug(value = '') {
   const slug = String(value).replace(/^\/+|\/+$/g, '');
   if (slug.length > 300 || (slug && !/^[a-z0-9]+(?:[/-][a-z0-9]+)*$/.test(slug))) fail(400, 'Page paths can contain lowercase letters, numbers, hyphens and nested slashes.');
-  if (new Set(['health', 'runtime', 'media', 'content-assets', 'layout-assets', 'release-assets', 'preview-assets', 'preview', 'sites', 'admin', 'api', 'mcp']).has(slug.split('/')[0])) fail(400, 'That path is reserved by LumaSite. Choose another page path.');
+  if (new Set(['health', 'runtime', 'media', 'content-assets', 'layout-assets', 'forms', 'release-assets', 'preview-assets', 'preview', 'sites', 'admin', 'api', 'mcp']).has(slug.split('/')[0])) fail(400, 'That path is reserved by LumaSite. Choose another page path.');
   return slug;
 }
 function source(value, label, max = 1024 * 1024) {
@@ -280,6 +280,8 @@ export function renderDocument(page, { theme = {}, revisionId, preview = false, 
   const layoutPrefix = preview ? `/preview-assets/${page.projectId}/${page.id}.layout` : `/layout-assets/${layout?.id}`;
   const layoutCss = layout ? `<link rel="stylesheet" href="${escapeHtml(layoutPrefix + '.css' + query)}">` : '';
   const layoutAfter = layout?.cssAfter ? `<link rel="stylesheet" href="${escapeHtml(layoutPrefix + (preview ? '-after.css' : '.after.css') + query)}">` : '';
+  const formsCss = project?.forms?.length ? '<link rel="stylesheet" href="/runtime/forms.css">' : '';
+  const formsJs = project?.forms?.length ? '<script defer src="/runtime/forms.js"></script>' : '';
   const layoutJs = layout?.js ? `<script type="module" src="${escapeHtml(layoutPrefix + '.js' + query)}"></script>` : '';
-  return `<!doctype html><html lang="${escapeHtml(metadata.language)}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">${integrations.head}${metadata.head}<link rel="stylesheet" href="/runtime/lumafx/lumafx.css">${layoutCss}<link rel="stylesheet" href="${escapeHtml(cssUrl)}">${layoutAfter}<style>:root{${themeCss}}</style><script src="/runtime/lumafx/lumafx.global.js"></script></head><body>${integrations.bodyStart}${html}${layoutJs}<script type="module" src="${escapeHtml(jsUrl)}"></script>${integrations.bodyEnd}</body></html>`;
+  return `<!doctype html><html lang="${escapeHtml(metadata.language)}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">${integrations.head}${metadata.head}<link rel="stylesheet" href="/runtime/lumafx/lumafx.css">${layoutCss}<link rel="stylesheet" href="${escapeHtml(cssUrl)}">${layoutAfter}${formsCss}<style>:root{${themeCss}}</style><script src="/runtime/lumafx/lumafx.global.js"></script></head><body>${integrations.bodyStart}${html}${layoutJs}<script type="module" src="${escapeHtml(jsUrl)}"></script>${integrations.bodyEnd}${formsJs}</body></html>`;
 }

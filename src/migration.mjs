@@ -8,6 +8,7 @@ import {zip} from 'fflate';
 import {z} from 'zod';
 import {pageSeoSchema,projectSeoSchema,siteBase} from './seo.mjs';
 import {integrationSettingsSchema} from './integrations.mjs';
+import {formSchema} from './forms-model.mjs';
 import {layoutSchema,layoutModeSchema,layoutClassSchema} from './layout.mjs';
 import {fail,tokenHash,publicProject,getProjectUrls,getPreviewUrl,rememberProjectToken} from './service.mjs';
 import {confirmProject,projectFingerprint,assertUnchanged,saveProjectBackup,discardProjectBackup,backupSummary} from './project-backups.mjs';
@@ -20,12 +21,12 @@ const extensions=new Map([['image/png','png'],['image/jpeg','jpg'],['image/webp'
 const slug=z.string().min(1).max(80).regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),domain=z.string().max(253).refine(v=>v===''||/^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)*[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(v));
 const name=n=>z.string().min(1).max(n).refine(v=>!!v.trim()),code=n=>z.string().refine(v=>Buffer.byteLength(v)<=n),source=code(1024*1024);
 const theme=z.record(z.string(),z.string()).refine(v=>Object.keys(v).length<=128&&Object.entries(v).every(([k,s])=>/^--[a-z][a-z0-9-]{0,60}$/.test(k)&&s.length<=200&&!/[;{}<>]/.test(s)));
-const reserved=new Set(['health','runtime','media','release-assets','content-assets','layout-assets','preview-assets','preview','sites','admin','api','mcp']);
+const reserved=new Set(['health','runtime','media','release-assets','content-assets','layout-assets','forms','preview-assets','preview','sites','admin','api','mcp']);
 const route=z.string().max(300).refine(v=>!v||(/^[a-z0-9]+(?:[/-][a-z0-9]+)*$/.test(v)&&!reserved.has(v.split('/')[0])));
 const pageSchema=z.object({id,projectId:id,slug:route,title:name(200),description:z.string().max(500),seo:pageSeoSchema.optional(),layoutMode:layoutModeSchema.optional(),layoutClass:layoutClassSchema.optional(),html:source,css:source,js:source,updatedAt:stamp,revision:z.number().int().min(1).max(2147483647),publishedRevisionId:id.nullable()}).strict();
 const revisionSchema=z.object({id,projectId:id,pageId:id,createdAt:stamp,number:z.number().int().min(1).max(2147483647),page:pageSchema,theme,compiledCss:code(8*1024*1024)}).strict();
 const assetSchema=z.object({id,projectId:id,name:z.string().max(200),filename:z.string().max(45),mime:z.string().refine(v=>extensions.has(v)),size:z.number().int().min(1).max(MIGRATION_LIMITS.media),createdAt:stamp,url:z.string().max(100)}).strict();
-const projectSchema=z.object({id,name:name(100),slug,domain,theme,seo:projectSeoSchema.optional(),integrations:integrationSettingsSchema.optional(),layout:layoutSchema.optional(),createdAt:stamp,updatedAt:stamp}).strict();
+const projectSchema=z.object({id,name:name(100),slug,domain,theme,seo:projectSeoSchema.optional(),integrations:integrationSettingsSchema.optional(),layout:layoutSchema.optional(),forms:z.array(formSchema).max(50).optional(),createdAt:stamp,updatedAt:stamp}).strict();
 const payloadSchema=z.object({schemaVersion:z.literal(1),project:projectSchema,pages:z.array(pageSchema).max(1000),revisions:z.array(revisionSchema).max(5000),assets:z.array(assetSchema).max(MIGRATION_LIMITS.entries-2)}).strict();
 const fileSchema=z.object({path:z.string().max(100),size:z.number().int().min(0).max(MIGRATION_LIMITS.json),sha256:z.string().regex(/^[a-f0-9]{64}$/)}).strict();
 const manifestSchema=z.object({format:z.literal('lumasite-project'),version:z.literal(1),createdAt:stamp,projectFile:z.literal('project.json'),files:z.array(fileSchema).min(1).max(MIGRATION_LIMITS.entries-1)}).strict();
@@ -37,6 +38,7 @@ const pageKeys=['id','projectId','slug','title','description','seo','layoutMode'
 function graph(data){
  const {project,pages,revisions,assets}=data,all=new Set([project.id]),pageIds=new Set(pages.map(p=>p.id)),byRevision=new Map(revisions.map(r=>[r.id,r]));
  const unique=(items,key,label)=>{const seen=new Set();for(const item of items){const v=key(item);if(seen.has(v))fail(400,`Duplicate ${label} in project archive.`);seen.add(v);}};
+ for(const f of project.forms||[]){if(all.has(f.id))fail(400,'Duplicate form object ID.');all.add(f.id);}
  if(pages.some(p=>p.layoutMode==='global')&&!project.layout)fail(400,'Global pages require a project layout.');
  if(pages.some(p=>p.layoutMode==='global'&&p.publishedRevisionId)&&!project.layout?.published)fail(400,'Published global pages require a published layout.');
  if(project.layout){const l=project.layout;unique(l.history,r=>r.id,'layout version');for(const r of l.history){if(all.has(r.id))fail(400,'Duplicate layout object ID.');all.add(r.id);}if(l.published&&!l.history.some(r=>JSON.stringify(r)===JSON.stringify(l.published)))fail(400,'Published layout must match its history snapshot.');}
@@ -90,7 +92,7 @@ export async function inspectProjectArchive(buffer){
 async function readMedia(store,a){const file=await open(path.join(store.dataDir,'media',a.projectId,a.filename),constants.O_RDONLY|constants.O_NOFOLLOW);try{const s=await file.stat();if(!s.isFile()||s.size!==a.size||s.size>MIGRATION_LIMITS.media)fail(400,'Project media is missing, changed or exceeds the supported size.');return await file.readFile();}finally{await file.close();}}
 export async function exportProject(store,projectId){
  const state=store.read(),p=state.projects.find(p=>p.id===projectId);if(!p)fail(404,'Project not found.');
- const payload=graph(parsed(payloadSchema,{schemaVersion:1,project:pick(p,['id','name','slug','domain','theme','seo','integrations','layout','createdAt','updatedAt']),pages:state.pages.filter(p=>p.projectId===projectId).map(p=>pick(p,pageKeys)),revisions:state.revisions.filter(r=>r.projectId===projectId).map(r=>({...pick(r,['id','projectId','pageId','createdAt','number','theme','compiledCss']),page:pick(r.page,pageKeys)})),assets:state.assets.filter(a=>a.projectId===projectId).map(a=>pick(a,['id','projectId','name','filename','mime','size','createdAt','url']))},'project data'));
+ const payload=graph(parsed(payloadSchema,{schemaVersion:1,project:pick(p,['id','name','slug','domain','theme','seo','integrations','layout','forms','createdAt','updatedAt']),pages:state.pages.filter(p=>p.projectId===projectId).map(p=>pick(p,pageKeys)),revisions:state.revisions.filter(r=>r.projectId===projectId).map(r=>({...pick(r,['id','projectId','pageId','createdAt','number','theme','compiledCss']),page:pick(r.page,pageKeys)})),assets:state.assets.filter(a=>a.projectId===projectId).map(a=>pick(a,['id','projectId','name','filename','mime','size','createdAt','url']))},'project data'));
  const content=Buffer.from(JSON.stringify(payload));rejectTokens(content.toString());if(content.length>MIGRATION_LIMITS.json)fail(413,'Project content exceeds the 128 MiB JSON limit.');
  let credentials={};try{credentials=JSON.parse(await readFile(path.join(store.dataDir,'credentials.json'),'utf8'));}catch(e){if(e.code!=='ENOENT')throw e;}
  let oauth={};try{oauth=JSON.parse(await readFile(path.join(store.dataDir,'oauth.json'),'utf8'));}catch(e){if(e.code!=='ENOENT')throw e;}
@@ -128,7 +130,7 @@ export async function importProject(store,buffer,options={}){
  const{payload,files}=await decodeArchive(buffer);
  const selectedSlug=existing?.slug??options.slug??payload.project.slug,selectedDomain=existing?.domain??options.domain??'',linkMode=options.linkMode??(updating&&selectedDomain?'domain':'project');if(linkMode==='domain'&&!selectedDomain)fail(400,'Domain link mode requires an explicit destination domain.');
  const collision=s=>{if(updating){assertUnchanged(s,existing.id,fingerprint);return;}if(s.projects.some(p=>p.slug===selectedSlug))fail(409,'That project slug already exists. Choose another slug or update the existing website.');if(selectedDomain&&s.projects.some(p=>p.domain===selectedDomain))fail(409,'That domain already belongs to another project. Choose another domain or update that website.');};collision(state);
- const ids=new Map(),taken=new Set([state.instance.id,...state.projects.map(p=>p.id),...state.pages.map(p=>p.id),...state.revisions.map(r=>r.id),...state.assets.map(a=>a.id),...state.projects.flatMap(p=>(p.layout?.history||[]).map(r=>r.id))]);for(const item of[payload.project,...payload.pages,...payload.revisions,...payload.assets,...(payload.project.layout?.history||[])]){let fresh;do{fresh=randomUUID();}while(taken.has(fresh));taken.add(fresh);ids.set(item.id,fresh);}if(updating)ids.set(payload.project.id,existing.id);
+ const ids=new Map(),taken=new Set([state.instance.id,...state.projects.map(p=>p.id),...state.pages.map(p=>p.id),...state.revisions.map(r=>r.id),...state.assets.map(a=>a.id),...state.projects.flatMap(p=>[...(p.layout?.history||[]),...(p.forms||[])].map(r=>r.id))]);for(const item of[payload.project,...payload.pages,...payload.revisions,...payload.assets,...(payload.project.layout?.history||[]),...(payload.project.forms||[])]){let fresh;do{fresh=randomUUID();}while(taken.has(fresh));taken.add(fresh);ids.set(item.id,fresh);}if(updating)ids.set(payload.project.id,existing.id);
  const token=updating?null:`ls_project_${randomBytes(32).toString('base64url')}`,project={...payload.project,id:ids.get(payload.project.id),name:existing?.name??options.name??payload.project.name,slug:selectedSlug,domain:selectedDomain,tokenHash:existing?.tokenHash??tokenHash(token),...(updating?{createdAt:existing.createdAt,updatedAt:new Date().toISOString()}: {})};
  const remapPage=p=>({...p,id:ids.get(p.id),projectId:project.id,publishedRevisionId:p.publishedRevisionId?ids.get(p.publishedRevisionId):null}),pages=payload.pages.map(remapPage),revisions=payload.revisions.map(r=>({...r,id:ids.get(r.id),projectId:project.id,pageId:ids.get(r.pageId),page:remapPage(r.page)})),assets=payload.assets.map(a=>({...a,id:ids.get(a.id),projectId:project.id,filename:`${ids.get(a.id)}.${extensions.get(a.mime)}`,url:`/media/${project.id}/${ids.get(a.id)}.${extensions.get(a.mime)}`}));
  const virtual={...state,projects:[...state.projects.filter(p=>p.id!==project.id),project],pages:[...state.pages.filter(p=>p.projectId!==project.id),...pages]},rewrite=rewriter(payload,virtual,{...project,linkMode},ids);
@@ -146,6 +148,7 @@ export async function importProject(store,buffer,options={}){
   return value;
  };
  if(project.seo)project.seo=rewriteSeo(project.seo);
+ if(project.forms)project.forms=project.forms.map(f=>({...f,id:ids.get(f.id),enabled:updating?f.enabled:false}));
  if(project.layout){
   const transform=l=>({...l,...Object.fromEntries(['header','footer','css','cssAfter','js','compiledCss'].filter(k=>k in l).map(k=>[k,rewrite(l[k])])),...('id'in l?{id:ids.get(l.id)}:{})});
   project.layout={...project.layout,draft:transform(project.layout.draft),published:project.layout.published?transform(project.layout.published):null,history:project.layout.history.map(transform)};
