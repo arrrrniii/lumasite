@@ -42,10 +42,29 @@ try {
     await page.getByLabel('Website name', { exact: true }).fill('Browser Demo');
     await page.getByLabel(/^Website domain/).fill('browser-demo.example');
     await page.getByRole('button', { name: 'Create website', exact: true }).click();
-    await page.getByRole('heading', { name: 'Your website, connected.' }).waitFor();
+    await page.getByRole('heading', { name: 'Connections', exact: true }).waitFor();
     assert.match(await page.locator('body').innerText(), /\/mcp\/[a-f0-9-]+/);
     assert.match(await page.locator('body').innerText(), new RegExp(String(port)));
     await idle();
+  });
+  await step('Expose project-scoped website, sitemap, robots and RSS links with a separate draft URL', async () => {
+    const project = store.read().projects[0];
+    const paths = { website: '', sitemap: 'sitemap.xml', robots: 'robots.txt', rss: 'feed.xml' };
+    for (const [environment, base] of [['preview', `http://localhost:${sitePort}/sites/${project.slug}/`], ['production', 'https://browser-demo.example/']]) {
+      for (const [resource, suffix] of Object.entries(paths)) {
+        const row = page.locator(`[data-environment="${environment}"] [data-resource="${resource}"]`);
+        assert.equal(await row.locator('a').first().getAttribute('href'), base + suffix);
+        assert.equal(await row.locator('[data-action="copy"]').getAttribute('data-copy'), base + suffix);
+      }
+    }
+    await page.getByRole('button', { name: 'Get draft link', exact: true }).click();
+    await idle();
+    const draft = page.getByRole('link', { name: 'Open draft', exact: true });
+    const href = await draft.getAttribute('href');
+    assert.equal(new URL(href).port, String(sitePort));
+    assert.match(new URL(href).pathname, /preview/);
+    assert.equal((await fetch(href)).status, 200);
+    await page.screenshot({ path: path.join(results, 'connections-desktop.png'), fullPage: true });
   });
   await step('Preview the starter page with the actual self-hosted LumaFX runtime', async () => {
     await page.getByRole('button', { name: 'Pages', exact: true }).click();
@@ -102,6 +121,20 @@ try {
     await idle();
     assert.equal(store.read().assets.length, 1);
   });
+  await step('Show accurate overview counts and open a recent page', async () => {
+    await page.getByRole('button', { name: 'Overview', exact: true }).click();
+    await idle();
+    const published = store.read().pages.filter(p => p.publishedRevisionId).length;
+    assert.deepEqual(await page.locator('.overview-stats dd').allTextContents(), ['2', String(published), String(2 - published)]);
+    await page.locator('.quick-links summary').click();
+    assert.equal(await page.getByRole('link', { name: 'XML sitemap', exact: true }).count(), 1);
+    await page.keyboard.press('Escape');
+    assert.equal(await page.locator('.quick-links').getAttribute('open'), null);
+    await page.screenshot({ path: path.join(results, 'overview-desktop.png'), fullPage: true });
+    await page.locator('.page-directory-row').filter({ hasText: 'Release test' }).click();
+    await page.getByRole('heading', { name: 'Release test', exact: true }).waitFor();
+    await idle();
+  });
   await step('Inspect revisions and operational health from the studio', async () => {
     await page.getByRole('button', { name: 'Pages', exact: true }).click();
     await idle();
@@ -110,7 +143,7 @@ try {
     assert.equal(await page.getByRole('button', { name: 'Restore draft', exact: true }).count(), 1);
     await page.getByRole('button', { name: 'Close', exact: true }).click();
     await page.getByRole('button', { name: 'Runtime', exact: true }).click();
-    await page.getByRole('heading', { name: 'A clear view of your server.', exact: true }).waitFor();
+    await page.getByRole('heading', { name: 'Runtime', exact: true }).waitFor();
     assert.match(await page.locator('body').innerText(), /Running normally/);
     assert.match(await page.locator('body').innerText(), /logs --follow/);
     await idle();
@@ -120,10 +153,48 @@ try {
     await page.setViewportSize({ width: 390, height: 844 });
     assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), 'Runtime overflows mobile width');
     await page.screenshot({ path: path.join(results, 'runtime-mobile.png'), fullPage: true });
+    await page.getByRole('button', { name: 'Open navigation', exact: true }).click();
     await page.getByRole('button', { name: 'Pages', exact: true }).click();
     await idle();
     assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), 'Editor overflows mobile width');
     await page.screenshot({ path: path.join(results, 'studio-mobile.png'), fullPage: true });
+  });
+  await step('Navigate every Studio section at 320px, with a keyboard-accessible mobile drawer', async () => {
+    await page.setViewportSize({ width: 320, height: 740 });
+    for (const name of ['Overview', 'Media library', 'Components', 'Connections', 'Runtime', 'Pages']) {
+      await page.getByRole('button', { name: 'Open navigation', exact: true }).click();
+      assert.equal(await page.locator('.content').evaluate(el => el.inert), true);
+      const rail = page.locator('#studio-navigation');
+      await rail.getByRole('button', { name: 'Runtime', exact: true }).focus();
+      await page.keyboard.press('Tab');
+      assert.equal(await page.evaluate(() => document.activeElement.classList.contains('brand')), true, 'Drawer focus wraps to its first control');
+      await rail.getByRole('button', { name, exact: true }).click();
+      await idle();
+      assert.equal(await page.locator('.content').evaluate(el => el.inert), false);
+      assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), `${name} overflows 320px`);
+    }
+    await page.getByRole('button', { name: 'Open navigation', exact: true }).click();
+    await page.keyboard.press('Escape');
+    assert.equal(await page.getByRole('button', { name: 'Open navigation', exact: true }).getAttribute('aria-expanded'), 'false');
+    assert.equal(await page.evaluate(() => document.activeElement.id), 'menu-trigger');
+    await page.getByRole('button', { name: 'Open navigation', exact: true }).click();
+    await page.getByRole('button', { name: 'Overview', exact: true }).click();
+    await idle();
+    await page.screenshot({ path: path.join(results, 'overview-mobile.png'), fullPage: true });
+    assert.equal(await page.evaluate(() => document.fonts.check('14px "DM Sans"') && document.fonts.check('17px Sora')), true);
+  });
+  await step('Keep generated links scoped when switching to a website without a domain', async () => {
+    await page.setViewportSize({ width: 1512, height: 982 });
+    await page.getByRole('button', { name: 'New website', exact: true }).click();
+    await page.getByLabel('Website name', { exact: true }).fill('Another website');
+    await page.getByRole('button', { name: 'Create website', exact: true }).click();
+    await idle();
+    assert.equal(await page.locator('[data-environment="production"] a').count(), 0);
+    const link = page.getByRole('link', { name: 'Open preview XML sitemap', exact: true });
+    assert.equal(await link.getAttribute('href'), `http://localhost:${sitePort}/sites/another-website/sitemap.xml`);
+    await page.locator('#project-select').selectOption(store.read().projects[0].id);
+    await idle();
+    assert.match(await page.getByRole('button', { name: 'Copy preview XML sitemap URL', exact: true }).getAttribute('data-copy'), /sites\/browser-demo\/sitemap.xml$/);
   });
   assert.deepEqual(errors, [], 'Unexpected browser JavaScript errors');
   console.log(JSON.stringify({ passed: completed.length, screenshots: results, browserErrors: errors.length }));

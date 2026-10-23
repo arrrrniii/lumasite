@@ -21,6 +21,7 @@ try{
  await page.getByLabel('Admin password',{exact:true}).fill('SEO-Browser-Test-123!');
  await page.getByRole('button',{name:'Open studio',exact:true}).click();
  await page.getByRole('button',{name:/SEO browser fixture/}).click();
+ await page.getByRole('button',{name:'Pages',exact:true}).click();
  await page.getByRole('tab',{name:'Settings',exact:true}).click();
  await page.getByLabel('SEO title override',{exact:true}).fill('A verified search title');
  await page.getByLabel('Canonical URL override',{exact:true}).fill('https://seo-ui.example.com/');

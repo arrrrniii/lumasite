@@ -1,0 +1,31 @@
+{
+  "retrieved": "2026-10-22",
+  "source": "Google Fonts official distribution",
+  "license": "SIL Open Font License 1.1",
+  "files": [
+    {
+      "name": "soravariable.woff2",
+      "url": "https://fonts.gstatic.com/s/sora/v17/xMQbuFFYT72XzQUpDqW1KX4.woff2",
+      "bytes": 33672,
+      "sha256": "d2909123a6a8ed2f928055f002c32f63ee93496b470c1a344873f955111fca53"
+    },
+    {
+      "name": "dmsansvariable.woff2",
+      "url": "https://fonts.gstatic.com/s/dmsans/v17/rP2Hp2ywxg089UriCZOIHTWEBlw.woff2",
+      "bytes": 62556,
+      "sha256": "aa530716b0d351866af7dbfa3eee4120fb36f2d071baff8c234185141865c7ff"
+    },
+    {
+      "name": "Sora-OFL.txt",
+      "url": "https://raw.githubusercontent.com/google/fonts/main/ofl/sora/OFL.txt",
+      "bytes": 4385,
+      "sha256": "ba0b9729c9428ba79a0459ab8ec575791b51509dbec213e383d0316d37fec299"
+    },
+    {
+      "name": "DMSans-OFL.txt",
+      "url": "https://raw.githubusercontent.com/google/fonts/main/ofl/dmsans/OFL.txt",
+      "bytes": 4482,
+      "sha256": "9af36190332437f5ecd09974de43c1f7c77a310a996cdd8ceb25628b458840e1"
+    }
+  ]
+}

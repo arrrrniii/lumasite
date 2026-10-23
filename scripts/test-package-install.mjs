@@ -24,7 +24,7 @@ async function ports() {
 try {
   const [archive] = JSON.parse((await run(npm, ['pack', '--json', '--pack-destination', directory], source)).stdout);
   const files = archive.files.map(file => file.path);
-  for (const needed of ['bin/lumasite.mjs', 'bin/create-lumasite.mjs', 'src/create.mjs', 'src/setup.mjs', 'src/server.mjs', 'public/admin.html', 'vendor/lumafx/lumafx.global.js', 'vendor/lumafx/LICENSE']) assert.ok(files.includes(needed), `Missing package file: ${needed}`);
+  for (const needed of ['bin/lumasite.mjs', 'bin/create-lumasite.mjs', 'src/create.mjs', 'src/setup.mjs', 'src/server.mjs', 'public/admin.html', 'public/fonts/dmsansvariable.woff2', 'public/fonts/soravariable.woff2', 'public/fonts/DMSans-OFL.txt', 'public/fonts/Sora-OFL.txt', 'vendor/lumafx/lumafx.global.js', 'vendor/lumafx/LICENSE']) assert.ok(files.includes(needed), `Missing package file: ${needed}`);
   assert.equal(files.some(file => /(^|\/)(?:\.lumasite|node_modules|marketing|test-results|\.env|credentials\.json|state\.json)(?:\/|$)/.test(file) || /\.(zip|log|pem|key)$/.test(file)), false);
   await run(npm, ['install', '--global', '--prefix', prefix, '--omit=dev', '--ignore-scripts', '--no-audit', '--no-fund', path.join(directory, archive.filename)]);
   assert.match((await run(bin, ['--help'])).stdout, /Guided terminal installer/);
@@ -32,7 +32,7 @@ try {
   const [port, sitePort] = await ports();
   const setup = JSON.parse((await run(bin, ['setup', '--yes', '--name', 'Installed package', '--port', String(port), '--site-port', String(sitePort), '--data-dir', dataDir, '--json'])).stdout);
   assert.equal(setup.healthy, true); assert.equal(setup.managed, true);
-  for (const route of ['/admin', '/admin-assets/admin.js', '/admin-assets/admin.css', '/runtime/lumafx/lumafx.global.js']) assert.equal((await fetch(`http://127.0.0.1:${port}${route}`)).status, 200, route);
+  for (const route of ['/admin', '/admin-assets/admin.js', '/admin-assets/admin.css', '/admin-assets/fonts/dmsansvariable.woff2', '/admin-assets/fonts/soravariable.woff2', '/runtime/lumafx/lumafx.global.js']) assert.equal((await fetch(`http://127.0.0.1:${port}${route}`)).status, 200, route);
   const projectId = setup.projects[0].id;
   const auth = { Authorization: `Bearer ${setup.projects[0].token}` };
   const credentials = JSON.parse(await fs.readFile(path.join(dataDir, 'credentials.json')));

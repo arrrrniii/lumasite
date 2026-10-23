@@ -149,7 +149,7 @@ export async function startServers({ dataDir, store: suppliedStore } = {}) {
   admin.get('/api/library', async (_req, res) => res.json(await getLibrary()));
   admin.get('/api/diagnostics', async (_req, res) => {
     const state = store.read(), library = await getLibrary();
-    res.json({ ...health(), instance: publicInstance(state.instance), dataDir: store.dataDir, logPath: path.join(store.dataDir, 'logs/server.log'), projects: state.projects.length, pages: state.pages.length, assets: state.assets.length, lumafx: library.lumafx, checks: { storage: true, tailwind: await compilerHealth(), lumafx: !!library.lumafx, isolatedPublicOrigin: true }, commands: ['status', 'health', 'doctor', 'logs --follow', 'restart', 'stop'].map(c => `lumasite ${c} --data-dir ${JSON.stringify(store.dataDir)}`) });
+    res.json({ ...health(), instance: publicInstance(state.instance), dataDir: store.dataDir, cliPath: path.join(root, 'bin/lumasite.mjs'), logPath: path.join(store.dataDir, 'logs/server.log'), projects: state.projects.length, pages: state.pages.length, assets: state.assets.length, lumafx: library.lumafx, checks: { storage: true, tailwind: await compilerHealth(), lumafx: !!library.lumafx, isolatedPublicOrigin: true }, commands: ['status', 'health', 'doctor', 'logs --follow', 'restart', 'stop'].map(c => `lumasite ${c} --data-dir ${JSON.stringify(store.dataDir)}`) });
   });
   admin.use('/admin-assets', express.static(path.join(root, 'public'), { fallthrough: false, index: false }));
   admin.use('/runtime/lumafx', express.static(path.join(root, 'vendor/lumafx'), { index: false, maxAge: '1h' }));

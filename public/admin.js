@@ -11,7 +11,7 @@
     sourceTab: 'html', device: 'desktop', previewUrl: '', previewError: '',
     library: null, libraryTab: 'components', assets: [], revisions: [],
     diagnostics: null, health: null, readiness: null, modal: null,
-    formError: '', projectTokens: new Map(), importFile: null,
+    formError: '', projectTokens: new Map(), importFile: null, menuOpen: false,
   };
   let toastTimer;
   let previewResizeObserver;
@@ -30,6 +30,12 @@
   }
 
   const paths = {
+    overview: '<rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/>',
+    menu: '<path d="M4 6h16M4 12h16M4 18h16"/>',
+    globe: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c5 5 5 13 0 18-5-5-5-13 0-18Z"/>',
+    map: '<rect x="9" y="2" width="6" height="5" rx="1"/><rect x="2" y="17" width="6" height="5" rx="1"/><rect x="16" y="17" width="6" height="5" rx="1"/><path d="M12 7v5M5 17v-5h14v5"/>',
+    rss: '<path d="M4 11a9 9 0 0 1 9 9M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1"/>',
+    chevron: '<path d="m8 10 4 4 4-4"/>',
     arrow: '<path d="m9 5 7 7-7 7"/>',
     plus: '<path d="M12 5v14M5 12h14"/>',
     pages: '<path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9Z"/><path d="M14 3v6h6M8 13h8M8 17h5"/>',
@@ -85,6 +91,42 @@
 
   function copyField(value, label = 'Copy', secret = false) {
     return `<div class="copy-field">${secret ? `<input class="mono" aria-label="Project MCP token" type="password" readonly value="${escape(value)}">` : `<code>${escape(value)}</code>`}<button class="btn small" data-action="copy" data-copy="${escape(value)}" type="button">${icon('copy')}${label}</button></div>`;
+  }
+
+  // Every resource is resolved within the selected website, including installations
+  // that use /sites/:slug/ instead of a production hostname.
+  function websiteResources() {
+    const resource = (path, label, symbol, key) => ({ path, label, symbol, key });
+    return [resource('', 'Website', 'globe', 'website'), resource('sitemap.xml', 'XML sitemap', 'map', 'sitemap'), resource('robots.txt', 'Robots.txt', 'pages', 'robots'), resource('feed.xml', 'RSS feed', 'rss', 'rss')];
+  }
+
+  function resourceUrl(base, path = '') {
+    const safe = url(base || '');
+    if (!base || !safe) return '';
+    return url(new URL(path, safe.endsWith('/') ? safe : `${safe}/`).href);
+  }
+
+  function addressRow(value, label, symbol = 'globe', context = '') {
+    const safe = value ? url(value) : '';
+    if (!safe) return '';
+    const accessible = `${context ? `${context} ` : ''}${label}`;
+    return `<div class="address-row"><span class="address-icon">${icon(symbol)}</span><div class="address-text"><span>${escape(label)}</span><a href="${escape(safe)}" target="_blank" rel="noopener noreferrer" title="${escape(safe)}">${escape(safe)}</a></div><div class="address-actions"><a class="btn icon-only" href="${escape(safe)}" target="_blank" rel="noopener noreferrer" aria-label="Open ${escape(accessible)}" title="Open ${escape(accessible)}">${icon('external')}</a><button class="btn icon-only" data-action="copy" data-copy="${escape(safe)}" type="button" aria-label="Copy ${escape(accessible)} URL" title="Copy ${escape(accessible)} URL">${icon('copy')}</button></div></div>`;
+  }
+
+  function environmentLinks(production = false) {
+    const base = production ? state.urls?.production : state.urls?.site;
+    const name = production ? 'Production' : 'Preview';
+    return `<section class="link-environment" data-environment="${name.toLowerCase()}"><div class="environment-heading"><span class="eyebrow">${name}</span><span class="pill ${production ? '' : 'success'}">${production ? 'Configured domain' : 'Published pages'}</span></div>${base ? websiteResources().map((item) => `<div data-resource="${item.key}">${addressRow(resourceUrl(base, item.path), item.label, item.symbol, name.toLowerCase())}</div>`).join('') : `<div class="empty-links">${icon('globe')}<p>Add your domain in Website settings below.</p><span class="hint">Your preview links are ready to use.</span></div>`}</section>`;
+  }
+
+  function quickLinks() {
+    if (!state.project) return '';
+    return `<details class="quick-links"><summary class="btn small">${icon('connect')}Quick links${icon('chevron')}</summary><div class="quick-links-menu"><span class="eyebrow">Published preview</span>${websiteResources().map((item) => external(resourceUrl(state.urls?.site, item.path), item.label, 'quick-link')).join('')}${state.urls?.production ? `<span class="eyebrow">Configured domain</span>${external(state.urls.production, 'Production website', 'quick-link')}` : ''}<button class="quick-link" data-action="navigate" data-view="connections" type="button">All links & settings${icon('arrow')}</button></div></details>`;
+  }
+
+  function draftLinks() {
+    const preview = url(state.previewUrl, { separateOrigin: true });
+    return preview ? `${external(preview, 'Open draft', 'btn small')}<button class="btn small" data-action="copy" data-copy="${escape(preview)}" type="button" aria-label="Copy private draft URL">${icon('copy')}</button>` : '';
   }
 
   function pagePayload(page = state.page, validate = false) {
@@ -206,20 +248,21 @@
   }
 
   function rail() {
-    return `<aside class="rail">${brand()}<div class="rail-content"><div><p class="rail-label">Workspace</p><div class="project-picker"><select id="project-select" aria-label="Select website"><option value="">All websites</option>${state.projects.map((project) => `<option value="${escape(project.id)}" ${project.id === state.project?.id ? 'selected' : ''}>${escape(project.name)}</option>`).join('')}</select><button class="new-project" data-action="new-project" type="button">${icon('plus')}New website</button></div></div>
-      <div><p class="rail-label">Website studio</p><nav class="rail-nav" aria-label="Website studio">${state.project ? `${navButton('pages', 'Pages', 'pages')}${navButton('media', 'Media library', 'image')}${navButton('library', 'Components', 'layers')}${navButton('connections', 'Connections', 'connect')}` : navButton('projects', 'Your websites', 'folder')}${navButton('runtime', 'Runtime', 'pulse', 'mobile-runtime')}</nav></div></div>
-      <div class="rail-footer"><div class="info-note small">${icon('sparkle')}<span>LumaFX is native.<br>Bring your pages to life.</span></div><div class="rail-footer-meta"><span>LumaSite ${escape(state.version ? `v${state.version}` : '')}</span><span>Local studio</span></div></div></aside>`;
+    return `<aside class="rail" id="studio-navigation" aria-label="Studio navigation"><div class="rail-brand">${brand()}<button class="btn icon-only mobile-control" data-action="toggle-menu" type="button" aria-label="Close navigation">${icon('close')}</button></div><div class="rail-content"><div><p class="rail-label">Workspace</p><div class="project-picker"><select id="project-select" aria-label="Select website"><option value="">All websites</option>${state.projects.map((project) => `<option value="${escape(project.id)}" ${project.id === state.project?.id ? 'selected' : ''}>${escape(project.name)}</option>`).join('')}</select><button class="new-project" data-action="new-project" type="button">${icon('plus')}New website</button></div></div>
+      <div><p class="rail-label">Website studio</p><nav class="rail-nav" aria-label="Website studio">${state.project ? `${navButton('overview', 'Overview', 'overview')}${navButton('pages', 'Pages', 'pages')}${navButton('media', 'Media library', 'image')}${navButton('library', 'Components', 'layers')}${navButton('connections', 'Connections', 'connect')}` : navButton('projects', 'Your websites', 'folder')}${navButton('runtime', 'Runtime', 'pulse')}</nav></div></div>
+      <div class="rail-footer"><div class="rail-native">${icon('sparkle')}<div><strong>Made to move.</strong><span>LumaFX is built into every page.</span></div></div><div class="rail-footer-meta"><span>LumaSite ${escape(state.version ? `v${state.version}` : '')}</span>${icon('lock')}</div></div></aside>`;
   }
 
   function shell() {
-    const titles = { projects: 'Your websites', pages: 'Pages', media: 'Media library', library: 'Components', connections: 'Connections', runtime: 'Runtime' };
+    const titles = { projects: 'Your websites', overview: 'Overview', pages: 'Pages', media: 'Media library', library: 'Components', connections: 'Connections', runtime: 'Runtime' };
     document.title = `${state.project?.name ? `${state.project.name} · ` : ''}${titles[state.view] || 'Studio'} · LumaSite`;
-    return `<div class="shell">${rail()}<div class="content"><header class="topbar"><div class="breadcrumb"><span>Studio</span><span>/</span>${state.project ? `<strong>${escape(state.project.name)}</strong><span>/</span>` : ''}<span>${titles[state.view] || 'Studio'}</span></div><div class="topbar-right"><span class="pill">${icon('lock')}Private workspace</span><button class="btn small" data-action="import-zip" type="button">${icon('upload')}Import ZIP</button><button class="btn subtle small" data-action="logout" type="button" title="Sign out">${icon('logout')}Sign out</button></div></header><main class="workspace" id="main" tabindex="-1">${workspaceView()}</main></div></div>${modalView()}`;
+    return `<div class="shell">${rail()}<button class="nav-scrim" data-action="toggle-menu" type="button" aria-label="Close navigation" tabindex="-1"></button><div class="content"><header class="topbar"><div class="topbar-left"><button class="btn icon-only mobile-control" id="menu-trigger" data-action="toggle-menu" type="button" aria-label="Open navigation" aria-controls="studio-navigation" aria-expanded="${state.menuOpen}">${icon('menu')}</button><div class="breadcrumb"><span>Studio</span>${icon('arrow')}${state.project ? `<strong>${escape(state.project.name)}</strong>${icon('arrow')}` : ''}<span>${titles[state.view] || 'Studio'}</span></div></div><div class="topbar-right">${quickLinks()}${state.project ? external(state.urls?.site, 'Preview website', 'btn small topbar-preview') : ''}<button class="btn icon-only" data-action="import-zip" type="button" aria-label="Import ZIP" title="Import ZIP">${icon('upload')}</button><button class="btn icon-only" data-action="logout" type="button" aria-label="Sign out" title="Sign out">${icon('logout')}</button></div></header><main class="workspace" id="main" tabindex="-1">${workspaceView()}</main><footer class="workspace-footer"><span>${icon('lock')}Private studio</span><span>Design. Connect. Publish.</span></footer></div></div>${modalView()}`;
   }
 
   function workspaceView() {
     if (state.view === 'runtime') return runtimeView();
     if (!state.project) return projectsView();
+    if (state.view === 'overview') return overviewView();
     if (state.view === 'media') return mediaView();
     if (state.view === 'library') return libraryView();
     if (state.view === 'connections') return connectionsView();
@@ -228,12 +271,38 @@
 
   function render() {
     previewResizeObserver?.disconnect();
+    const wasMenuOpen = state.menuOpen;
+    if (state.modal) state.menuOpen = false;
     app.innerHTML = state.authenticated ? shell() : authView();
+    syncNavigation();
     const dialog = document.querySelector('dialog');
     if (dialog && !dialog.open) { dialog.showModal(); dialog.querySelector('input, button')?.focus(); }
+    else if (wasMenuOpen && !state.menuOpen) document.getElementById('main')?.focus();
     applyBusyUI();
     const canvas = document.querySelector('.preview-canvas');
     if (canvas) { previewResizeObserver = new ResizeObserver(fitPreview); previewResizeObserver.observe(canvas); requestAnimationFrame(fitPreview); }
+  }
+
+  function syncNavigation() {
+    const mobile = matchMedia('(max-width: 900px)').matches;
+    const open = mobile && state.menuOpen;
+    document.querySelector('.shell')?.classList.toggle('navigation-open', open);
+    document.body.classList.toggle('navigation-open', open);
+    const rail = document.getElementById('studio-navigation');
+    if (rail) { rail.inert = mobile && !open; rail.setAttribute('aria-hidden', String(mobile && !open)); }
+    const content = document.querySelector('.content');
+    if (content) content.inert = open;
+    document.getElementById('menu-trigger')?.setAttribute('aria-expanded', String(open));
+  }
+
+  function overviewView() {
+    const published = state.pages.filter((page) => page.publishedRevisionId).length;
+    const recent = [...state.pages].sort((a, b) => String(b.updatedAt || '').localeCompare(String(a.updatedAt || ''))).slice(0, 6);
+    return `<div class="page-heading"><div><span class="eyebrow">Website overview</span><h1>${escape(state.project.name)}</h1><p>Your pages, connections, and publishing tools in one place.</p></div><div class="heading-actions"><button class="btn" data-action="project-export-zip" type="button">${icon('download')}Export ZIP</button><button class="btn primary" data-action="navigate" data-view="pages" type="button">${icon('pages')}Edit pages</button></div></div>
+      <section class="overview-summary" aria-label="Website summary"><div class="overview-identity"><span class="project-avatar">${escape(state.project.name?.slice(0, 1).toUpperCase() || 'W')}</span><div><strong>${escape(state.project.domain || state.project.slug)}</strong><span>${state.project.domain ? 'Configured domain · DNS and HTTPS managed on your server' : 'Add a domain in Connections when you are ready'}</span></div></div><dl class="overview-stats"><div><dt>Total pages</dt><dd>${state.pages.length}</dd></div><div><dt>Published</dt><dd>${published}</dd></div><div><dt>Unpublished</dt><dd>${state.pages.length - published}</dd></div></dl></section>
+      <div class="overview-grid"><section class="surface page-directory"><div class="surface-header"><div><h2>Recent pages</h2><p>Pick up where you left off.</p></div><button class="btn small" data-action="new-page" type="button">${icon('plus')}New page</button></div>${recent.length ? `<div class="page-directory-label"><span>Page</span><span>Status</span></div>${recent.map((page) => `<button class="page-directory-row" type="button" data-action="select-page" data-id="${escape(page.id)}"><span class="page-directory-icon">${icon('pages')}</span><span class="page-directory-name"><strong>${escape(page.title || 'Untitled page')}</strong><small>/${escape(page.slug || '')}</small></span><span class="pill ${page.publishedRevisionId ? 'success' : ''}">${page.publishedRevisionId ? 'Published' : 'Draft'}</span>${icon('arrow')}</button>`).join('')}` : '<p class="hint">Create your first page to start publishing.</p>'}<button class="text-button" data-action="navigate" data-view="pages" type="button">View all ${state.pages.length} pages${icon('arrow')}</button></section>
+      <section class="surface overview-links"><div class="surface-header"><div><h2>Website links</h2><p>Published pages on this server.</p></div>${icon('globe')}</div>${websiteResources().map((item) => addressRow(resourceUrl(state.urls?.site, item.path), item.label, item.symbol, 'preview')).join('')}<button class="text-button" data-action="navigate" data-view="connections" type="button">All addresses & settings${icon('arrow')}</button></section></div>
+      <section class="studio-shortcuts" aria-label="Studio tools">${[['media', 'image', 'Your media, ready to use', 'Upload and manage images, video, and audio.'], ['library', 'sparkle', 'Build with LumaFX', 'Reusable sections and native animation recipes.'], ['connections', 'connect', 'Connect your tools', 'MCP access, domains, and SEO defaults.']].map(([view, symbol, title, description]) => `<button data-action="navigate" data-view="${view}" type="button"><span class="shortcut-icon">${icon(symbol)}</span><span><strong>${title}</strong><small>${description}</small></span>${icon('arrow')}</button>`).join('')}</section>`;
   }
 
   function projectForm() {
@@ -246,12 +315,12 @@
   }
 
   function pageList() {
-    return `<aside class="page-rail"><div class="page-rail-title"><span>Website pages <span class="muted">(${state.pages.length})</span></span><button class="btn icon-only" data-action="new-page" type="button" aria-label="Add page">${icon('plus')}</button></div><nav class="page-list" aria-label="Pages">${state.pages.map((page) => `<button class="page-item${page.id === state.page?.id ? ' active' : ''}" type="button" data-action="select-page" data-id="${escape(page.id)}" ${page.id === state.page?.id ? 'aria-current="page"' : ''}>${icon('pages')}<span>${escape(page.title || 'Untitled page')}<small>/${escape(page.slug || '')}</small></span>${page.publishedRevisionId ? '<span class="dot" title="Published" style="color:#65a283"></span>' : ''}</button>`).join('')}</nav></aside>`;
+    return `<aside class="page-rail"><div class="page-rail-title"><span>Website pages <span class="muted">(${state.pages.length})</span></span><button class="btn icon-only" data-action="new-page" type="button" aria-label="Add page">${icon('plus')}</button></div><nav class="page-list" aria-label="Pages">${state.pages.map((page) => `<button class="page-item${page.id === state.page?.id ? ' active' : ''}" type="button" data-action="select-page" data-id="${escape(page.id)}" ${page.id === state.page?.id ? 'aria-current="page"' : ''}>${icon('pages')}<span><strong class="page-item-title" title="${escape(page.title || 'Untitled page')}">${escape(page.title || 'Untitled page')}</strong><small>/${escape(page.slug || '')}</small></span>${page.publishedRevisionId ? '<span class="dot" title="Published" style="color:#65a283"></span>' : ''}</button>`).join('')}</nav></aside>`;
   }
 
   function editorView() {
     return `<div class="page-heading"><div><h1>${escape(state.project.name)}</h1><p>${state.urls?.site ? external(state.urls.site, state.project.domain || state.urls.site) : 'Your website studio'}</p></div><div class="heading-actions">${state.page ? `<span class="status-inline${state.dirty ? ' dirty' : ''}" id="draft-status"><span class="dot"></span>${state.dirty ? 'Unsaved changes' : 'Draft saved'}</span><button class="btn" type="button" data-action="save" ${state.dirty ? '' : 'disabled'}>${icon('save')}Save draft</button><button class="btn primary" type="button" data-action="publish">${icon('rocket')}Publish page</button>` : `<button class="btn primary" type="button" data-action="new-page">${icon('plus')}New page</button>`}</div></div>
-      <section class="studio">${pageList()}<div class="studio-body">${state.page ? `<header class="editor-top"><div class="editor-page-name"><h2>${escape(state.page.title || 'Untitled page')}</h2><span class="pill ${state.page.publishedRevisionId ? 'success' : ''}">${state.page.publishedRevisionId ? 'Published' : 'Draft'}</span></div><div class="row"><button class="btn subtle small" data-action="revisions" type="button">${icon('history')}History</button><button class="btn small violet" data-action="navigate" data-view="library" type="button">${icon('sparkle')}Add section</button></div></header><div class="editor-grid"><section class="preview-pane" aria-label="Page preview"><div class="preview-tools"><div class="preview-address">${icon('lock')}<span>Draft preview</span></div><div class="row" style="gap:2px">${['desktop', 'tablet', 'mobile'].map((device) => `<button class="btn icon-only${state.device === device ? ' active' : ''}" type="button" data-action="device" data-device="${device}" title="${device[0].toUpperCase() + device.slice(1)} preview" aria-label="${device} preview" aria-pressed="${state.device === device}">${icon(device)}</button>`).join('')}<button class="btn icon-only" type="button" data-action="preview" title="Save and refresh preview" aria-label="Save and refresh preview">${icon('refresh')}</button></div></div><div class="preview-canvas"><div class="preview-frame-wrap" data-device="${state.device}" id="preview-wrap">${previewContent()}</div></div><div class="preview-footer">${icon('eye')}A private preview of your saved draft. Publish when it feels right.</div></section>${sourcePane()}</div>` : `<div class="empty-state">${icon('pages')}<h2>Your next page starts here.</h2><p>Create a page, add your sections, and bring it to life with LumaFX.</p><button class="btn primary" data-action="new-page" type="button">${icon('plus')}Create page</button></div>`}</div></section>`;
+      <section class="studio">${pageList()}<div class="studio-body">${state.page ? `<header class="editor-top"><div class="editor-page-name"><h2>${escape(state.page.title || 'Untitled page')}</h2><span class="pill ${state.page.publishedRevisionId ? 'success' : ''}">${state.page.publishedRevisionId ? 'Published' : 'Draft'}</span></div><div class="row"><button class="btn subtle small" data-action="revisions" type="button">${icon('history')}History</button><button class="btn small violet" data-action="navigate" data-view="library" type="button">${icon('sparkle')}Add section</button></div></header><div class="editor-grid"><section class="preview-pane" aria-label="Page preview"><div class="preview-tools"><div class="preview-address">${icon('lock')}<span>Draft preview</span></div><div class="row" style="gap:2px">${['desktop', 'tablet', 'mobile'].map((device) => `<button class="btn icon-only${state.device === device ? ' active' : ''}" type="button" data-action="device" data-device="${device}" title="${device[0].toUpperCase() + device.slice(1)} preview" aria-label="${device} preview" aria-pressed="${state.device === device}">${icon(device)}</button>`).join('')}<button class="btn icon-only" type="button" data-action="preview" title="Save and refresh preview" aria-label="Save and refresh preview">${icon('refresh')}</button></div></div><div class="preview-canvas"><div class="preview-frame-wrap" data-device="${state.device}" id="preview-wrap">${previewContent()}</div></div><div class="preview-footer"><span>${icon('lock')}Private saved draft</span><div class="row draft-external-links">${draftLinks()}</div></div></section>${sourcePane()}</div>` : `<div class="empty-state">${icon('pages')}<h2>Your next page starts here.</h2><p>Create a page, add your sections, and bring it to life with LumaFX.</p><button class="btn primary" data-action="new-page" type="button">${icon('plus')}Create page</button></div>`}</div></section>`;
   }
 
   function previewContent() {
@@ -277,7 +346,7 @@
   function projectSeoForm() {
     const seo = state.project.seo || {};
     const field = (key, label, placeholder = '') => `<label>${label}<input name="${key}" value="${escape(seo[key] || '')}" placeholder="${escape(placeholder)}"></label>`;
-    return `<section class="surface"><div class="surface-header"><div><h2>SEO and branding</h2><p>Shared defaults for this website.</p></div></div><form class="stack" data-form="project-seo">${field('siteName', 'Site name', state.project.name)}<label>Site description<textarea name="description" aria-label="Site description" rows="3">${escape(seo.description || '')}</textarea></label>${field('language', 'Website language', 'en')}${field('image', 'Default social image URL')}${field('imageAlt', 'Default social image description')}${field('logo', 'Organization logo URL')}${field('favicon', 'Favicon URL')}${field('appleTouchIcon', 'Apple touch icon URL')}<label class="checkbox-label"><input name="noindex" type="checkbox" ${seo.noindex ? 'checked' : ''}>Keep the whole website out of search results</label><p class="hint">Shared defaults apply immediately. Production indexing requires the configured domain; project-path and draft previews remain noindex.</p><div class="row"><button class="btn" type="submit">Save SEO settings</button>${external(`${state.urls.site}sitemap.xml`, 'View sitemap')}${external(`${state.urls.site}feed.xml`, 'View RSS')}</div></form></section>`;
+    return `<section class="surface seo-surface"><div class="surface-header"><div><span class="eyebrow">Search & sharing</span><h2>SEO and branding</h2><p>Shared defaults for this website.</p></div></div><form class="seo-form" data-form="project-seo">${field('siteName', 'Site name', state.project.name)}<label>Site description<textarea name="description" aria-label="Site description" rows="3">${escape(seo.description || '')}</textarea></label>${field('language', 'Website language', 'en')}${field('image', 'Default social image URL')}${field('imageAlt', 'Default social image description')}${field('logo', 'Organization logo URL')}${field('favicon', 'Favicon URL')}${field('appleTouchIcon', 'Apple touch icon URL')}<label class="checkbox-label"><input name="noindex" type="checkbox" ${seo.noindex ? 'checked' : ''}>Keep the whole website out of search results</label><p class="hint">Shared defaults apply immediately. Production indexing requires the configured domain; project-path and draft previews remain noindex.</p><div class="row"><button class="btn" type="submit">Save SEO settings</button></div></form></section>`;
   }
 
   function mediaType(asset) {
@@ -311,7 +380,7 @@
   function libraryView() {
     const animation = state.libraryTab === 'animations';
     const entries = state.library?.[state.libraryTab] || [];
-    return `<div class="page-heading"><div><h1>Build with a little more possibility.</h1><p>Add a starting point to ${state.page ? `“${escape(state.page.title)}”` : 'your page'}, then make every detail yours.</p></div><button class="btn" type="button" data-action="navigate" data-view="pages">${icon('code')}Back to page</button></div><div class="section-tabs" aria-label="Library categories"><button type="button" data-action="library-tab" data-tab="components" class="${animation ? '' : 'active'}">Components</button><button type="button" data-action="library-tab" data-tab="animations" class="${animation ? 'active' : ''}">LumaFX animations</button></div>
+    return `<div class="page-heading"><div><span class="eyebrow">Design library</span><h1>Components & motion</h1><p>Add a starting point to ${state.page ? `“${escape(state.page.title)}”` : 'your page'}, then make every detail yours.</p></div><button class="btn" type="button" data-action="navigate" data-view="pages">${icon('code')}Back to page</button></div><div class="section-tabs" aria-label="Library categories"><button type="button" data-action="library-tab" data-tab="components" class="${animation ? '' : 'active'}">Components</button><button type="button" data-action="library-tab" data-tab="animations" class="${animation ? 'active' : ''}">LumaFX animations</button></div>
       ${animation ? `<div class="library-callout"><span class="library-icon">${icon('sparkle')}</span><div><h3>Motion is part of the language.</h3><p>LumaFX loads with every page. Add an effect, then customize its attributes in your HTML.</p></div><span class="pill violet" style="margin-left:auto">Native</span></div>` : ''}
       ${entries.length ? `<section class="library-grid" aria-label="${animation ? 'Animations' : 'Components'}">${entries.map((entry) => `<article class="library-item${animation ? ' animation' : ''}"><span class="library-icon">${icon(animation ? 'sparkle' : 'layers')}</span><h3>${escape(entry.name)}</h3><p>${escape(entry.description || '')}</p>${entry.category ? `<span class="pill violet" style="align-self:start">${escape(entry.category)}</span>` : ''}<button class="btn small${animation ? ' violet' : ''}" type="button" data-action="apply-snippet" data-id="${escape(entry.id)}" ${!state.page ? 'disabled' : ''}>${icon('plus')}Add to page</button></article>`).join('')}</section>` : `<section class="surface empty-state">${icon('layers')}<h2>The library is empty.</h2><p>Check the server library configuration, or write your own HTML, CSS, and JavaScript in the page editor.</p></section>`}`;
   }
@@ -319,7 +388,12 @@
   function connectionsView() {
     const urls = state.urls || {};
     const token = state.projectTokens.get(state.project.id);
-    return `<div class="page-heading"><div><h1>Your website, connected.</h1><p>All the addresses and access details for ${escape(state.project.name)}.</p></div><div class="heading-actions"><button class="btn" type="button" data-action="project-export-zip">${icon('download')}Export ZIP</button>${external(urls.site, 'Open website', 'btn')}</div></div><div class="view-columns"><div><section class="surface"><div class="surface-header"><div><h2>MCP connection</h2><p>Connect your agent to create, edit, and publish this website.</p></div><span class="pill violet">${icon('connect')}MCP</span></div><div class="stack"><div class="field-group"><span>Server URL</span>${copyField(urls.mcp || '')}</div><div class="field-group"><span>Project access token</span>${token ? `${copyField(token, 'Copy', true)}<p class="hint">Saved privately on your server. Keep this token with your MCP client credentials.</p>` : '<p class="hint">For security, tokens are only shown when created or rotated. Use the server credentials command to retrieve the saved token, or generate a new one below.</p>'}</div><div><button class="btn small" type="button" data-action="rotate-token">${icon('refresh')}Generate new token</button></div><div class="info-note">${icon('info')}<span>Use the server URL with a <strong>Bearer token</strong> in clients that support Streamable HTTP. This token is limited to this website.</span></div></div></section><section class="surface"><div class="surface-header"><div><h2>Website settings</h2><p>The name and domain used by this project.</p></div></div><form class="stack" data-form="project-settings"><label>Website name<input name="name" required maxlength="100" value="${escape(state.project.name)}"></label><label>Production domain<input name="domain" value="${escape(state.project.domain || '')}" placeholder="sendmailos.com" spellcheck="false"><small>Point the domain’s DNS to your server, then configure HTTPS with the CLI proxy command.</small></label><div><button class="btn" type="submit">Save settings</button></div></form></section>${projectSeoForm()}</div><div><section class="surface"><div class="surface-header"><h2>Website addresses</h2></div><div class="stack"><div class="field-group"><span>Website studio</span>${copyField(urls.admin || '')}</div><div class="field-group"><span>Local website</span>${copyField(urls.site || '')}</div>${urls.production ? `<div class="field-group"><span>Production website</span>${copyField(urls.production)}</div>` : '<p class="hint">Add a domain in Website settings to prepare your production address.</p>'}</div></section><section class="surface"><div class="surface-header"><h2>Two ports. One studio.</h2></div><div class="stack"><div class="check-row"><span>Admin, API, and MCP</span><code>${escape(state.port)}</code></div><div class="check-row"><span>Website and media</span><code>${escape(state.sitePort)}</code></div><p class="hint">Separate listeners keep website scripts away from your administration session. A reverse proxy routes your public domains to these ports.</p><button class="btn small" type="button" data-action="navigate" data-view="runtime">${icon('pulse')}Open runtime and commands</button></div></section></div></div>`;
+    return `<div class="page-heading"><div><span class="eyebrow">Website settings</span><h1>Connections</h1><p>Every address, connection, and search setting for ${escape(state.project.name)}.</p></div><button class="btn" type="button" data-action="project-export-zip">${icon('download')}Export ZIP</button></div>
+      <section class="surface website-addresses"><div class="surface-header"><div><h2>Website links</h2><p>Open a resource or copy its full URL.</p></div><span class="pill">${icon('globe')}${escape(state.project.slug)}</span></div><div class="environment-grid">${environmentLinks()}${environmentLinks(true)}</div><p class="hint links-footnote">Preview URLs stay out of search results. Production links use your configured domain; DNS, reverse proxy, and HTTPS must point to this installation.</p></section>
+      <div class="view-columns connections-columns"><div><section class="surface"><div class="surface-header"><div><span class="eyebrow">Agent access</span><h2>MCP connection</h2><p>Create, edit, and publish with your own tools.</p></div><span class="panel-icon">${icon('connect')}</span></div><div class="stack"><div class="field-group"><span>Server URL</span>${copyField(urls.mcp || '')}</div><div class="field-group"><span>Project access token</span>${token ? `${copyField(token, 'Copy', true)}<p class="hint">Saved privately on your server. Keep this token with your MCP client credentials.</p>` : '<p class="hint">Tokens are only shown when created or rotated. Retrieve the saved token with the server credentials command, or generate a new one.</p>'}</div><div><button class="btn small" type="button" data-action="rotate-token">${icon('refresh')}Generate new token</button></div><div class="info-note">${icon('lock')}<span>Connect with a <strong>Bearer token</strong> using Streamable HTTP. Access is limited to this website.</span></div></div></section>
+      <section class="surface"><div class="surface-header"><div><h2>Studio & draft preview</h2><p>Private tools for managing this website.</p></div></div>${addressRow(urls.admin, 'Website studio', 'lock')}<div class="draft-link-panel"><div><strong>Private draft link</strong><p class="hint">${escape(state.page?.title || 'No page selected')} · A signed link to the saved draft. Anyone with the link can view it until it expires.</p></div>${state.page ? `<button class="btn small" type="button" data-action="draft-link">${icon('eye')}${state.dirty ? 'Save & get draft link' : 'Get draft link'}</button>` : ''}<div class="row draft-external-links">${draftLinks()}</div>${state.previewError ? `<p class="form-error">${escape(state.previewError)}</p>` : ''}</div></section></div>
+      <div><section class="surface"><div class="surface-header"><div><h2>Website settings</h2><p>Your name and production domain.</p></div>${icon('globe')}</div><form class="stack" data-form="project-settings"><label>Website name<input name="name" required maxlength="100" value="${escape(state.project.name)}"></label><label>Production domain<input name="domain" value="${escape(state.project.domain || '')}" placeholder="example.com" spellcheck="false"><small>Point DNS to your server and configure HTTPS with the CLI proxy command.</small></label><div><button class="btn" type="submit">Save settings</button></div></form></section>
+      <section class="surface"><div class="surface-header"><div><h2>Installation ports</h2><p>One studio, separate website runtime.</p></div></div><div class="stack"><div class="check-row"><span>Admin, API & MCP</span><code class="port-number">${escape(state.port)}</code></div><div class="check-row"><span>Websites & media</span><code class="port-number">${escape(state.sitePort)}</code></div><button class="btn small" type="button" data-action="navigate" data-view="runtime">${icon('pulse')}Health, logs & commands${icon('arrow')}</button></div></section></div></div>${projectSeoForm()}`;
   }
 
   function runtimeValue(value, fallback = 'Unavailable') {
@@ -346,14 +420,16 @@
     const health = state.health || {};
     const healthy = health.status === 'ok';
     const dataDir = diagnostics.dataDir || diagnostics.paths?.dataDir || diagnostics.paths?.data || '';
+    const cli = diagnostics.cliPath ? `node ${shellQuote(diagnostics.cliPath)}` : 'node bin/lumasite.mjs';
     const suffix = dataDir ? ` --data-dir ${shellQuote(dataDir)}` : '';
     let checks = diagnostics.checks;
     if (checks && !Array.isArray(checks)) checks = Object.entries(checks).map(([name, value]) => ({ name, ...(typeof value === 'object' ? value : { ok: value === true || value === 'ok', detail: value }) }));
     if (!Array.isArray(checks)) checks = [];
+    const checkNames = { storage: 'Website storage', tailwind: 'Tailwind compiler', lumafx: 'LumaFX runtime', isolatedPublicOrigin: 'Separate website origin' };
     const logPath = diagnostics.log || diagnostics.logPath || diagnostics.paths?.log || diagnostics.paths?.logs;
     const commands = [ ['Status', 'status'], ['Health', 'health'], ['Diagnose', 'doctor'], ['Logs', 'logs --follow'], ['Start', 'start'], ['Restart', 'restart'], ['Stop', 'stop'], ['Credentials', 'credentials'] ];
     const domainFlag = ` --domain ${shellQuote(state.project?.domain || 'website.example.com')} --admin-domain ${shellQuote(['localhost', '127.0.0.1'].includes(window.location.hostname) ? 'studio.example.com' : window.location.hostname)}`;
-    return `<div class="page-heading"><div><h1>A clear view of your server.</h1><p>Live information from this LumaSite installation.</p></div><button class="btn" type="button" data-action="refresh-runtime">${icon('refresh')}Refresh</button></div><dl class="runtime-grid"><div class="runtime-stat"><dt>Server health</dt><dd class="small-value" style="color:${healthy ? 'var(--green)' : 'var(--red)'}">${healthy ? 'Running normally' : 'Check required'}</dd></div><div class="runtime-stat"><dt>Admin / website port</dt><dd>${escape(health.port || diagnostics.port || state.port)} <span class="muted" style="font-weight:400">/</span> ${escape(health.sitePort || diagnostics.sitePort || state.sitePort)}</dd></div><div class="runtime-stat"><dt>Process ID</dt><dd>${escape(health.pid || diagnostics.pid || '—')}</dd></div><div class="runtime-stat"><dt>Uptime</dt><dd>${escape(uptime(health.uptime ?? diagnostics.uptime))}</dd></div></dl><div class="view-columns"><div><section class="surface"><div class="surface-header"><div><h2>Server commands</h2><p>Run these from your LumaSite installation directory.</p></div>${icon('code')}</div><div class="stack">${commands.map(([label, command]) => `<div class="command-row"><span>${label}</span>${copyField(`node bin/lumasite.mjs ${command}${suffix}`)}</div>`).join('')}</div><p class="hint" style="margin-top:17px">Restart and stop act on this installation’s verified process. Stopping the server also closes this studio until you start it again.</p></section><section class="surface"><div class="surface-header"><div><h2>Proxy configuration</h2><p>Generate a configuration for your existing web server.</p></div></div><div class="stack">${copyField(`node bin/lumasite.mjs proxy --format apache${domainFlag}${suffix}`)}${copyField(`node bin/lumasite.mjs proxy --format caddy${domainFlag}${suffix}`)}<p class="hint">Review the generated configuration before adding it to Apache or Caddy. The command prints configuration without changing your server.</p></div></section></div><div><section class="surface"><div class="surface-header"><h2>Health checks</h2><span class="pill ${state.readiness?.status === 'ready' ? 'success' : 'warning'}">${state.readiness?.status === 'ready' ? 'Ready' : 'Check readiness'}</span></div><div class="check-list"><div class="check-row"><span class="check-label">${icon(healthy ? 'check' : 'info')}HTTP health endpoint</span>${external(`${window.location.origin}/health`, '/health')}</div><div class="check-row"><span class="check-label">${icon(state.readiness?.status === 'ready' ? 'check' : 'info')}Readiness endpoint</span>${external(`${window.location.origin}/ready`, '/ready')}</div>${checks.map((check) => { const ok = check.ok ?? check.status === 'ok'; return `<div class="check-row"><span class="check-label">${icon(ok ? 'check' : 'info')}<span>${escape(check.name || check.label || 'Check')}${check.detail ? `<br><small class="muted">${escape(runtimeValue(check.detail))}</small>` : ''}</span></span><span class="pill ${ok ? 'success' : 'warning'}">${ok ? 'Passed' : 'Review'}</span></div>`; }).join('')}</div></section><section class="surface"><div class="surface-header"><h2>Installation details</h2></div><div class="stack">${dataDir ? `<div class="field-group"><span>Data directory</span>${copyField(dataDir)}</div>` : ''}${logPath ? `<div class="field-group"><span>Server log</span>${copyField(runtimeValue(logPath))}</div>` : ''}<div class="check-row"><span>Version</span><code>${escape(health.version || state.version || '—')}</code></div><div class="check-row"><span>Websites</span><code>${escape(Array.isArray(diagnostics.projects) ? diagnostics.projects.length : diagnostics.projects ?? state.projects.length)}</code></div></div><details><summary>Full runtime response</summary><pre class="raw-json">${escape(JSON.stringify({ health, readiness: state.readiness, diagnostics }, null, 2))}</pre></details></section></div></div>`;
+    return `<div class="page-heading"><div><span class="eyebrow">Installation</span><h1>Runtime</h1><p>Live information from this LumaSite installation.</p></div><button class="btn" type="button" data-action="refresh-runtime">${icon('refresh')}Refresh</button></div><dl class="runtime-grid"><div class="runtime-stat"><dt>Server health</dt><dd class="small-value" style="color:${healthy ? 'var(--green)' : 'var(--red)'}">${healthy ? 'Running normally' : 'Check required'}</dd></div><div class="runtime-stat"><dt>Admin / website port</dt><dd>${escape(health.port || diagnostics.port || state.port)} <span class="muted" style="font-weight:400">/</span> ${escape(health.sitePort || diagnostics.sitePort || state.sitePort)}</dd></div><div class="runtime-stat"><dt>Process ID</dt><dd>${escape(health.pid || diagnostics.pid || '—')}</dd></div><div class="runtime-stat"><dt>Uptime</dt><dd>${escape(uptime(health.uptime ?? diagnostics.uptime))}</dd></div></dl><div class="view-columns"><div><section class="surface"><div class="surface-header"><div><h2>Server commands</h2><p>Run these from your LumaSite installation directory.</p></div>${icon('code')}</div><div class="stack">${commands.map(([label, command]) => `<div class="command-row"><span>${label}</span>${copyField(`${cli} ${command}${suffix}`)}</div>`).join('')}</div><p class="hint" style="margin-top:17px">Restart and stop act on this installation’s verified process. Stopping the server also closes this studio until you start it again.</p></section><section class="surface"><div class="surface-header"><div><h2>Proxy configuration</h2><p>Generate a configuration for your existing web server.</p></div></div><div class="stack">${copyField(`${cli} proxy --format apache${domainFlag}${suffix}`)}${copyField(`${cli} proxy --format caddy${domainFlag}${suffix}`)}<p class="hint">Review the generated configuration before adding it to Apache or Caddy. The command prints configuration without changing your server.</p></div></section></div><div><section class="surface"><div class="surface-header"><h2>Health checks</h2><span class="pill ${state.readiness?.status === 'ready' ? 'success' : 'warning'}">${state.readiness?.status === 'ready' ? 'Ready' : 'Check readiness'}</span></div><div class="check-list"><div class="check-row"><span class="check-label">${icon(healthy ? 'check' : 'info')}HTTP health endpoint</span>${external(`${window.location.origin}/health`, '/health')}</div><div class="check-row"><span class="check-label">${icon(state.readiness?.status === 'ready' ? 'check' : 'info')}Readiness endpoint</span>${external(`${window.location.origin}/ready`, '/ready')}</div>${checks.map((check) => { const ok = check.ok ?? check.status === 'ok'; return `<div class="check-row"><span class="check-label">${icon(ok ? 'check' : 'info')}<span>${escape(checkNames[check.name] || check.label || check.name || 'Check')}${check.detail && typeof check.detail !== 'boolean' ? `<br><small class="muted">${escape(runtimeValue(check.detail))}</small>` : ''}</span></span><span class="pill ${ok ? 'success' : 'warning'}">${ok ? 'Passed' : 'Review'}</span></div>`; }).join('')}</div></section><section class="surface"><div class="surface-header"><h2>Installation details</h2></div><div class="stack">${dataDir ? `<div class="field-group"><span>Data directory</span>${copyField(dataDir)}</div>` : ''}${logPath ? `<div class="field-group"><span>Server log</span>${copyField(runtimeValue(logPath))}</div>` : ''}<div class="check-row"><span>Version</span><code>${escape(health.version || state.version || '—')}</code></div><div class="check-row"><span>Websites</span><code>${escape(Array.isArray(diagnostics.projects) ? diagnostics.projects.length : diagnostics.projects ?? state.projects.length)}</code></div></div><details><summary>Full runtime response</summary><pre class="raw-json">${escape(JSON.stringify({ health, readiness: state.readiness, diagnostics }, null, 2))}</pre></details></section></div></div>`;
   }
 
   function formatDate(value) {
@@ -411,12 +487,13 @@
     if (index >= 0) state.pages[index] = { ...state.page };
   }
 
-  async function selectProject(id, { push = true, view = 'pages', checkDirty = true } = {}) {
+  async function selectProject(id, { push = true, view = 'overview', checkDirty = true } = {}) {
     if (checkDirty && !discardDraft()) return;
     const [details, pages] = await Promise.all([
       api(`/api/projects/${encodeURIComponent(id)}`),
       api(`/api/projects/${encodeURIComponent(id)}/pages`),
     ]);
+    state.menuOpen = false;
     state.project = details.project;
     state.urls = details.urls;
     state.pages = pages.pages || [];
@@ -447,6 +524,7 @@
       state.previewError = error.message;
       state.previewUrl = '';
     }
+    document.querySelectorAll('.draft-external-links').forEach((element) => { element.innerHTML = draftLinks(); });
     const wrap = document.getElementById('preview-wrap');
     if (wrap) { wrap.innerHTML = previewContent(); applyBusyUI(); requestAnimationFrame(fitPreview); }
   }
@@ -461,9 +539,10 @@
   }
 
   async function selectPage(id) {
-    if (id === state.page?.id || !discardDraft()) return;
+    if ((id === state.page?.id && state.view === 'pages') || !discardDraft()) return;
     const response = await api(projectPath(`/pages/${encodeURIComponent(id)}`));
     state.page = response.page;
+    state.view = 'pages';
     state.sourceTab = 'html';
     state.previewUrl = '';
     state.previewError = '';
@@ -502,6 +581,7 @@
     if (view === 'media') await loadAssets();
     if (view === 'library') await loadLibrary();
     if (view === 'runtime') await loadRuntime();
+    state.menuOpen = false;
     state.view = view;
     render();
     if (view === 'pages' && state.page && !state.previewUrl) await refreshPreview();
@@ -557,6 +637,12 @@
   }
 
   const actions = {
+    'toggle-menu': () => {
+      state.menuOpen = !state.menuOpen;
+      syncNavigation();
+      if (state.menuOpen) document.querySelector('#studio-navigation [aria-label="Close navigation"]')?.focus();
+      else document.getElementById('menu-trigger')?.focus();
+    },
     home: () => navigate('projects'),
     navigate: (element) => navigate(element.dataset.view),
     'new-project': () => { state.modal = 'project'; render(); },
@@ -593,6 +679,13 @@
       await refreshPreview();
       if (state.previewError) throw new Error(state.previewError);
       toast('Draft preview refreshed.');
+    },
+    'draft-link': async () => {
+      if (state.dirty) await persistDraft({ notify: false });
+      await refreshPreview();
+      render();
+      if (state.previewError) throw new Error(state.previewError);
+      toast('Private draft link ready. It opens your saved draft.');
     },
     device: (element) => {
       state.device = element.dataset.device;
@@ -654,7 +747,7 @@
 
   // These actions only change local UI state; running them outside the network
   // lock preserves keyboard focus and keeps file picker activation synchronous.
-  const localActions = new Set(['new-project', 'import-zip', 'new-page', 'close-modal', 'source-tab', 'device', 'library-tab', 'apply-snippet', 'choose-files']);
+  const localActions = new Set(['toggle-menu', 'new-project', 'import-zip', 'new-page', 'close-modal', 'source-tab', 'device', 'library-tab', 'apply-snippet', 'choose-files']);
 
   app.addEventListener('click', (event) => {
     const element = event.target.closest('[data-action]');
@@ -716,6 +809,7 @@
         const response = await api(projectPath('/pages'), { method: 'POST', body: values });
         state.pages.push(response.page);
         state.page = response.page;
+        state.view = 'pages';
         state.modal = null;
         state.previewUrl = '';
         state.previewError = '';
@@ -819,11 +913,30 @@
   }, true);
 
   document.addEventListener('keydown', (event) => {
+    if (state.menuOpen && matchMedia('(max-width: 900px)').matches) {
+      if (event.key === 'Escape') { event.preventDefault(); actions['toggle-menu'](); return; }
+      if (event.key === 'Tab') {
+        const controls = [...document.querySelectorAll('#studio-navigation a, #studio-navigation button:not(:disabled), #studio-navigation select:not(:disabled)')];
+        const first = controls[0], last = controls.at(-1);
+        if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+        else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+      }
+    }
+    if (event.key === 'Escape') {
+      const links = document.querySelector('.quick-links[open]');
+      if (links) { links.open = false; links.querySelector('summary')?.focus(); }
+    }
     if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 's' && state.authenticated && state.page) {
       event.preventDefault();
       if (state.dirty) run(() => actions.save());
     }
   });
+
+  document.addEventListener('click', (event) => {
+    const links = document.querySelector('.quick-links[open]');
+    if (links && !links.contains(event.target)) links.open = false;
+  });
+  matchMedia('(max-width: 900px)').addEventListener('change', () => { state.menuOpen = false; syncNavigation(); });
 
   window.addEventListener('beforeunload', (event) => {
     if (state.dirty) { event.preventDefault(); event.returnValue = ''; }

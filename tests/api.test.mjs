@@ -110,6 +110,7 @@ test('HTTP authoring: authentication, immutable publishing, revisions, media and
     assert.ok([401, 403].includes(scoped.response.status), 'A project token does not authorize admin APIs');
     const diagnostics = await f.request('/api/diagnostics');
     assert.equal(diagnostics.response.status, 200);
+    assert.equal(diagnostics.data.cliPath, path.resolve('bin/lumasite.mjs'));
     assert.equal(JSON.stringify(diagnostics.data).includes(f.credentials.adminToken), false);
   });
 

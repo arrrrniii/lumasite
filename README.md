@@ -9,7 +9,7 @@ LumaSite runs as an independent application. The `marketing/` directory is an op
 Requires Node.js 24 or later, npm, Git, and read access to this private repository. Create a project with one command, answer the questions, and let it install the application inside your new folder:
 
 ```sh
-npx --yes "git+https://github.com/arrrrniii/lumasite.git#v0.4.1" create
+npx --yes "git+https://github.com/arrrrniii/lumasite.git#v0.5.0" create
 ```
 
 It first asks **What is your project named?**, then walks through local/server mode, website name/domain, optional ZIP import, ports, Studio/preview URLs, and proxy configuration. After reviewing the settings, it creates the folder, installs its own runtime/dependencies, initializes credentials, and optionally starts the website. The installed application stays inside the project when npx's temporary installer goes away.
@@ -81,6 +81,14 @@ The MCP URL is a Streamable HTTP endpoint and requires the project's bearer toke
 The custom domain is saved as project configuration. Local testing works without DNS through `/sites/<slug>/`; entering a domain does not automatically register it or change DNS.
 
 You can optionally run `npm link` and use `lumasite` in place of `node bin/lumasite.mjs`.
+
+## Studio workspace
+
+The Studio opens each website with an Overview: page counts, recent pages, website resources, and shortcuts to editing and media. The navy navigation drawer collapses on mobile. Pages, Media library, Components, Connections, and Runtime share the same controls and self-hosted typography.
+
+Use **Quick links** from any project section, or **Connections → Website links**, to open or copy the published preview, production website, XML sitemap, robots.txt, and RSS feed. Connections also includes the Studio address, authenticated MCP endpoint, domain settings, SEO/branding defaults, and installation ports. Production addresses reflect configuration; they do not verify DNS or TLS.
+
+The page editor has **Open draft** and a private-draft copy button. In Connections, **Get draft link** generates a signed link for the selected page; when needed, **Save & get draft link** saves edits first. Anyone with that link can view the saved draft until it expires. The published preview uses published revisions only. See [the Studio guide](docs/studio.md).
 
 ## Commands
 
