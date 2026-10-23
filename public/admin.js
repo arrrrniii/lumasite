@@ -9,7 +9,7 @@
     port: 4310, sitePort: 4311, projects: [], project: null, urls: null,
     pages: [], page: null, baseline: '', dirty: false, view: 'projects',
     sourceTab: 'html', device: 'desktop', previewUrl: '', previewError: '',
-    library: null, libraryTab: 'components', assets: [], revisions: [], connections: [], integrations: null, editTagId: null,
+    library: null, libraryTab: 'components', assets: [], revisions: [], connections: [], integrations: null, layout: null, layoutTab: 'header', layoutDirty: false, layoutPreviewUrl: '', layoutPreviewPageId: '', editTagId: null,
     diagnostics: null, health: null, readiness: null, modal: null,
     formError: '', projectTokens: new Map(), importFile: null, importMode: 'create', backups: [], menuOpen: false,
   };
@@ -139,7 +139,7 @@
         catch { throw new Error('Structured data must be valid JSON before saving.'); }
       } else seo.structuredData = page._seoJson;
     }
-    return { title, slug, description, html, css, js, seo };
+    return { title, slug, description, html, css, js, seo, layoutMode: page.layoutMode || 'none', layoutClass: page.layoutClass || '' };
   }
 
   function markClean() {
@@ -223,7 +223,7 @@
   }
 
   function discardDraft() {
-    return !state.dirty || window.confirm('Discard your unsaved changes? Save the draft first if you want to keep them.');
+    return (!state.layoutDirty || window.confirm('Discard unsaved layout changes?')) && (!state.dirty || window.confirm('Discard your unsaved changes? Save the draft first if you want to keep them.'));
   }
 
   function brand() {
@@ -249,12 +249,12 @@
 
   function rail() {
     return `<aside class="rail" id="studio-navigation" aria-label="Studio navigation"><div class="rail-brand">${brand()}<button class="btn icon-only mobile-control" data-action="toggle-menu" type="button" aria-label="Close navigation">${icon('close')}</button></div><div class="rail-content"><div><p class="rail-label">Workspace</p><div class="project-picker"><select id="project-select" aria-label="Select website"><option value="">All websites</option>${state.projects.map((project) => `<option value="${escape(project.id)}" ${project.id === state.project?.id ? 'selected' : ''}>${escape(project.name)}</option>`).join('')}</select><button class="new-project" data-action="new-project" type="button">${icon('plus')}New website</button></div></div>
-      <div><p class="rail-label">Website studio</p><nav class="rail-nav" aria-label="Website studio">${state.project ? `${navButton('overview', 'Overview', 'overview')}${navButton('pages', 'Pages', 'pages')}${navButton('media', 'Media library', 'image')}${navButton('library', 'Components', 'layers')}${navButton('integrations', 'Integrations', 'code')}${navButton('connections', 'Connections', 'connect')}` : navButton('projects', 'Your websites', 'folder')}${navButton('runtime', 'Runtime', 'pulse')}</nav></div></div>
+      <div><p class="rail-label">Website studio</p><nav class="rail-nav" aria-label="Website studio">${state.project ? `${navButton('overview', 'Overview', 'overview')}${navButton('pages', 'Pages', 'pages')}${navButton('media', 'Media library', 'image')}${navButton('library', 'Components', 'layers')}${navButton('layout', 'Global layout', 'layers')}${navButton('integrations', 'Integrations', 'code')}${navButton('connections', 'Connections', 'connect')}` : navButton('projects', 'Your websites', 'folder')}${navButton('runtime', 'Runtime', 'pulse')}</nav></div></div>
       <div class="rail-footer"><div class="rail-native">${icon('sparkle')}<div><strong>Made to move.</strong><span>LumaFX is built into every page.</span></div></div><div class="rail-footer-meta"><span>LumaSite ${escape(state.version ? `v${state.version}` : '')}</span>${icon('lock')}</div></div></aside>`;
   }
 
   function shell() {
-    const titles = { projects: 'Your websites', overview: 'Overview', pages: 'Pages', media: 'Media library', library: 'Components', integrations: 'Integrations', connections: 'Connections', runtime: 'Runtime' };
+    const titles = { projects: 'Your websites', overview: 'Overview', pages: 'Pages', media: 'Media library', library: 'Components', integrations: 'Integrations', layout: 'Global layout', connections: 'Connections', runtime: 'Runtime' };
     document.title = `${state.project?.name ? `${state.project.name} · ` : ''}${titles[state.view] || 'Studio'} · LumaSite`;
     return `<div class="shell">${rail()}<button class="nav-scrim" data-action="toggle-menu" type="button" aria-label="Close navigation" tabindex="-1"></button><div class="content"><header class="topbar"><div class="topbar-left"><button class="btn icon-only mobile-control" id="menu-trigger" data-action="toggle-menu" type="button" aria-label="Open navigation" aria-controls="studio-navigation" aria-expanded="${state.menuOpen}">${icon('menu')}</button><div class="breadcrumb"><span>Studio</span>${icon('arrow')}${state.project ? `<strong>${escape(state.project.name)}</strong>${icon('arrow')}` : ''}<span>${titles[state.view] || 'Studio'}</span></div></div><div class="topbar-right">${quickLinks()}${state.project ? external(state.urls?.site, 'Preview website', 'btn small topbar-preview') : ''}<button class="btn icon-only" data-action="import-zip" type="button" aria-label="Import ZIP" title="Import ZIP">${icon('upload')}</button><button class="btn icon-only" data-action="logout" type="button" aria-label="Sign out" title="Sign out">${icon('logout')}</button></div></header><main class="workspace" id="main" tabindex="-1">${workspaceView()}</main><footer class="workspace-footer"><span>${icon('lock')}Private studio</span><span>Design. Connect. Publish.</span></footer></div></div>${modalView()}`;
   }
@@ -267,6 +267,7 @@
     if (state.view === 'library') return libraryView();
     if (state.view === 'connections') return connectionsView();
     if (state.view === 'integrations') return integrationsView();
+    if (state.view === 'layout') return layoutView();
     return editorView();
   }
 
@@ -341,13 +342,33 @@
     const p = state.page, seo = p.seo || {};
     const field = (key, label, placeholder = '') => `<label>${label}<input data-seo-field="${key}" value="${escape(seo[key] || '')}" placeholder="${escape(placeholder)}"></label>`;
     const automatic = `${state.project.domain ? `https://${state.project.domain}/` : state.urls.site}${p.slug || ''}`;
-    return `<div class="settings-form"><label>Page title<input data-page-field="title" value="${escape(p.title)}" maxlength="200"></label><label>URL path<input data-page-field="slug" value="${escape(p.slug || '')}" spellcheck="false" placeholder="Leave empty for homepage"><small>Nested paths work too: blog/my-article.</small></label><label>Search description<textarea data-page-field="description" aria-label="Search description" rows="4" maxlength="500">${escape(p.description || '')}</textarea></label><fieldset><legend>Search and sharing</legend>${field('title', 'SEO title override', p.title)}${field('canonical', 'Canonical URL override', automatic)}<p class="hint">Leave overrides empty to use the page title and production domain automatically.</p>${field('image', 'Social image URL', '/media/project/image.png')}${field('imageAlt', 'Social image description')}<label class="checkbox-label"><input type="checkbox" data-seo-field="noindex" ${seo.noindex ? 'checked' : ''}>Keep this page out of search results</label><p class="hint">Page settings are drafts until published. Preview URLs always stay noindex.</p></fieldset><fieldset><legend>Blog article</legend><label>Page type<select data-seo-field="type" aria-label="Page type"><option value="website" ${seo.type !== 'article' ? 'selected' : ''}>Website page</option><option value="article" ${seo.type === 'article' ? 'selected' : ''}>Blog article</option></select></label>${field('headline', 'Article headline', p.title)}${field('author', 'Author organization', state.project.name)}${field('publishedTime', 'Publication time', '2026-10-22T12:00:00.000Z')}${field('modifiedTime', 'Modified time override', 'Automatic from the published revision')}<p class="hint">Use ISO dates with a timezone. Published articles appear in the blog list and RSS feed automatically.</p></fieldset><fieldset><legend>Additional structured data</legend><label>Structured data (JSON-LD)<textarea data-seo-json aria-label="Structured data (JSON-LD)" rows="8" spellcheck="false">${escape(p._seoJson ?? (seo.structuredData ? JSON.stringify(seo.structuredData, null, 2) : ''))}</textarea></label><p class="hint">Optional JSON object or array. Organization, WebSite, WebPage, breadcrumbs, and BlogPosting are already generated. Add only information supported by the page.</p></fieldset></div>`;
+    return `<div class="settings-form"><label>Page title<input data-page-field="title" value="${escape(p.title)}" maxlength="200"></label><label>URL path<input data-page-field="slug" value="${escape(p.slug || '')}" spellcheck="false" placeholder="Leave empty for homepage"><small>Nested paths work too: blog/my-article.</small></label><label>Search description<textarea data-page-field="description" aria-label="Search description" rows="4" maxlength="500">${escape(p.description || '')}</textarea></label><fieldset><legend>Global layout</legend><label>Layout<select data-page-field="layoutMode"><option value="none" ${p.layoutMode !== 'global' ? 'selected' : ''}>Standalone page</option><option value="global" ${p.layoutMode === 'global' ? 'selected' : ''}>Global layout</option></select></label><label>Header variant class<input data-page-field="layoutClass" value="${escape(p.layoutClass || '')}" placeholder="Optional CSS class"></label><p class="hint">Optional slots: &lt;!-- lumasite:header --&gt; and &lt;!-- lumasite:footer --&gt;. Without slots the layout wraps the page. Save and publish to change this assignment.</p></fieldset><fieldset><legend>Search and sharing</legend>${field('title', 'SEO title override', p.title)}${field('canonical', 'Canonical URL override', automatic)}<p class="hint">Leave overrides empty to use the page title and production domain automatically.</p>${field('image', 'Social image URL', '/media/project/image.png')}${field('imageAlt', 'Social image description')}<label class="checkbox-label"><input type="checkbox" data-seo-field="noindex" ${seo.noindex ? 'checked' : ''}>Keep this page out of search results</label><p class="hint">Page settings are drafts until published. Preview URLs always stay noindex.</p></fieldset><fieldset><legend>Blog article</legend><label>Page type<select data-seo-field="type" aria-label="Page type"><option value="website" ${seo.type !== 'article' ? 'selected' : ''}>Website page</option><option value="article" ${seo.type === 'article' ? 'selected' : ''}>Blog article</option></select></label>${field('headline', 'Article headline', p.title)}${field('author', 'Author organization', state.project.name)}${field('publishedTime', 'Publication time', '2026-10-22T12:00:00.000Z')}${field('modifiedTime', 'Modified time override', 'Automatic from the published revision')}<p class="hint">Use ISO dates with a timezone. Published articles appear in the blog list and RSS feed automatically.</p></fieldset><fieldset><legend>Additional structured data</legend><label>Structured data (JSON-LD)<textarea data-seo-json aria-label="Structured data (JSON-LD)" rows="8" spellcheck="false">${escape(p._seoJson ?? (seo.structuredData ? JSON.stringify(seo.structuredData, null, 2) : ''))}</textarea></label><p class="hint">Optional JSON object or array. Organization, WebSite, WebPage, breadcrumbs, and BlogPosting are already generated. Add only information supported by the page.</p></fieldset></div>`;
   }
 
   function projectSeoForm() {
     const seo = state.project.seo || {};
     const field = (key, label, placeholder = '') => `<label>${label}<input name="${key}" value="${escape(seo[key] || '')}" placeholder="${escape(placeholder)}"></label>`;
     return `<section class="surface seo-surface"><div class="surface-header"><div><span class="eyebrow">Search & sharing</span><h2>SEO and branding</h2><p>Shared defaults for this website.</p></div></div><form class="seo-form" data-form="project-seo">${field('siteName', 'Site name', state.project.name)}<label>Site description<textarea name="description" aria-label="Site description" rows="3">${escape(seo.description || '')}</textarea></label>${field('language', 'Website language', 'en')}${field('image', 'Default social image URL')}${field('imageAlt', 'Default social image description')}${field('logo', 'Organization logo URL')}${field('favicon', 'Favicon URL')}${field('appleTouchIcon', 'Apple touch icon URL')}<label class="checkbox-label"><input name="noindex" type="checkbox" ${seo.noindex ? 'checked' : ''}>Keep the whole website out of search results</label><p class="hint">Shared defaults apply immediately. Production indexing requires the configured domain; project-path and draft previews remain noindex.</p><div class="row"><button class="btn" type="submit">Save SEO settings</button></div></form></section>`;
+  }
+
+  function layoutView() {
+    const data = state.layout, layout = data.layout, tab = state.layoutTab;
+    const linked = data.pages.filter(p => p.layoutMode === 'global');
+    const preview = url(state.layoutPreviewUrl, { separateOrigin: true });
+    return `<div class="page-heading"><div><h1>One layout. Every page.</h1><p>Manage your shared header, footer, styles, and behavior in one place.</p></div><div class="heading-actions"><button class="btn" data-action="save-layout" type="button">${icon('save')}Save layout draft</button><button class="btn primary" data-action="publish-layout" type="button">${icon('rocket')}Publish layout</button></div></div>
+      <div class="layout-workspace"><section class="surface layout-editor"><div class="surface-header"><div><h2>Shared source</h2><p id="layout-draft-status">${state.layoutDirty ? 'Unsaved changes' : `Draft ${layout.revision} saved`}</p></div><span class="pill ${layout.published ? 'success' : ''}">${layout.published ? `Live version ${layout.published.revision}` : 'Not published'}</span></div><div class="source-tabs" role="tablist" aria-label="Layout source">${['header','footer','css','cssAfter','js'].map(key => `<button role="tab" type="button" aria-selected="${tab === key}" class="${tab === key ? 'active' : ''}" data-action="layout-tab" data-tab="${key}">${({header:'Header',footer:'Footer',css:'Shared CSS',cssAfter:'Final CSS',js:'Shared JavaScript'})[key]}</button>`).join('')}</div><label class="layout-source-label" for="layout-source">${tab} source</label><textarea id="layout-source" class="source-textarea" data-layout-field="${tab}" spellcheck="false" autocapitalize="off" wrap="off">${escape(layout.draft[tab])}</textarea><p class="hint layout-editor-help">Save to preview. Publish to update all linked pages. Page bodies and SEO stay in the page editor. Bindings: <code>{{page.title}}</code>, <code>{{page.slug}}</code>, <code>{{page.layoutClass}}</code>.</p></section>
+      <aside class="layout-details"><section class="surface"><h2>${linked.length} linked ${linked.length === 1 ? 'page' : 'pages'}</h2><p class="hint">New pages use a published layout automatically. Change an individual page in Pages → Settings.</p><div class="layout-page-list">${linked.length ? linked.map(p => `<div><span>${escape(p.title)}</span><small>/${escape(p.slug)}</small></div>`).join('') : '<p>No pages linked yet. Select Global layout in a page’s settings, then save and publish that page. Existing websites can use MCP layout_extract to move matching copies safely.</p>'}</div>${linked.length ? `<label>Preview page<select id="layout-preview-page">${linked.map(p => `<option value="${escape(p.id)}" ${state.layoutPreviewPageId === p.id ? 'selected' : ''}>/${escape(p.slug || ' (homepage)')}</option>`).join('')}</select></label><button class="btn small" data-action="preview-layout" type="button">${icon('eye')}Preview saved layout</button>` : ''}</section>
+      <section class="surface"><h2>Published history</h2><p class="hint">Restore a version into your draft, preview it, then publish. The last 50 versions are retained.</p><div class="layout-history">${[...layout.history].reverse().map(r => `<div><span>Version ${r.revision}<small>${escape(formatDate(r.createdAt))}</small></span><button class="btn small" data-action="restore-layout" data-id="${escape(r.id)}" type="button">Restore draft</button></div>`).join('') || '<p class="hint">Your first publication will appear here.</p>'}</div></section></aside></div>
+      ${preview ? `<section class="surface layout-preview"><h2>Saved layout preview</h2><p class="hint">Private preview of the selected page with the saved layout draft.</p><iframe title="Global layout draft preview" src="${escape(preview)}" sandbox="allow-scripts" referrerpolicy="no-referrer"></iframe></section>` : ''}`;
+  }
+
+  async function loadLayout() {
+    state.layout = await api(projectPath('/layout')); state.layoutDirty = false;
+    state.layoutPreviewPageId ||= state.layout.pages.find(p => p.layoutMode === 'global')?.id;
+  }
+  async function persistLayout() {
+    state.layout = await api(projectPath('/layout'), { method: 'PATCH', body: { ...state.layout.layout.draft, expectedRevision: state.layout.layout.revision } });
+    state.layoutDirty = false; state.layoutPreviewUrl = '';
   }
 
   function integrationsView() {
@@ -560,6 +581,7 @@
 
   async function selectProject(id, { push = true, view = 'overview', checkDirty = true } = {}) {
     if (checkDirty && !discardDraft()) return;
+    state.layout = null; state.layoutDirty = false; state.layoutPreviewUrl = ''; state.layoutPreviewPageId = '';
     const [details, pages] = await Promise.all([
       api(`/api/projects/${encodeURIComponent(id)}`),
       api(`/api/projects/${encodeURIComponent(id)}/pages`),
@@ -582,6 +604,7 @@
     if (view === 'library') await loadLibrary();
     if (view === 'connections') await loadConnections();
     if (view === 'integrations') await loadIntegrations();
+    if (view === 'layout') await loadLayout();
     render();
     if (state.page && view === 'pages') await refreshPreview();
   }
@@ -645,6 +668,8 @@
   }
 
   async function navigate(view) {
+    if (state.layoutDirty && !window.confirm('Discard unsaved layout changes? Save the layout draft to keep them.')) return;
+    state.layoutDirty = false;
     if (view === 'projects') {
       if (!discardDraft()) return;
       state.project = null;
@@ -656,6 +681,7 @@
     if (view === 'library') await loadLibrary();
     if (view === 'connections') await loadConnections();
     if (view === 'integrations') await loadIntegrations();
+    if (view === 'layout') await loadLayout();
     if (view === 'runtime') await loadRuntime();
     state.menuOpen = false;
     state.view = view;
@@ -829,6 +855,11 @@
       toast('Revision restored to your draft. Publish to make it live.');
     },
     'refresh-connections': async () => { await loadConnections(); render(); },
+    'layout-tab': element => { state.layoutTab = element.dataset.tab; render(); },
+    'save-layout': async () => { await persistLayout(); render(); toast('Layout draft saved. Your live website is unchanged.'); },
+    'publish-layout': async () => { if (state.layoutDirty) await persistLayout(); state.layout = await api(projectPath('/layout/publish'), { method: 'POST', body: { expectedRevision: state.layout.layout.revision } }); render(); toast('Layout published to every linked page.'); },
+    'preview-layout': async () => { if (state.layoutDirty) await persistLayout(); const pageId = state.layoutPreviewPageId || state.layout.pages.find(p => p.layoutMode === 'global')?.id; const result = await api(projectPath('/preview'), { method: 'POST', body: { pageId } }); state.layoutPreviewUrl = result.url; render(); },
+    'restore-layout': async element => { if (state.layoutDirty && !window.confirm('Replace unsaved layout changes with this version?')) return; state.layout = await api(projectPath('/layout/restore'), { method: 'POST', body: { snapshotId: element.dataset.id, expectedRevision: state.layout.layout.revision } }); state.layoutDirty = false; state.layoutPreviewUrl = ''; render(); toast('Layout version restored to draft. Preview before publishing.'); },
     'refresh-integrations': async () => { await loadIntegrations(); render(); toast('Integration settings reloaded.'); },
     'new-custom-tag': () => { state.editTagId = null; state.modal = 'custom-tag'; render(); },
     'edit-custom-tag': element => { state.editTagId = element.dataset.id; state.modal = 'custom-tag'; render(); },
@@ -982,6 +1013,8 @@
   });
 
   app.addEventListener('input', (event) => {
+    const layoutField = event.target.dataset.layoutField;
+    if (layoutField && state.layout) { state.layout.layout.draft[layoutField] = event.target.value; state.layoutDirty = true; document.getElementById('layout-draft-status').textContent = 'Unsaved changes'; }
     const field = event.target.dataset.pageField;
     if (field && state.page) { state.page[field] = event.target.value; updateDirty(); }
     const seoField = event.target.dataset.seoField;
@@ -992,6 +1025,7 @@
   });
 
   app.addEventListener('change', (event) => {
+    if (event.target.id === 'layout-preview-page') state.layoutPreviewPageId = event.target.value;
     if (event.target.id === 'import-zip-file') {
       const file = event.target.files?.[0];
       const error = !file ? '' : file.size > 100 * 1024 * 1024 ? 'This ZIP is larger than 100 MB. Choose a smaller export.' : !file.size ? 'This file is empty. Choose a LumaSite ZIP export.' : !/\.zip$/i.test(file.name) && !['application/zip', 'application/x-zip-compressed'].includes(file.type) ? 'Choose a ZIP exported from LumaSite.' : '';
@@ -1080,7 +1114,7 @@
   matchMedia('(max-width: 900px)').addEventListener('change', () => { state.menuOpen = false; syncNavigation(); });
 
   window.addEventListener('beforeunload', (event) => {
-    if (state.dirty) { event.preventDefault(); event.returnValue = ''; }
+    if (state.dirty || state.layoutDirty) { event.preventDefault(); event.returnValue = ''; }
   });
 
   async function routeFromLocation() {

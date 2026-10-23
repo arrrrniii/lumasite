@@ -513,3 +513,24 @@
   }
   @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; } }
 }
+
+/* Shared layout editor follows the Studio's existing type and color system. */
+.layout-workspace { display:grid; grid-template-columns:minmax(0,1fr) minmax(280px,350px); gap:24px; align-items:start; }
+.layout-editor { min-width:0; padding:0; overflow:hidden; }
+.layout-editor .surface-header { padding:28px 28px 0; }
+.layout-editor .source-textarea { display:block; width:100%; min-height:540px; resize:vertical; padding:24px; }
+.layout-editor-help { padding:20px 28px; border-top:1px solid var(--line,#dce3ee); }
+.layout-details { display:grid; gap:24px; min-width:0; }
+.layout-page-list { max-height:280px; overflow:auto; margin:20px 0; }
+.layout-page-list>div { display:grid; gap:4px; padding:12px 0; border-bottom:1px solid var(--line,#dce3ee); }
+.layout-page-list span { overflow-wrap:anywhere; font-size:13px; }
+.layout-page-list small,.layout-history small { display:block; color:var(--muted,#687891); font-size:12px; overflow-wrap:anywhere; }
+.layout-history>div { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:14px 0; border-bottom:1px solid var(--line,#dce3ee); }
+.layout-history { max-height:350px; overflow:auto; }
+.layout-details .btn { margin-top:12px; }
+.layout-preview { margin-top:24px; }
+.layout-preview iframe { display:block; width:100%; height:650px; border:1px solid var(--line,#dce3ee); margin-top:20px; background:#fff; }
+@media(max-width:1100px){.layout-workspace{grid-template-columns:minmax(0,1fr)}.layout-details{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:650px){.layout-details{grid-template-columns:minmax(0,1fr)}.layout-editor .surface-header{padding:20px 20px 0}.layout-editor .source-textarea{padding:18px;min-height:380px}.layout-editor-help{padding:18px}.layout-workspace{gap:16px}.layout-editor .source-tabs{overflow-x:auto}}
+
+.layout-source-label { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }

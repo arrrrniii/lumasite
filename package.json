@@ -1,6 +1,6 @@
 {
   "name": "lumasite",
-  "version": "0.9.0",
+  "version": "0.10.0",
   "description": "An independent, self-hosted website studio with native LumaFX and MCP authoring.",
   "private": true,
   "license": "UNLICENSED",
@@ -37,7 +37,8 @@
     "test:projects": "node tests/project-browser.mjs",
     "test:oauth": "node tests/oauth-browser.mjs",
     "test:oauth-apache": "node tests/oauth-apache.mjs",
-    "test:integrations": "node tests/integrations-browser.mjs"
+    "test:integrations": "node tests/integrations-browser.mjs",
+    "test:layout": "node tests/layout-browser.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.30.0",

@@ -14,6 +14,8 @@ import { listProjectBackups, readProjectBackup } from './project-backups.mjs';
 import { createOAuthService } from './oauth.mjs';
 import { projectRootPath, productionNavigation } from './public-links.mjs';
 import { getIntegrations, updateIntegrations } from './integrations.mjs';
+import { getLayout, layoutSummary, updateLayout, publishLayout, restoreLayout, composeLayout, pageLayout } from './layout.mjs';
+import { extractLayout } from './layout-extract.mjs';
 import { productionHost, pageNoindex, sitemapXml, robotsTxt, feedXml, renderBlogBlocks } from './seo.mjs';
 import { VERSION, fail, tokenMatches, passwordMatches, publicInstance, publicProject, initializeInstance, createProject, requireProject, requirePage, getProjectUrls, updateProject, createPage, updatePage, publishPage, restorePage, rotateProjectToken, uploadAsset, getLibrary, getPreviewUrl, verifyPreviewToken, renderDocument } from './service.mjs';
 
@@ -33,10 +35,10 @@ export async function startServers({ dataDir, store: suppliedStore } = {}) {
   if (process.env.LUMASITE_HOST) config.host = process.env.LUMASITE_HOST;
   const sessions = new Map(), loginAttempts = new Map(), cssCache = new Map();
   const contentAssets = new Map(), revisionAssetUrls = new Map(), navigationCache = new Map();
-  function productionHtml(revision, project, instance) {
-    const key = JSON.stringify([revision.id, project.domain, instance?.sitePublicUrl]);
+  function productionHtml(revision, project, instance, html = revision.page.html) {
+    const key = JSON.stringify([revision.id, project.domain, instance?.sitePublicUrl, project.layout?.published?.id]);
     if (!navigationCache.has(key)) {
-      navigationCache.set(key, productionNavigation(revision.page.html, project, instance));
+      navigationCache.set(key, productionNavigation(html, project, instance));
       if (navigationCache.size > 100) navigationCache.delete(navigationCache.keys().next().value);
     }
     return navigationCache.get(key);
@@ -170,6 +172,11 @@ export async function startServers({ dataDir, store: suppliedStore } = {}) {
   });
   admin.get('/api/projects/:id', (req, res) => { const state = store.read(), project = publicProject(requireProject(state, req.params.id)); res.json({ project, urls: getProjectUrls(state, project) }); });
   admin.patch('/api/projects/:id', async (req, res) => res.json(await updateProject(store, req.params.id, req.body)));
+  admin.get('/api/projects/:id/layout', (req, res) => res.json(layoutSummary(store.read(), req.params.id)));
+  admin.patch('/api/projects/:id/layout', async (req, res) => res.json(await updateLayout(store, req.params.id, req.body)));
+  admin.post('/api/projects/:id/layout/publish', async (req, res) => res.json(await publishLayout(store, req.params.id, req.body)));
+  admin.post('/api/projects/:id/layout/restore', async (req, res) => res.json(await restoreLayout(store, req.params.id, req.body)));
+  admin.post('/api/projects/:id/layout/extract', async (req, res) => res.json(await extractLayout(store, req.params.id, req.body)));
   admin.get('/api/projects/:id/integrations', (req, res) => res.json({ integrations: getIntegrations(requireProject(store.read(), req.params.id)) }));
   admin.patch('/api/projects/:id/integrations', async (req, res) => res.json(await updateIntegrations(store, req.params.id, req.body)));
   admin.post('/api/projects/:id/token', async (req, res) => res.json(await rotateProjectToken(store, req.params.id)));
@@ -238,6 +245,12 @@ export async function startServers({ dataDir, store: suppliedStore } = {}) {
     if (!asset) return res.status(404).end();
     res.type(asset.type).set({ 'Cache-Control': 'public,max-age=31536000,immutable', ETag: asset.etag }).send(asset.body);
   });
+  publicApp.get('/layout-assets/:asset', (req, res) => {
+    const match = req.params.asset.match(/^([a-f0-9-]+)(\.after)?\.(css|js)$/);
+    const layout = match && store.read().projects.flatMap(p => p.layout?.history || []).find(r => r.id === match[1]);
+    if (!layout || (match[2] && match[3] !== 'css')) return res.status(404).end();
+    res.type(match[3] === 'css' ? 'text/css' : 'text/javascript').set('Cache-Control', 'public,max-age=31536000,immutable').send(match[2] ? layout.cssAfter || '' : match[3] === 'css' ? layout.compiledCss : layout.js);
+  });
   publicApp.get('/release-assets/:asset', (req, res) => {
     const match = req.params.asset.match(/^([a-f0-9-]+)\.(css|js)$/);
     const revision = match && store.read().revisions.find(r => r.id === match[1]);
@@ -253,17 +266,29 @@ export async function startServers({ dataDir, store: suppliedStore } = {}) {
     return cssCache.get(key);
   }
   publicApp.get('/preview-assets/:projectId/:asset', async (req, res) => {
-    const match = req.params.asset.match(/^([a-f0-9-]+)\.(css|js)$/), state = store.read();
+    const match = req.params.asset.match(/^([a-f0-9-]+)(\.layout(?:-after)?)?\.(css|js)$/), state = store.read();
     if (!match || !verifyPreviewToken(state, req.query.token, req.params.projectId, match[1])) fail(403, 'This preview link is invalid or expired. Refresh the preview in the studio.');
     const page = requirePage(state, req.params.projectId, match[1]);
-    res.type(match[2] === 'css' ? 'text/css' : 'text/javascript').set({ 'Cache-Control': 'no-store', 'Access-Control-Allow-Origin': '*' }).send(match[2] === 'css' ? await previewCss(page) : page.js);
+    const layout = pageLayout(requireProject(state, req.params.projectId), page, true);
+    if (match[2] && !layout) return res.status(404).end();
+    let body = page.js;
+    if (match[2]) {
+      if (match[2] === '.layout-after') {
+        if (match[3] !== 'css') return res.status(404).end();
+        return res.type('text/css').set({ 'Cache-Control': 'no-store', 'Access-Control-Allow-Origin': '*' }).send(layout.cssAfter || '');
+      }
+      const key = `layout:${req.params.projectId}:${getLayout(requireProject(state, req.params.projectId)).revision}`;
+      if (match[3] === 'css' && !cssCache.has(key)) { cssCache.set(key, compilePageCss(layout.header + layout.footer, layout.css, layout.js)); if (cssCache.size > 100) cssCache.delete(cssCache.keys().next().value); }
+      body = match[3] === 'css' ? await cssCache.get(key) : layout.js;
+    } else if (match[3] === 'css') body = await previewCss(page);
+    res.type(match[3] === 'css' ? 'text/css' : 'text/javascript').set({ 'Cache-Control': 'no-store', 'Access-Control-Allow-Origin': '*' }).send(body);
   });
   publicApp.get('/preview/:projectId/:pageId', async (req, res) => {
     const state = store.read();
     if (!verifyPreviewToken(state, req.query.token, req.params.projectId, req.params.pageId)) fail(403, 'This preview link is invalid or expired. Refresh the preview in the studio.');
     const page = requirePage(state, req.params.projectId, req.params.pageId), project = requireProject(state, req.params.projectId);
-    const html = renderBlogBlocks(page.html, state, project, `/sites/${project.slug}/`, page.slug);
-    res.set('Cache-Control', 'no-store').type('html').send(renderDocument(page, { preview: true, theme: project.theme, token: req.query.token, project, instance: state.instance, html }));
+    const html = renderBlogBlocks(composeLayout(page.html, page, pageLayout(project, page, true)), state, project, `/sites/${project.slug}/`, page.slug);
+    res.set('Cache-Control', 'no-store').type('html').send(renderDocument(page, { preview: true, theme: project.theme, token: req.query.token, project, instance: state.instance, html, layoutComposed: true }));
   });
   function servePublished(req, res, project, slug) {
     const state = store.read();
@@ -275,9 +300,10 @@ export async function startServers({ dataDir, store: suppliedStore } = {}) {
     if (pageNoindex(revision.page, project, noindex)) res.set('X-Robots-Tag', 'noindex,follow');
     else res.removeHeader('X-Robots-Tag');
     const basePath = localPath ? `/sites/${project.slug}/` : '/';
-    const source = !localPath && project.domain === req.hostname ? productionHtml(revision, project, state.instance) : revision.page.html;
+    const composed = composeLayout(revision.page.html, revision.page, pageLayout(project, revision.page));
+    const source = !localPath && project.domain === req.hostname ? productionHtml(revision, project, state.instance, composed) : composed;
     const html = renderBlogBlocks(source, state, project, basePath, revision.page.slug);
-    res.set('Cache-Control', 'no-cache').type('html').send(renderDocument(revision.page, { revisionId: revision.id, theme: revision.theme, assetUrls: publishedAssetUrls(revision), project, instance: state.instance, noindex, liveIntegrations: !noindex, html }));
+    res.set('Cache-Control', 'no-cache').type('html').send(renderDocument(revision.page, { revisionId: revision.id, theme: revision.theme, assetUrls: publishedAssetUrls(revision), project, instance: state.instance, noindex, liveIntegrations: !noindex, html, layoutComposed: true }));
   }
   function seoResource(req, res, project, resource, localPath = false) {
     const state = store.read(), production = !localPath && productionHost(project, req.hostname);

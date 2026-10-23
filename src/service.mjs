@@ -6,8 +6,9 @@ import { compilePageCss } from './compiler.mjs';
 import { homePage, escapeHtml, components } from './templates.mjs';
 import { validateSeo, renderSeo } from './seo.mjs';
 import { integrationMarkup } from './integrations.mjs';
+import { composeLayout, pageLayout, layoutModeSchema, layoutClassSchema, parseLayout } from './layout.mjs';
 
-export const VERSION = '0.9.0';
+export const VERSION = '0.10.0';
 export function fail(status, message) { throw Object.assign(new Error(message), { status }); }
 export const tokenHash = token => createHash('sha256').update(String(token)).digest('hex');
 export function tokenMatches(token, hash) {
@@ -30,8 +31,9 @@ export function publicInstance(instance) {
   const { passwordHash: _p, adminTokenHash: _t, ...result } = instance;
   return result;
 }
-export function publicProject(project) {
-  const { tokenHash: _t, ...result } = project;
+export function publicProject(project, { includeLayoutSource = false } = {}) {
+  const { tokenHash: _t, layout, ...result } = project;
+  if (layout) result.layout = includeLayoutSource ? layout : { revision: layout.revision, publishedRevisionId: layout.published?.id || null, publishedAt: layout.published?.createdAt || null };
   return result;
 }
 function text(value, label, max = 200) {
@@ -51,7 +53,7 @@ function domainName(value) {
 function pageSlug(value = '') {
   const slug = String(value).replace(/^\/+|\/+$/g, '');
   if (slug.length > 300 || (slug && !/^[a-z0-9]+(?:[/-][a-z0-9]+)*$/.test(slug))) fail(400, 'Page paths can contain lowercase letters, numbers, hyphens and nested slashes.');
-  if (new Set(['health', 'runtime', 'media', 'content-assets', 'release-assets', 'preview-assets', 'preview', 'sites', 'admin', 'api', 'mcp']).has(slug.split('/')[0])) fail(400, 'That path is reserved by LumaSite. Choose another page path.');
+  if (new Set(['health', 'runtime', 'media', 'content-assets', 'layout-assets', 'release-assets', 'preview-assets', 'preview', 'sites', 'admin', 'api', 'mcp']).has(slug.split('/')[0])) fail(400, 'That path is reserved by LumaSite. Choose another page path.');
   return slug;
 }
 function source(value, label, max = 1024 * 1024) {
@@ -118,7 +120,7 @@ export function getProjectUrls(state, project) {
   return { admin: `${instance.publicUrl}/admin/projects/${project.id}`, mcp: `${instance.publicUrl}/mcp/${project.id}`, site: `${publicOrigin}/sites/${project.slug}/`, production: project.domain ? `https://${project.domain}/` : null };
 }
 function newPage(projectId, data) {
-  return { id: randomUUID(), projectId, slug: pageSlug(data.slug), title: text(data.title || 'Untitled page', 'Page title'), description: String(data.description || '').slice(0, 500), seo: validateSeo(data.seo), html: source(data.html || '', 'HTML'), css: source(data.css || '', 'CSS'), js: source(data.js || '', 'JavaScript'), updatedAt: new Date().toISOString(), revision: 1, publishedRevisionId: null };
+  return { id: randomUUID(), projectId, slug: pageSlug(data.slug), title: text(data.title || 'Untitled page', 'Page title'), description: String(data.description || '').slice(0, 500), seo: validateSeo(data.seo), ...(data.layoutMode !== undefined ? { layoutMode: parseLayout(layoutModeSchema, data.layoutMode), layoutClass: parseLayout(layoutClassSchema, data.layoutClass || '') } : {}), html: source(data.html || '', 'HTML'), css: source(data.css || '', 'CSS'), js: source(data.js || '', 'JavaScript'), updatedAt: new Date().toISOString(), revision: 1, publishedRevisionId: null };
 }
 export async function createProject(store, data) {
   const name = text(data.name, 'Project name', 100), domain = domainName(data.domain);
@@ -167,8 +169,8 @@ export async function rotateProjectToken(store, projectId) {
 }
 export async function createPage(store, projectId, data) {
   return store.mutate(state => {
-    requireProject(state, projectId);
-    const page = newPage(projectId, data);
+    const project = requireProject(state, projectId);
+    const page = newPage(projectId, { ...(project.layout?.published ? { layoutMode: 'global' } : {}), ...data });
     if (state.pages.some(p => p.projectId === projectId && p.slug === page.slug)) fail(409, 'A page already uses this path.');
     state.pages.push(page); return page;
   });
@@ -185,6 +187,8 @@ export async function updatePage(store, projectId, pageId, data) {
       if (state.pages.some(other => other.projectId === projectId && other.id !== pageId && other.slug === slug)) fail(409, 'A page already uses this path.');
       p.slug = slug;
     }
+    if ('layoutMode' in data) p.layoutMode = parseLayout(layoutModeSchema, data.layoutMode);
+    if ('layoutClass' in data) p.layoutClass = parseLayout(layoutClassSchema, data.layoutClass);
     for (const key of ['html', 'css', 'js']) if (key in data) p[key] = source(data[key], key.toUpperCase());
     p.updatedAt = new Date().toISOString(); p.revision += 1;
     return p;
@@ -192,7 +196,9 @@ export async function updatePage(store, projectId, pageId, data) {
 }
 export async function publishPage(store, projectId, pageId) {
   const state = store.read(), page = requirePage(state, projectId, pageId), project = requireProject(state, projectId);
-  const compiledCss = await compilePageCss(page.html, page.css, page.js);
+  if (page.layoutMode === 'global' && !project.layout?.published) fail(409, 'Publish the global layout before publishing a page that uses it.');
+  composeLayout(page.html, page, pageLayout(project, page));
+  const compiledCss = await compilePageCss(page.html + `<div class="${escapeHtml(page.layoutClass || '')}"></div>`, page.css, page.js);
   return store.mutate(next => {
     const current = requirePage(next, projectId, pageId);
     if (current.revision !== page.revision) fail(409, 'The page changed during publishing. Publish again to include the latest changes.');
@@ -212,6 +218,7 @@ export async function restorePage(store, projectId, pageId, revisionId) {
     if (state.pages.some(other => other.projectId === projectId && other.id !== pageId && other.slug === revision.page.slug)) fail(409, 'Another draft uses the path from this revision. Change that page’s path before restoring.');
     for (const key of ['html', 'css', 'js', 'title', 'description', 'slug']) page[key] = revision.page[key];
     page.seo = structuredClone(revision.page.seo || {});
+    page.layoutMode = revision.page.layoutMode || 'none'; page.layoutClass = revision.page.layoutClass || '';
     page.updatedAt = new Date().toISOString(); page.revision += 1;
     return page;
   });
@@ -259,7 +266,7 @@ export async function getLibrary() {
   catch (error) { if (error.code !== 'ENOENT') throw error; }
   return { components, animations, lumafx };
 }
-export function renderDocument(page, { theme = {}, revisionId, preview = false, token = '', assetUrls, project, instance, noindex = false, liveIntegrations = false, html = page.html } = {}) {
+export function renderDocument(page, { theme = {}, revisionId, preview = false, token = '', assetUrls, project, instance, noindex = false, liveIntegrations = false, html = page.html, layoutComposed = false } = {}) {
   const id = revisionId || `${page.id}-${page.revision}`;
   const prefix = preview ? `/preview-assets/${page.projectId}/${page.id}` : `/release-assets/${id}`;
   const themeCss = Object.entries(theme).map(([key, value]) => `${key}:${value}`).join(';');
@@ -268,5 +275,11 @@ export function renderDocument(page, { theme = {}, revisionId, preview = false, 
   const cssUrl = !preview && assetUrls?.css || `${prefix}.css${query}`;
   const jsUrl = !preview && assetUrls?.js || `${prefix}.js${query}`;
   const integrations = integrationMarkup(project, liveIntegrations && !preview);
-  return `<!doctype html><html lang="${escapeHtml(metadata.language)}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">${integrations.head}${metadata.head}<link rel="stylesheet" href="/runtime/lumafx/lumafx.css"><link rel="stylesheet" href="${escapeHtml(cssUrl)}"><style>:root{${themeCss}}</style><script src="/runtime/lumafx/lumafx.global.js"></script></head><body>${integrations.bodyStart}${html}<script type="module" src="${escapeHtml(jsUrl)}"></script>${integrations.bodyEnd}</body></html>`;
+  const layout = pageLayout(project, page, preview);
+  if (!layoutComposed) html = composeLayout(html, page, layout);
+  const layoutPrefix = preview ? `/preview-assets/${page.projectId}/${page.id}.layout` : `/layout-assets/${layout?.id}`;
+  const layoutCss = layout ? `<link rel="stylesheet" href="${escapeHtml(layoutPrefix + '.css' + query)}">` : '';
+  const layoutAfter = layout?.cssAfter ? `<link rel="stylesheet" href="${escapeHtml(layoutPrefix + (preview ? '-after.css' : '.after.css') + query)}">` : '';
+  const layoutJs = layout?.js ? `<script type="module" src="${escapeHtml(layoutPrefix + '.js' + query)}"></script>` : '';
+  return `<!doctype html><html lang="${escapeHtml(metadata.language)}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">${integrations.head}${metadata.head}<link rel="stylesheet" href="/runtime/lumafx/lumafx.css">${layoutCss}<link rel="stylesheet" href="${escapeHtml(cssUrl)}">${layoutAfter}<style>:root{${themeCss}}</style><script src="/runtime/lumafx/lumafx.global.js"></script></head><body>${integrations.bodyStart}${html}${layoutJs}<script type="module" src="${escapeHtml(jsUrl)}"></script>${integrations.bodyEnd}</body></html>`;
 }
