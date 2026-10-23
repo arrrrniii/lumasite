@@ -1,6 +1,6 @@
 # From the wizard to a working website
 
-The first-run creator makes an application folder, installs LumaSite, and prepares a website. This walkthrough matches v0.6.0's `create` command. The lower-level `setup` command also asks for a data directory; `create` uses `<project-folder>/.lumasite` by default, or an explicit `--data-dir`.
+The first-run creator makes an application folder, installs LumaSite, and prepares a website. This walkthrough matches v0.6.1's `create` command. The lower-level `setup` command also asks for a data directory; `create` uses `<project-folder>/.lumasite` by default, or an explicit `--data-dir`.
 
 ![Illustrated server wizard and the website, Studio, and MCP addresses it prepares](images/wizard-example.png)
 
@@ -15,12 +15,12 @@ gh auth login
 gh auth setup-git
 ```
 
-A read-only SSH deploy key is another option; use a `git+ssh://git@github.com/arrrrniii/lumasite.git#v0.6.0` package URL with it. Git authentication and npm registry login are different things.
+A read-only SSH deploy key is another option; use a `git+ssh://git@github.com/arrrrniii/lumasite.git#v0.6.1` package URL with it. Git authentication and npm registry login are different things.
 
 Start the creator from the parent directory where you want the new project:
 
 ```sh
-npx --yes "git+https://github.com/arrrrniii/lumasite.git#v0.6.0" create
+npx --yes --package="git+https://github.com/arrrrniii/lumasite.git#v0.6.1" lumasite create
 ```
 
 The outer `--yes` accepts npm's download prompt. It does not skip the creator's questions. The separate `create my-website --yes ...` form is for automation.

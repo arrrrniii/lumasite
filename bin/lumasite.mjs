@@ -1,4 +1,4 @@
 #!/usr/bin/env node
-import { runCli } from '../src/cli.mjs';
+import { launchCli } from '../src/bootstrap.mjs';
 
-process.exitCode = await runCli(process.argv.slice(2));
+process.exitCode = await launchCli(process.argv.slice(2));

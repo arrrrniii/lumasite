@@ -72,7 +72,7 @@ export async function createWebsite(selected, options, {
   scripts['project:list'] = 'node lumasite.mjs project list';
   const pkg = { name: plan.slug, version: '1.0.0', private: true, type: 'module', engines: { node: '>=24' }, scripts, dependencies: { lumasite: packageSpec } };
   const relativeData = path.relative(directory, dataDir);
-  const wrapper = `import { runCli } from 'lumasite/src/cli.mjs';\nimport path from 'node:path';\nimport { fileURLToPath } from 'node:url';\nconst args = process.argv.slice(2);\nif (!args.some(arg => arg === '--data-dir' || arg.startsWith('--data-dir='))) args.push('--data-dir', path.resolve(fileURLToPath(new URL('.', import.meta.url)), ${JSON.stringify(relativeData)}));\nprocess.exitCode = await runCli(args);\n`;
+  const wrapper = `import { launchCli } from 'lumasite/src/bootstrap.mjs';\nimport path from 'node:path';\nimport { fileURLToPath } from 'node:url';\nconst args = process.argv.slice(2);\nif (!args.some(arg => arg === '--data-dir' || arg.startsWith('--data-dir='))) args.push('--data-dir', path.resolve(fileURLToPath(new URL('.', import.meta.url)), ${JSON.stringify(relativeData)}));\nprocess.exitCode = await launchCli(args);\n`;
   const ignoredData = relativeData && !relativeData.startsWith(`..${path.sep}`) && !path.isAbsolute(relativeData)
     ? `/${relativeData.split(path.sep).join('/').replace(/[\\*?[\]!# ]/g, '\\$&')}/\n` : '';
   const ignore = `node_modules/\n.lumasite/\n${ignoredData}.env\n.env.*\n*.zip\n*.tgz\n*.log\n.DS_Store\n.setup-import.zip\n`;

@@ -5,7 +5,7 @@
 A self-hosted website studio for creating, editing, and publishing through MCP or your browser. Change the page structure, HTML, Tailwind classes, CSS, browser JavaScript, images, and LumaFX animations, then publish a revision without redeploying the Studio application.
 
 [![Tests](https://github.com/arrrrniii/lumasite/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/arrrrniii/lumasite/actions/workflows/ci.yml)
-[Version 0.6.0](https://github.com/arrrrniii/lumasite/tree/v0.6.0) · Node.js 24+ · Native LumaFX · Streamable HTTP MCP
+[Version 0.6.1](https://github.com/arrrrniii/lumasite/tree/v0.6.1) · Node.js 24+ · Native LumaFX · Streamable HTTP MCP
 
 ![LumaSite Studio showing the SendMailOS example, published pages, sitemap, robots.txt and RSS links](docs/images/studio-overview.png)
 
@@ -33,7 +33,7 @@ Publishing compiles the page's Tailwind CSS and records a published revision. It
 You need **Node.js 24+, npm, Git, and Git read access to this private repository**. Authenticate Git first; this is a GitHub installation, not an npm registry publication.
 
 ```sh
-npx --yes "git+https://github.com/arrrrniii/lumasite.git#v0.6.0" create
+npx --yes --package="git+https://github.com/arrrrniii/lumasite.git#v0.6.1" lumasite create
 ```
 
 The first question is **What is your project named?** Choose a new folder such as `my-website`. The wizard then asks for local/server mode, a new website or ZIP import, website name/domain, ports, URLs, and whether to start the app. Server mode also asks about the reverse proxy. Review the summary before it writes the project.
@@ -183,7 +183,7 @@ npm run import -- --file /private/imports/my-website.zip --slug another-website
 A global CLI is optional:
 
 ```sh
-npm install --global "git+https://github.com/arrrrniii/lumasite.git#v0.6.0"
+npm install --global "git+https://github.com/arrrrniii/lumasite.git#v0.6.1"
 lumasite setup
 ```
 
