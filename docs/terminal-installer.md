@@ -8,7 +8,7 @@ Check `node -v` before installing. Updating npm does not update Node.js: Node 20
 
 ## Create a project with one command
 
-With Git authenticated to the private repository, run:
+The repository is public. No GitHub login is needed for HTTPS installation:
 
 ```sh
 npx --yes --package="git+https://github.com/arrrrniii/lumasite.git#v0.6.1" lumasite create
@@ -66,27 +66,32 @@ npx --yes --package="git+https://github.com/arrrrniii/lumasite.git#v0.6.1" lumas
 
 The package also includes a `create-lumasite` executable, usable with `npx --package="git+https://github.com/arrrrniii/lumasite.git#v0.6.1" create-lumasite`. The short public-registry command `npx create-lumasite@latest` is reserved for a future intentional npm publication; it has not been published.
 
-## Install directly from the private GitHub repository
+## Install directly from the public GitHub repository
 
-Give the server's Git client read access to `arrrrniii/lumasite`. With GitHub CLI and an authorized account:
+A global CLI is optional:
 
 ```sh
-gh auth login
-gh auth setup-git
-npm install --global git+https://github.com/arrrrniii/lumasite.git
+npm install --global "git+https://github.com/arrrrniii/lumasite.git#v0.6.1"
 lumasite setup
 ```
 
-A read-only SSH deploy key is another option:
+HTTPS installation from this public repository requires no GitHub account, token, or deploy key. Use a user-writable npm prefix and the account intended to own the application/data. Add that prefix's `bin` directory to PATH if your Node installation has not done so.
+
+The package's `private: true` setting prevents npm registry publication; it does not make the GitHub repository private or prevent Git installation. There is no `lumasite` npm registry release. Publishing there is a separate intentional action.
+
+If `npx` exits without displaying the wizard, first check Git access directly:
 
 ```sh
-npm install --global git+ssh://git@github.com/arrrrniii/lumasite.git
-lumasite setup
+GIT_TERMINAL_PROMPT=0 git ls-remote https://github.com/arrrrniii/lumasite.git HEAD
 ```
 
-Configure Git authentication on that server; npm registry login does not authenticate a private Git repository. Use a user-writable npm prefix and the account intended to own the application/data. Add that prefix's `bin` directory to PATH if your Node installation has not done so. Do not embed a GitHub token in the install URL. A release tag or full commit can be appended as `#REF` when you need a fixed application release.
+A working connection prints a commit hash. The original private repository could cause npm to exit with code 128 without displaying Git's authentication error. Public visibility removes the authentication requirement for the HTTPS URL. Network failures or local Git URL rewrites still need checking.
 
-The GitHub repository remains private. There is no `lumasite` npm registry release. Publishing to npm is a separate action requiring an npm account, ownership of an available package name/scope, and an intentional change to the package's `private: true` setting. The GitHub installation already supplies the global command without publishing to that registry.
+`npm run detect` belongs inside a generated project folder containing its `package.json`. Before creating a project, use the packaged command instead:
+
+```sh
+npx --yes --package="git+https://github.com/arrrrniii/lumasite.git#v0.6.1" lumasite detect
+```
 
 ## Walk through terminal setup
 

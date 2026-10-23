@@ -30,7 +30,7 @@ Publishing compiles the page's Tailwind CSS and records a published revision. It
 
 ## Start with the wizard
 
-You need **Node.js 24+, npm, Git, and Git read access to this private repository**. Authenticate Git first; this is a GitHub installation, not an npm registry publication.
+You need **Node.js 24+, npm, and Git**. The GitHub repository is public: HTTPS installation does not require a GitHub account, token, or server login. This is a GitHub installation, not an npm registry publication.
 
 ```sh
 npx --yes --package="git+https://github.com/arrrrniii/lumasite.git#v0.6.1" lumasite create
@@ -189,7 +189,7 @@ lumasite setup
 
 For development, clone the repository, run `npm ci`, then use `node bin/lumasite.mjs` as the CLI. [Install from GitHub](docs/install-from-github.md) covers a fresh server and upgrades. [Operations](docs/operations.md) covers Apache/Caddy/Traefik, Docker Compose, backups, and process management. Do not rerun first-time setup to upgrade an initialized instance.
 
-The repository remains private and `private: true` prevents accidental npm publication. A future registry command such as `npx create-lumasite@latest` needs a separate intentional npm release. GitHub HTTPS authentication or a read-only SSH deploy key is required for the installation commands above.
+The GitHub repository is public. The package setting `private: true` only prevents accidental npm registry publication; it does not restrict GitHub installation. A future registry command such as `npx create-lumasite@latest` needs a separate intentional npm release. Website data, credentials, and project ZIPs remain private and excluded from this repository.
 
 ## Scope and verification
 

@@ -6,16 +6,9 @@ The first-run creator makes an application folder, installs LumaSite, and prepar
 
 The image is an illustrated example of the real prompts, not output from a production deployment. `example.com`, the answers below, and `<project-id>` are placeholders. Generated credentials are deliberately absent.
 
-## 1. Install prerequisites and authenticate Git
+## 1. Install prerequisites
 
-Use Node.js 24 or later, npm, and Git. The server's Git user needs read access to this private repository. For an authorized GitHub CLI account, configure Git with:
-
-```sh
-gh auth login
-gh auth setup-git
-```
-
-A read-only SSH deploy key is another option; use a `git+ssh://git@github.com/arrrrniii/lumasite.git#v0.6.1` package URL with it. Git authentication and npm registry login are different things.
+Use Node.js 24 or later, npm, and Git. The repository is public; the HTTPS commands below do not require GitHub authentication. Updating npm does not update Node: check `node -v` and select Node 24+ before installing.
 
 Start the creator from the parent directory where you want the new project:
 
@@ -154,7 +147,7 @@ When a supervisor owns the process, use that supervisor's stop/start/restart com
 
 | Symptom | Check or next step |
 | --- | --- |
-| GitHub authentication fails | Configure this server's Git credentials or deploy key with repository read access |
+| GitHub fetch fails | The repository is public; test `GIT_TERMINAL_PROMPT=0 git ls-remote https://github.com/arrrrniii/lumasite.git HEAD` and inspect network access or Git URL rewrites |
 | Project directory exists | Choose a new folder; `create` will not overwrite it |
 | Data directory is initialized | Use the existing instance's commands, New website, or Import ZIP |
 | A port is busy | Choose two free ports; inspect existing services before changing them |
