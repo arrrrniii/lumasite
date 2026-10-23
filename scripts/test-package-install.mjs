@@ -24,11 +24,13 @@ async function ports() {
 try {
   const [archive] = JSON.parse((await run(npm, ['pack', '--json', '--pack-destination', directory], source)).stdout);
   const files = archive.files.map(file => file.path);
-  for (const needed of ['bin/lumasite.mjs', 'bin/create-lumasite.mjs', 'src/create.mjs', 'src/setup.mjs', 'src/server.mjs', 'public/admin.html', 'public/fonts/dmsansvariable.woff2', 'public/fonts/soravariable.woff2', 'public/fonts/DMSans-OFL.txt', 'public/fonts/Sora-OFL.txt', 'vendor/lumafx/lumafx.global.js', 'vendor/lumafx/LICENSE']) assert.ok(files.includes(needed), `Missing package file: ${needed}`);
+  for (const needed of ['bin/lumasite.mjs', 'bin/create-lumasite.mjs', 'src/create.mjs', 'src/setup.mjs', 'src/server.mjs', 'src/server-detection.mjs', 'public/admin.html', 'public/fonts/dmsansvariable.woff2', 'public/fonts/soravariable.woff2', 'public/fonts/DMSans-OFL.txt', 'public/fonts/Sora-OFL.txt', 'vendor/lumafx/lumafx.global.js', 'vendor/lumafx/LICENSE']) assert.ok(files.includes(needed), `Missing package file: ${needed}`);
   assert.equal(files.some(file => /(^|\/)(?:\.lumasite|node_modules|marketing|test-results|\.env|credentials\.json|state\.json)(?:\/|$)/.test(file) || /\.(zip|log|pem|key)$/.test(file)), false);
   await run(npm, ['install', '--global', '--prefix', prefix, '--omit=dev', '--ignore-scripts', '--no-audit', '--no-fund', path.join(directory, archive.filename)]);
   assert.match((await run(bin, ['--help'])).stdout, /Guided terminal installer/);
   assert.equal((await run(bin, ['--version'])).stdout.trim(), archive.version);
+  const detected = JSON.parse((await run(bin, ['detect', '--json'])).stdout);
+  assert.equal(detected.ports.length, 2); assert.equal(typeof detected.recommendation.requiresChoice, 'boolean');
   const [port, sitePort] = await ports();
   const setup = JSON.parse((await run(bin, ['setup', '--yes', '--name', 'Installed package', '--port', String(port), '--site-port', String(sitePort), '--data-dir', dataDir, '--json'])).stdout);
   assert.equal(setup.healthy, true); assert.equal(setup.managed, true);
@@ -57,6 +59,7 @@ try {
   assert.equal(created.healthy, true); assert.equal(created.projectDir, app); assert.equal(created.commands.start, 'npm start');
   const appPackage = JSON.parse(await fs.readFile(path.join(app, 'package.json'), 'utf8'));
   assert.equal(appPackage.scripts.start, 'node lumasite.mjs start');
+  assert.equal(appPackage.scripts.detect, 'node lumasite.mjs detect');
   assert.ok(await fs.stat(path.join(app, 'package-lock.json')));
   await assert.rejects(fs.access(path.join(app, '.setup-import.zip')), { code: 'ENOENT' });
   const runRecord = JSON.parse(await fs.readFile(path.join(app, 'private data/run.json')));
@@ -66,6 +69,7 @@ try {
   assert.equal(JSON.parse((await run(process.execPath, [path.join(app, 'lumasite.mjs'), 'health', '--json'])).stdout).status, 'healthy', 'Created project survives removal of temporary installer');
   assert.equal((await fetch(`http://127.0.0.1:${appPort}/admin`)).status, 200);
   assert.equal((await fetch(`http://127.0.0.1:${appSitePort}/sites/${created.projects[0].slug}/`)).status, 200, 'Creator imports published website revisions');
+  assert.equal(JSON.parse((await run(process.execPath, [path.join(app, 'lumasite.mjs'), 'detect', '--json'])).stdout).ports.length, 2);
   console.log(JSON.stringify({ package: archive.name, version: archive.version, files: files.length, bytes: archive.size, globalInstall: 'passed', setup: 'passed', studio: 'passed', publish: 'passed', mcp: 'passed', create: 'passed', independentRuntime: 'passed' }));
 } finally {
   await run(process.execPath, [path.join(app, 'lumasite.mjs'), 'stop', '--json']).catch(() => {});

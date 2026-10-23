@@ -146,6 +146,8 @@ try {
     await page.getByRole('heading', { name: 'Runtime', exact: true }).waitFor();
     assert.match(await page.locator('body').innerText(), /Running normally/);
     assert.match(await page.locator('body').innerText(), /logs --follow/);
+    assert.match(await page.locator('body').innerText(), /Detect proxy/);
+    assert.match(await page.locator('body').innerText(), /proxy --format traefik/);
     await idle();
     await page.screenshot({ path: path.join(results, 'runtime-desktop.png'), fullPage: true });
   });

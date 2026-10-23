@@ -8,7 +8,7 @@ import { PassThrough } from 'node:stream';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { fileURLToPath } from 'node:url';
-import { prepareSetup, validateSetupPlan } from '../src/setup.mjs';
+import { prepareSetup, validateSetupPlan, writeSetupFiles } from '../src/setup.mjs';
 import { openStore } from '../src/store.mjs';
 import { initializeInstance, createProject, publishPage, uploadAsset } from '../src/service.mjs';
 import { exportProject } from '../src/migration.mjs';
@@ -72,6 +72,74 @@ test('server installer generates proxy files and supports explicit no-start', as
   await missing(path.join(dataDir, 'run.json'));
   const state = JSON.parse(await fs.readFile(path.join(dataDir, 'state.json')));
   assert.equal(state.instance.host, '127.0.0.1'); assert.equal(state.projects[0].domain, 'example.com');
+});
+
+function detected(proxy, networkMode) {
+  return { platform: 'linux', proxies: [{ id: proxy, label: proxy, installed: !networkMode, running: true, uncertain: false, binaries: [], services: [], processes: [], publicPorts: [80, 443], containers: networkMode ? [{ name: 'edge', networkMode, image: `${proxy}:latest`, confidence: 'image', ports: '0.0.0.0:443->443/tcp' }] : [] }], ports: [80, 443].map(port => ({ port, state: 'open', owners: [], proxies: [proxy] })), checks: {}, recommendation: { proxy, requiresChoice: false, reason: `Reuse ${proxy}` } };
+}
+
+test('server wizard detects the active proxy and saves a private report and matching configuration', async t => {
+  const { dataDir } = await fixture(t), [port, sitePort] = await ports();
+  for (const proxy of ['apache', 'caddy', 'traefik']) {
+    const directory = path.join(dataDir, proxy), report = detected(proxy);
+    const plan = await prepareSetup({ yes: true, mode: 'server', name: 'Detected website', domain: 'example.com', 'data-dir': directory, port, 'site-port': sitePort, 'no-start': true }, { detect: async () => report });
+    assert.equal(plan.proxy, proxy); assert.equal(plan.host, '127.0.0.1');
+    assert.equal(plan.detection, report); await missing(directory);
+    const files = await writeSetupFiles(plan);
+    assert.equal((await fs.stat(files.detectionReport)).mode & 0o077, 0);
+    assert.deepEqual(JSON.parse(await fs.readFile(files.detectionReport, 'utf8')), report);
+    assert.ok((await fs.readFile(files.proxyFile, 'utf8')).includes('studio.example.com'));
+    assert.match(await fs.readFile(files.instructions, 'utf8'), /lumasite detect/);
+  }
+});
+
+test('automatic setup refuses ambiguous detection before writing and explicit selection bypasses detection', async t => {
+  const { dataDir } = await fixture(t), [port, sitePort] = await ports();
+  const options = { yes: true, mode: 'server', name: 'Explicit website', domain: 'example.com', 'data-dir': dataDir, port, 'site-port': sitePort, 'no-start': true };
+  await assert.rejects(prepareSetup(options, { detect: async () => ({ recommendation: { proxy: null, requiresChoice: true, reason: 'Multiple proxies found.' } }) }), /Multiple proxies.*--proxy/);
+  await missing(dataDir);
+  const plan = await prepareSetup({ ...options, proxy: 'apache' }, { detect: async () => { throw new Error('Explicit override must skip detection'); } });
+  assert.equal(plan.proxy, 'apache'); assert.equal(plan.detection, null);
+  await missing(dataDir);
+});
+
+test('Docker detection requires a reachable backend and explicit public bind in unattended setup', async t => {
+  const { dataDir } = await fixture(t), [port, sitePort] = await ports();
+  const options = { yes: true, mode: 'server', name: 'Docker website', domain: 'example.com', 'data-dir': dataDir, port, 'site-port': sitePort, 'no-start': true };
+  const context = { detect: async () => detected('traefik', 'edge-network') };
+  await assert.rejects(prepareSetup(options, context), /containerized proxy.*--proxy-host/);
+  await assert.rejects(prepareSetup({ ...options, 'proxy-host': '127.0.0.1' }, context), /loopback backend/);
+  await assert.rejects(prepareSetup({ ...options, 'proxy-host': 'LOCALHOST' }, context), /loopback backend/);
+  await assert.rejects(prepareSetup({ ...options, 'proxy-host': 'host.docker.internal' }, context), /explicit --host/);
+  await missing(dataDir);
+  const plan = await prepareSetup({ ...options, 'proxy-host': 'host.docker.internal', host: '0.0.0.0', 'traefik-entrypoint': 'https', 'traefik-cert-resolver': 'acme' }, context);
+  assert.equal(plan.host, '0.0.0.0'); assert.match(plan.proxyConfig, /host\.docker\.internal/);
+  assert.match(plan.proxyConfig, /certResolver: "acme"/);
+  const nativeNetwork = await prepareSetup(options, { detect: async () => detected('traefik', 'host') });
+  assert.equal(nativeNetwork.host, '127.0.0.1'); assert.match(nativeNetwork.proxyConfig, /127\.0\.0\.1/);
+});
+
+test('Traefik CLI setup and proxy generation preserve explicit entrypoint and certificate settings', async t => {
+  const { dataDir, command } = await fixture(t), [port, sitePort] = await ports();
+  const setup = await command('setup', '--yes', '--no-start', '--mode', 'server', '--name', 'Traefik website', '--domain', 'example.com', '--proxy', 'traefik', '--traefik-entrypoint', 'https', '--traefik-cert-resolver', 'acme', '--port', String(port), '--site-port', String(sitePort));
+  assert.equal(setup.code, 0, setup.error); assert.match(setup.data.proxyFile, /traefik-dynamic\.yml$/);
+  const proxy = await fs.readFile(setup.data.proxyFile, 'utf8');
+  assert.match(proxy, /entryPoints: \["https"\]/); assert.match(proxy, /certResolver: "acme"/);
+  const generated = await command('proxy', '--format', 'traefik', '--traefik-entrypoint', 'secure', '--traefik-cert-resolver', 'existing');
+  assert.equal(generated.code, 0, generated.error); assert.match(generated.data.config, /entryPoints: \["secure"\]/);
+  const unreachable = await command('proxy', '--format', 'traefik', '--proxy-host', '192.0.2.1');
+  assert.equal(unreachable.code, 1); assert.match(unreachable.error, /loopback-only/);
+  assert.equal((await fs.stat(setup.data.proxyFile)).mode & 0o077, 0);
+  await missing(path.join(dataDir, 'run.json'));
+});
+
+test('detect works without an initialized project and creates no data directory', { timeout: 20000 }, async t => {
+  const { dataDir, command } = await fixture(t);
+  const result = await command('detect');
+  assert.equal(result.code, 0, result.error);
+  assert.ok(Array.isArray(result.data.proxies)); assert.equal(result.data.ports.length, 2);
+  assert.equal(typeof result.data.recommendation.requiresChoice, 'boolean');
+  await missing(dataDir);
 });
 
 test('installer refuses non-terminal prompts, invalid ZIPs and occupied ports without initializing', async t => {

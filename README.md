@@ -5,7 +5,7 @@
 A self-hosted website studio for creating, editing, and publishing through MCP or your browser. Change the page structure, HTML, Tailwind classes, CSS, browser JavaScript, images, and LumaFX animations, then publish a revision without redeploying the Studio application.
 
 [![Tests](https://github.com/arrrrniii/lumasite/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/arrrrniii/lumasite/actions/workflows/ci.yml)
-[Version 0.5.0](https://github.com/arrrrniii/lumasite/tree/v0.5.0) · Node.js 24+ · Native LumaFX · Streamable HTTP MCP
+[Version 0.6.0](https://github.com/arrrrniii/lumasite/tree/v0.6.0) · Node.js 24+ · Native LumaFX · Streamable HTTP MCP
 
 ![LumaSite Studio showing the SendMailOS example, published pages, sitemap, robots.txt and RSS links](docs/images/studio-overview.png)
 
@@ -24,7 +24,7 @@ A self-hosted website studio for creating, editing, and publishing through MCP o
 | Publish carefully | Save drafts, open signed previews, publish revisions, restore previous versions |
 | Prepare for search | Server-generated metadata, canonical URLs, JSON-LD, sitemap, robots.txt, and RSS |
 | Move to another server | Export a website ZIP and import it into another LumaSite installation |
-| Operate the runtime | Ports, status, health, diagnostics, logs, restart, stop, and backups |
+| Operate the runtime | Proxy detection, ports, status, health, diagnostics, logs, restart, stop, and backups |
 
 Publishing compiles the page's Tailwind CSS and records a published revision. It does not run a new Studio application build or restart the server. Application code, dependencies, TypeScript, JSX, or bundler-specific imports still require the normal development and deployment workflow. LumaSite publishes browser-ready page code.
 
@@ -33,7 +33,7 @@ Publishing compiles the page's Tailwind CSS and records a published revision. It
 You need **Node.js 24+, npm, Git, and Git read access to this private repository**. Authenticate Git first; this is a GitHub installation, not an npm registry publication.
 
 ```sh
-npx --yes "git+https://github.com/arrrrniii/lumasite.git#v0.5.0" create
+npx --yes "git+https://github.com/arrrrniii/lumasite.git#v0.6.0" create
 ```
 
 The first question is **What is your project named?** Choose a new folder such as `my-website`. The wizard then asks for local/server mode, a new website or ZIP import, website name/domain, ports, URLs, and whether to start the app. Server mode also asks about the reverse proxy. Review the summary before it writes the project.
@@ -70,7 +70,9 @@ Open the printed Studio URL, sign in with the generated password, and publish th
 
 *Illustrated example using reserved `example.com` addresses. It shows the wizard's real question flow; credentials and project IDs are placeholders.*
 
-Choose `server`, enter your domain, and give the Studio and public preview separate hostnames. LumaSite generates the application, private credentials, connection addresses, and Apache/Caddy configuration. **You enable DNS, the proxy configuration, HTTPS, and startup after reboot through your server setup.**
+Choose `server`, enter your domain, and give the Studio and public preview separate hostnames. LumaSite checks for **Apache, Caddy, and Traefik**, distinguishes installed/running services, inspects Docker proxy networking and ports 80/443, then suggests a proxy. You can override the suggestion. Ambiguous unattended setup requires an explicit choice.
+
+LumaSite generates the application, private credentials, connection addresses, and Apache/Caddy/Traefik configuration. **You enable DNS, the proxy configuration, HTTPS, and startup after reboot through your server setup.** See [server detection and Traefik setup](docs/server-detection.md), including container backend addresses and existing TLS settings.
 
 | Address in this example | Purpose | Private listener |
 | --- | --- | --- |
@@ -102,6 +104,7 @@ Website data is separate from the application dependency. Preserve the data dire
 | `npm run status` | Show ports, URLs, process identity, and paths |
 | `npm run health` | Check the listeners and readiness |
 | `npm run doctor` | Diagnose the installation |
+| `npm run detect` | Inspect the server's proxies, Docker networking, and ports 80/443 |
 | `npm run logs` | Follow the server log; Ctrl+C leaves the viewer |
 | `npm run restart` | Restart this verified installation |
 | `npm stop` | Stop this verified installation |
@@ -180,11 +183,11 @@ npm run import -- --file /private/imports/my-website.zip --slug another-website
 A global CLI is optional:
 
 ```sh
-npm install --global "git+https://github.com/arrrrniii/lumasite.git#v0.5.0"
+npm install --global "git+https://github.com/arrrrniii/lumasite.git#v0.6.0"
 lumasite setup
 ```
 
-For development, clone the repository, run `npm ci`, then use `node bin/lumasite.mjs` as the CLI. [Install from GitHub](docs/install-from-github.md) covers a fresh server and upgrades. [Operations](docs/operations.md) covers Apache/Caddy, Docker Compose, backups, and process management. Do not rerun first-time setup to upgrade an initialized instance.
+For development, clone the repository, run `npm ci`, then use `node bin/lumasite.mjs` as the CLI. [Install from GitHub](docs/install-from-github.md) covers a fresh server and upgrades. [Operations](docs/operations.md) covers Apache/Caddy/Traefik, Docker Compose, backups, and process management. Do not rerun first-time setup to upgrade an initialized instance.
 
 The repository remains private and `private: true` prevents accidental npm publication. A future registry command such as `npx create-lumasite@latest` needs a separate intentional npm release. GitHub HTTPS authentication or a read-only SSH deploy key is required for the installation commands above.
 

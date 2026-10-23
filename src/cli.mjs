@@ -6,14 +6,15 @@ import net from 'node:net';
 import { setTimeout as delay } from 'node:timers/promises';
 import { openStore } from './store.mjs';
 import { initializeInstance, createProject, getProjectUrls, VERSION } from './service.mjs';
-import { generateProxyConfig } from './proxy.mjs';
+import { generateProxyConfig, proxyHost } from './proxy.mjs';
 import { prepareConfiguration, applyConfiguration } from './configure.mjs';
 import { exportProject, importProject } from './migration.mjs';
 import { prepareSetup, assertSetupPorts, writeSetupFiles } from './setup.mjs';
 import { createWebsite } from './create.mjs';
+import { detectServer, formatDetection } from './server-detection.mjs';
 
 const serverPath = fileURLToPath(new URL('./server.mjs', import.meta.url));
-const valuedOptions = new Set(['data-dir', 'name', 'domain', 'slug', 'port', 'site-port', 'host', 'public-url', 'site-url', 'password', 'project', 'format', 'admin-domain', 'output', 'lines', 'file', 'link-mode', 'mode', 'proxy']);
+const valuedOptions = new Set(['data-dir', 'name', 'domain', 'slug', 'port', 'site-port', 'host', 'public-url', 'site-url', 'password', 'project', 'format', 'admin-domain', 'output', 'lines', 'file', 'link-mode', 'mode', 'proxy', 'proxy-host', 'traefik-entrypoint', 'traefik-cert-resolver']);
 const booleanOptions = new Set(['help', 'version', 'json', 'follow', 'yes', 'no-start']);
 const help = `LumaSite — editable websites through MCP
 
@@ -22,6 +23,7 @@ Usage: lumasite <command> [options]
 
   create [directory]    Create a project folder, answer setup questions, install and run
   setup        Guided terminal installer (new instance or website ZIP)
+  detect       Inspect web proxies, Docker and ports 80/443 without changing them
   init         Initialize an instance and optionally create its first project
   configure    Change a stopped instance’s URLs, listener host/ports or project domain
   project create --name NAME --domain DOMAIN    Create another project
@@ -34,7 +36,7 @@ Usage: lumasite <command> [options]
   restart      Safely stop and start this instance
   stop         Stop only a process verified by its instance ID and PID
   credentials  Print local administrator and project credentials
-  proxy        Generate Apache or Caddy configuration
+  proxy        Generate Apache, Caddy or Traefik configuration
   backup       Save a private snapshot (--output DIRECTORY)
   export       Export one portable project ZIP (--project ID_OR_SLUG --output FILE.zip)
   import       Import a project ZIP (--file FILE.zip)
@@ -61,11 +63,13 @@ Init options: --port 4310 --site-port 4311 --host 127.0.0.1
               --site-url https://preview.example.com --password PASSWORD
 Use a generated password or LUMASITE_PASSWORD to avoid shell history.
 
-Setup options: --mode local|server --proxy apache|caddy|none --file website.zip
+Setup options: --mode local|server --proxy auto|apache|caddy|traefik|none --file website.zip
                --name NAME --domain DOMAIN --data-dir DIRECTORY
                --port PORT --site-port PORT --public-url ORIGIN --site-url ORIGIN
                --yes (non-interactive) --no-start (initialize without starting)
-Setup detects available default ports and generates credentials and connection URLs.
+Setup detects available default ports and existing proxies, then generates credentials and URLs.
+Proxy options: --proxy-host HOST --traefik-entrypoint NAME --traefik-cert-resolver NAME
+Server mode defaults to read-only proxy detection; ambiguous automation needs an explicit --proxy.
 Server mode writes proxy configuration for review; DNS/TLS and reboot services are configured separately.
 
 Configure options (instance must be stopped):
@@ -514,18 +518,24 @@ export async function runCli(args, { stdin = process.stdin, stdout = process.std
     if (opts.help || !command || command === 'help') { stdout.write(help); return 0; }
     if (extras.length || (subcommand && !['project', 'create'].includes(command))) throw new Error('Unexpected positional arguments. Run lumasite --help.');
     const allowed = {
-      create: ['name', 'domain', 'slug', 'port', 'site-port', 'host', 'public-url', 'site-url', 'mode', 'proxy', 'file', 'yes', 'no-start'],
-      setup: ['name', 'domain', 'slug', 'port', 'site-port', 'host', 'public-url', 'site-url', 'mode', 'proxy', 'file', 'yes', 'no-start'],
+      create: ['name', 'domain', 'slug', 'port', 'site-port', 'host', 'public-url', 'site-url', 'mode', 'proxy', 'proxy-host', 'traefik-entrypoint', 'traefik-cert-resolver', 'file', 'yes', 'no-start'],
+      setup: ['name', 'domain', 'slug', 'port', 'site-port', 'host', 'public-url', 'site-url', 'mode', 'proxy', 'proxy-host', 'traefik-entrypoint', 'traefik-cert-resolver', 'file', 'yes', 'no-start'],
       init: ['name', 'domain', 'slug', 'port', 'site-port', 'host', 'public-url', 'site-url', 'password'],
       configure: ['public-url', 'site-url', 'host', 'port', 'site-port', 'domain', 'project'],
       project: subcommand === 'create' ? ['name', 'domain', 'slug'] : [],
-      logs: ['lines', 'follow'], proxy: ['format', 'admin-domain', 'domain', 'project', 'output'], backup: ['output'],
+      logs: ['lines', 'follow'], proxy: ['format', 'admin-domain', 'domain', 'project', 'output', 'proxy-host', 'traefik-entrypoint', 'traefik-cert-resolver'], backup: ['output'],
       export: ['project', 'output'], import: ['file', 'name', 'slug', 'domain', 'link-mode'],
     }[command] || [];
     for (const key of Object.keys(opts)) {
       if (!['data-dir', 'json'].includes(key) && !allowed.includes(key)) throw new Error(`--${key} is not supported by ${command}. Run lumasite ${command} --help.`);
     }
     const dataDir = path.resolve(opts['data-dir'] || process.env.LUMASITE_DATA_DIR || path.join(process.cwd(), '.lumasite'));
+    if (command === 'detect') {
+      const report = await detectServer();
+      if (opts.json) stdout.write(JSON.stringify(report) + '\n');
+      else stdout.write(formatDetection(report) + '\n');
+      return 0;
+    }
     if (command === 'create') {
       const result = await createWebsite(subcommand, opts, { input: stdin, output: stdout, errors: stderr });
       if (!result) { print({ status: 'cancelled', message: 'No project was created.' }, opts, stdout); return 0; }
@@ -553,7 +563,7 @@ export async function runCli(args, { stdin = process.stdin, stdout = process.std
           dataDir: plan.dataDir, port: plan.port, sitePort: plan.sitePort, host: plan.host,
           admin: `${plan.publicUrl}/admin`, sitePublicUrl: plan.sitePublicUrl,
           password: created.password, projects: [{ ...displayProject(store.read(), project.project), token: project.token }],
-          ...files, startupError,
+          ...files, detection: plan.detection, startupError,
           message: `${plan.archive ? 'Imported website ready; published revisions were preserved.' : 'Starter homepage created as a draft. Publish it in Studio or through MCP.'}\nCredentials saved privately in credentials.json.\n${files.proxyFile ? `Proxy configuration: ${files.proxyFile}\nPoint DNS to this server, then install the proxy configuration and enable HTTPS.\n` : ''}Setup notes: ${files.instructions}\n${Object.values(files.commands).join('\n')}${plan.mode === 'server' ? '\nUse a process supervisor for automatic startup after reboot.' : ''}${startupError ? `\nStartup needs attention: ${startupError}` : ''}`,
         };
       });
@@ -670,9 +680,18 @@ export async function runCli(args, { stdin = process.stdin, stdout = process.std
       const domain = opts.domain || project?.domain;
       const previewHost = instance.sitePublicUrl ? new URL(instance.sitePublicUrl).hostname : null;
       const siteDomain = previewHost && !['localhost', '127.0.0.1', '[::1]'].includes(previewHost) ? previewHost : null;
-      const config = generateProxyConfig({ format: opts.format || 'apache', adminDomain: opts['admin-domain'] || new URL(instance.publicUrl).hostname, domain, siteDomain, port: instance.port, sitePort: instance.sitePort });
+      let format = opts.format || 'apache';
+      if (format === 'auto') {
+        const report = await detectServer();
+        if (report.recommendation.requiresChoice || report.recommendation.proxy === 'none') throw new Error(`${report.recommendation.reason} Supply --format apache|caddy|traefik explicitly.`);
+        format = report.recommendation.proxy;
+        if (report.proxies.find(proxy => proxy.id === format)?.containers.some(container => container.networkMode !== 'host') && !opts['proxy-host']) throw new Error('The detected Docker proxy needs --proxy-host with a reachable backend address. Container loopback cannot reach the native LumaSite server.');
+      }
+      const upstreamHost = proxyHost(opts['proxy-host'] || (instance.host === '::1' ? '::1' : '127.0.0.1'));
+      if (!['127.0.0.1', 'localhost', '::1'].includes(upstreamHost) && instance.host !== '0.0.0.0') throw new Error('The configured loopback-only listener cannot be reached through this backend host. Configure a reachable listener first, and restrict backend access to the proxy network.');
+      const config = generateProxyConfig({ format, adminDomain: opts['admin-domain'] || new URL(instance.publicUrl).hostname, domain, siteDomain, port: instance.port, sitePort: instance.sitePort, upstreamHost, traefikEntryPoint: opts['traefik-entrypoint'], traefikCertResolver: opts['traefik-cert-resolver'] });
       if (opts.output) { await fs.writeFile(path.resolve(opts.output), config, { flag: 'wx', mode: 0o600 }); print({ status: 'generated', message: `Configuration saved to ${path.resolve(opts.output)}. Review it before enabling it; no server settings were changed.` }, opts, stdout); }
-      else print(opts.json ? { format: opts.format || 'apache', config } : config, opts, stdout);
+      else print(opts.json ? { format, config } : config, opts, stdout);
       return 0;
     }
     if (command === 'backup') { print(await backup(dataDir, opts.output), opts, stdout); return 0; }

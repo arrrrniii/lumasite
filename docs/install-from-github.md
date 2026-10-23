@@ -49,7 +49,7 @@ node bin/lumasite.mjs proxy \
   --output /srv/lumasite/lumasite-apache.conf
 ```
 
-Review and install the generated configuration using [the Apache/Caddy operations guide](operations.md). It routes the studio and MCP to the admin listener, and the preview/website hosts to the public listener. The CLI prints configuration; it does not change DNS, install certificates, or reload Apache. Keep the two listener origins separate. Native `start` runs in the background; use a supervisor for automatic startup after a server reboot, or use the included [Docker Compose setup](../README.md#docker-and-production-hosting).
+Review and install the generated configuration using [the Apache/Caddy/Traefik operations guide](operations.md). It routes the studio and MCP to the admin listener, and the preview/website hosts to the public listener. The CLI prints configuration; it does not change DNS, install certificates, or reload Apache. Keep the two listener origins separate. Native `start` runs in the background; use a supervisor for automatic startup after a server reboot, or use the included [Docker Compose setup](operations.md#docker-supervision).
 
 ## Import an existing website
 

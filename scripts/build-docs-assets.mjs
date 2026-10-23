@@ -28,24 +28,25 @@ const questions = [
  ['Website/media port', '4311'],
  ['Studio URL', 'https://studio.example.com'],
  ['Preview URL', 'https://preview.example.com'],
- ['Reverse proxy: apache/caddy/none', 'apache'],
+ ['Detection: Apache running on 80/443', 'Suggested: apache'],
+ ['Reverse proxy: apache/caddy/traefik/none', 'apache'],
  ['Start LumaSite after setup? y/n', 'y'],
  ['Create this instance? y/n', 'y'],
 ];
 let wizard = rect(0,0,1440,1080,'#f3f6fb',0)
  +text(48,58,'LUMASITE / FIRST RUN',{size:14,fill:'#2864eb',weight:700,'letter-spacing':2})
  +text(48,119,'From a name to your own website studio.',{size:39,weight:700})
- +text(48,159,'Server setup example · illustrated prompts from the v0.5 wizard',{size:20,fill:'#65748b'})
+ +text(48,159,'Server setup example · illustrated prompts from the v0.6 wizard',{size:20,fill:'#65748b'})
  +rect(48,203,920,680,'#101d32',18)+rect(48,203,920,54,'#1b2b44',18)
  +'<circle cx="75" cy="230" r="6" fill="#ff7777"/><circle cx="96" cy="230" r="6" fill="#ffd17c"/><circle cx="117" cy="230" r="6" fill="#79d6a6"/>'
- +text(149,236,'lumasite create',{size:15,fill:'#b4c4dd',mono:true})
- +text(78,299,'$ npx --yes "git+https://github.com/arrrrniii/lumasite.git#v0.5.0" create',{size:15,fill:'#f3f6ff',mono:true})
+ +text(149,236,'lumasite create',{size:14,fill:'#b4c4dd',mono:true})
+ +text(78,299,'$ npx --yes "git+https://github.com/arrrrniii/lumasite.git#v0.6.0" create',{size:14,fill:'#f3f6ff',mono:true})
  +text(78,343,'Create a LumaSite website',{size:19,fill:'#fff',weight:600,mono:true});
 questions.forEach(([question,answer], i) => {
- const y = 390+i*34;
- wizard += text(78,y,question,{size:15,fill:'#b4c4dd',mono:true})+text(592,y,answer,{size:15,fill:'#91baff',weight:600,mono:true});
+ const y = 378+i*32;
+ wizard += text(78,y,question,{size:14,fill:'#b4c4dd',mono:true})+text(638,y,answer,{size:14,fill:'#91baff',weight:600,mono:true});
 });
-wizard += text(78,834,'Review first. Project files are created after confirmation.',{size:15,fill:'#7fd7b0',mono:true});
+wizard += text(78,834,'Review first. Project files are created after confirmation.',{size:14,fill:'#7fd7b0',mono:true});
 const outputs = [
  ['01', 'WEBSITE', 'https://example.com/'],
  ['02', 'STUDIO', 'https://studio.example.com/admin'],
@@ -67,7 +68,7 @@ steps.forEach(([n,title,detail],i)=>{
  const x=48+i*458;
  wizard+=rect(x,920,428,105,'#fff',12,'#dce4ef')+rect(x+19,940,37,37,'#edf3ff',9)+text(x+32,965,n,{size:18,fill:'#2864eb',weight:700})+text(x+74,960,title,{size:19,weight:700})+text(x+74,993,detail,{size:16,fill:'#65748b'});
 });
-wizard+=text(48,1057,'Local mode uses localhost URLs and skips the reverse-proxy question. No real credentials are shown.',{size:15,fill:'#65748b'});
+wizard+=text(48,1057,'Local mode uses localhost URLs and skips the reverse-proxy question. No real credentials are shown.',{size:14,fill:'#65748b'});
 await writeFile(path.join(images,'wizard-example.svg'),svg(1440,1080,'LumaSite server wizard example and generated website, Studio and MCP addresses',wizard));
 
 let flow=rect(0,0,1440,630,'#f3f6fb',0)

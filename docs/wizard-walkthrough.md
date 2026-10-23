@@ -1,6 +1,6 @@
 # From the wizard to a working website
 
-The first-run creator makes an application folder, installs LumaSite, and prepares a website. This walkthrough matches v0.5.0's `create` command. The lower-level `setup` command also asks for a data directory; `create` uses `<project-folder>/.lumasite` by default, or an explicit `--data-dir`.
+The first-run creator makes an application folder, installs LumaSite, and prepares a website. This walkthrough matches v0.6.0's `create` command. The lower-level `setup` command also asks for a data directory; `create` uses `<project-folder>/.lumasite` by default, or an explicit `--data-dir`.
 
 ![Illustrated server wizard and the website, Studio, and MCP addresses it prepares](images/wizard-example.png)
 
@@ -15,12 +15,12 @@ gh auth login
 gh auth setup-git
 ```
 
-A read-only SSH deploy key is another option; use a `git+ssh://git@github.com/arrrrniii/lumasite.git#v0.5.0` package URL with it. Git authentication and npm registry login are different things.
+A read-only SSH deploy key is another option; use a `git+ssh://git@github.com/arrrrniii/lumasite.git#v0.6.0` package URL with it. Git authentication and npm registry login are different things.
 
 Start the creator from the parent directory where you want the new project:
 
 ```sh
-npx --yes "git+https://github.com/arrrrniii/lumasite.git#v0.5.0" create
+npx --yes "git+https://github.com/arrrrniii/lumasite.git#v0.6.0" create
 ```
 
 The outer `--yes` accepts npm's download prompt. It does not skip the creator's questions. The separate `create my-website --yes ...` form is for automation.
@@ -40,11 +40,14 @@ This server example uses a new project folder and website called **My Website**:
 | `Website/media port` | `4311` | Separate listener for public pages and media |
 | `Studio URL` | `https://studio.example.com` | External administration origin; `/admin` is appended |
 | `Preview URL` | `https://preview.example.com` | Public preview origin; project paths are appended |
-| `Reverse proxy: apache/caddy/none` | `apache` | Which configuration file to generate |
+| Server detection output | Apache running on 80/443 | Suggestion based on this server; reports installed/running proxies and Docker networking |
+| `Reverse proxy: apache/caddy/traefik/none` | `apache` | Choose or override the detected configuration |
 | `Start LumaSite after setup? y/n` | `y` | Start the native runtime after initialization |
 | `Create this instance? y/n` | `y`, after reviewing the summary | Confirm the plan before project creation |
 
 In **local** mode, leave the domain empty and accept the available `http://localhost:<port>` origins. The reverse-proxy question is skipped. Local testing does not require a public domain, Apache, or a certificate.
+
+Server detection is read-only. It also recognizes Nginx for manual routing rather than proposing a competing proxy. If the chosen proxy runs in a bridged Docker network, the wizard asks for a backend address reachable from the container and an explicit listener bind. Traefik additionally asks for the existing HTTPS entrypoint and optionally an existing certificate resolver. See [detection details and Traefik examples](server-detection.md).
 
 The defaults begin at 4310/4311 and move to available ports when necessary. Explicitly selecting an occupied port causes an error; the wizard does not stop that existing service. Replace all port numbers in your proxy configuration with the actual selected values.
 
@@ -63,6 +66,7 @@ my-website/
     credentials.json           private administrator and project credentials
     deployment/
       apache.conf              generated when Apache is selected
+      server-detection.json    report when automatic detection ran
       NEXT-STEPS.txt            paths and matching operational commands
 ```
 
@@ -95,7 +99,7 @@ The wizard generates proxy configuration and next-step notes. Saving a domain do
 
 Point the required DNS records at your server, review `.lumasite/deployment/apache.conf`, enable the required proxy modules and virtual hosts, and configure valid HTTPS certificates. Preserve the incoming Host header for public website routing. Keep Studio on a separate administration origin. The generated file is reviewed configuration text; the wizard does not alter your existing Apache sites or issue certificates.
 
-Use [the Apache/Caddy operations guide](operations.md) for the configuration commands. Configure a supervisor for startup after reboot. Native `npm start` runs in the background but does not install a boot service.
+Use [the Apache/Caddy/Traefik operations guide](operations.md) for configuration commands. Caddy generates `Caddyfile`; Traefik generates `traefik-dynamic.yml` for its existing file provider. Configure a supervisor for startup after reboot. Native `npm start` runs in the background but does not install a boot service.
 
 ## 5. Publish and connect MCP
 
@@ -137,6 +141,7 @@ Run these in the generated project folder:
 | `npm run status` | Locate ports, URLs, data, log, and process |
 | `npm run health` | Check that both listeners are working |
 | `npm run doctor` | Diagnose configuration and process ownership |
+| `npm run detect` | Inspect existing proxies, Docker, and ports 80/443 |
 | `npm run logs` | Follow logs; Ctrl+C exits the log viewer |
 | `npm run restart` | Restart this managed instance |
 | `npm stop` | Stop this managed instance |
@@ -153,7 +158,7 @@ When a supervisor owns the process, use that supervisor's stop/start/restart com
 | Project directory exists | Choose a new folder; `create` will not overwrite it |
 | Data directory is initialized | Use the existing instance's commands, New website, or Import ZIP |
 | A port is busy | Choose two free ports; inspect existing services before changing them |
-| Local health passes but the domain fails | Check DNS, certificates, Apache/Caddy upstreams, and Host preservation |
+| Local health passes but the domain fails | Check DNS, certificates, Apache/Caddy/Traefik upstreams, and Host preservation |
 | Studio opens but the new website returns 404 | Publish its homepage; confirm the hostname or `/sites/<slug>/` path |
 | Installation was interrupted | In the retained new project folder, run `npm install`, then `npm run setup`; initialized data is not reset |
 

@@ -2,7 +2,7 @@ import { createInterface } from 'node:readline/promises';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
-import { prepareSetup, shellQuote } from './setup.mjs';
+import { prepareSetup, shellQuote, writeDetectionReport } from './setup.mjs';
 import { VERSION } from './service.mjs';
 
 async function newDirectory(directory) {
@@ -67,7 +67,7 @@ export async function createWebsite(selected, options, {
   await newDirectory(directory);
   await fs.mkdir(path.dirname(directory), { recursive: true });
   await fs.mkdir(directory, { mode: 0o700 });
-  const scripts = Object.fromEntries(['start', 'setup', 'status', 'health', 'doctor', 'restart', 'stop', 'logs', 'credentials', 'export', 'import'].map(command => [command, `node lumasite.mjs ${command}`]));
+  const scripts = Object.fromEntries(['start', 'setup', 'status', 'health', 'doctor', 'restart', 'stop', 'logs', 'credentials', 'export', 'import', 'detect'].map(command => [command, `node lumasite.mjs ${command}`]));
   scripts.logs = 'node lumasite.mjs logs --follow';
   scripts['project:list'] = 'node lumasite.mjs project list';
   const pkg = { name: plan.slug, version: '1.0.0', private: true, type: 'module', engines: { node: '>=24' }, scripts, dependencies: { lumasite: packageSpec } };
@@ -79,7 +79,7 @@ export async function createWebsite(selected, options, {
   await fs.writeFile(path.join(directory, 'package.json'), JSON.stringify(pkg, null, 2) + '\n', { flag: 'wx' });
   await fs.writeFile(path.join(directory, 'lumasite.mjs'), wrapper, { flag: 'wx' });
   await fs.writeFile(path.join(directory, '.gitignore'), ignore, { flag: 'wx' });
-  const readme = `# ${plan.name}\n\nA LumaSite website with native LumaFX, Studio, and MCP.\n\nRun commands from this directory:\n\n\`\`\`sh\nnpm start\nnpm run status\nnpm run health\nnpm run logs\nnpm run restart\nnpm stop\n\`\`\`\n\nStudio: ${plan.publicUrl}/admin\nPreview: ${plan.sitePublicUrl}\nPersistent data: ${dataDir}\n\nUse Studio or MCP to edit and publish pages. A new homepage starts as a draft; an imported ZIP preserves published pages. Credentials stay in the private data directory. Reinstall dependencies with \`npm ci\`; website data is separate from \`node_modules\`.\n\nFor an interrupted first setup, run \`npm install\`, then \`npm run setup\`. An initialized instance is never reset by setup. Use \`npm run credentials\` to retrieve its saved connection credentials privately.\n\n${plan.mode === 'server' ? 'Enable your generated proxy configuration, point DNS to this server, and configure HTTPS. Use a process supervisor for automatic startup after reboot.\n' : ''}`;
+  const readme = `# ${plan.name}\n\nA LumaSite website with native LumaFX, Studio, and MCP.\n\nRun commands from this directory:\n\n\`\`\`sh\nnpm start\nnpm run status\nnpm run health\nnpm run detect\nnpm run logs\nnpm run restart\nnpm stop\n\`\`\`\n\nStudio: ${plan.publicUrl}/admin\nPreview: ${plan.sitePublicUrl}\nPersistent data: ${dataDir}\n\nUse Studio or MCP to edit and publish pages. A new homepage starts as a draft; an imported ZIP preserves published pages. Credentials stay in the private data directory. Reinstall dependencies with \`npm ci\`; website data is separate from \`node_modules\`.\n\nFor an interrupted first setup, run \`npm install\`, then \`npm run setup\`. An initialized instance is never reset by setup. Use \`npm run credentials\` to retrieve its saved connection credentials privately.\n\n${plan.mode === 'server' ? 'Enable your generated proxy configuration, point DNS to this server, and configure HTTPS. Use a process supervisor for automatic startup after reboot.\n' : ''}`;
   await fs.writeFile(path.join(directory, 'README.md'), readme, { flag: 'wx' });
   const progress = options.json ? errors : output;
   let temporaryZip;
@@ -89,7 +89,9 @@ export async function createWebsite(selected, options, {
     await processResult(npm, ['install', '--prefix', directory, '--omit=dev', '--ignore-scripts', '--no-audit', '--no-fund'], { cwd: directory, env, progress, label: 'Dependency installation' });
     const args = [path.join(directory, 'node_modules/lumasite/bin/lumasite.mjs'), 'setup', '--yes', '--json', '--data-dir', dataDir,
       '--mode', plan.mode, '--name', plan.name, '--slug', plan.slug, '--port', String(plan.port), '--site-port', String(plan.sitePort),
-      '--host', plan.host, '--public-url', plan.publicUrl, '--site-url', plan.sitePublicUrl, '--proxy', plan.proxy];
+      '--host', plan.host, '--public-url', plan.publicUrl, '--site-url', plan.sitePublicUrl, '--proxy', plan.proxy, '--proxy-host', plan.upstreamHost];
+    if (plan.proxy === 'traefik') args.push('--traefik-entrypoint', plan.traefikEntryPoint);
+    if (plan.traefikCertResolver) args.push('--traefik-cert-resolver', plan.traefikCertResolver);
     if (plan.domain) args.push('--domain', plan.domain);
     if (!plan.start) args.push('--no-start');
     if (plan.archive) {
@@ -99,10 +101,11 @@ export async function createWebsite(selected, options, {
     }
     const configured = await processResult(process.execPath, args, { cwd: directory, env, label: 'Project setup' });
     const result = typeof configured === 'string' ? JSON.parse(configured) : configured;
+    const detectionReport = await writeDetectionReport(plan);
     const notes = await fs.readFile(result.instructions, 'utf8');
-    await fs.writeFile(result.instructions, notes.replace(/^lumasite /gm, 'node lumasite.mjs '), { mode: 0o600 });
+    await fs.writeFile(result.instructions, notes.replace(/^lumasite /gm, 'node lumasite.mjs ') + (detectionReport ? `\nServer detection report: ${detectionReport}\n` : ''), { mode: 0o600 });
     const commands = Object.fromEntries(Object.keys(scripts).map(name => [name, name === 'start' ? 'npm start' : name === 'stop' ? 'npm stop' : `npm run ${name}`]));
-    return { ...result, projectDir: directory, commands, message: `Project created in ${directory}.\n\ncd ${shellQuote(directory)}\nnpm start\nnpm run status\nnpm run health\nnpm run logs\nnpm run restart\nnpm stop\n\n${plan.archive ? 'Imported published pages and drafts are ready.' : 'Publish your starter homepage in Studio or through MCP.'}\nCredentials are saved privately in the data directory.${result.proxyFile ? `\nProxy configuration: ${result.proxyFile}\nEnable the proxy, DNS, and HTTPS through your server setup.` : ''}${result.startupError ? `\nStartup needs attention: ${result.startupError}` : ''}` };
+    return { ...result, detection: plan.detection, detectionReport: detectionReport || result.detectionReport, projectDir: directory, commands, message: `Project created in ${directory}.\n\ncd ${shellQuote(directory)}\nnpm start\nnpm run status\nnpm run health\nnpm run detect\nnpm run logs\nnpm run restart\nnpm stop\n\n${plan.archive ? 'Imported published pages and drafts are ready.' : 'Publish your starter homepage in Studio or through MCP.'}\nCredentials are saved privately in the data directory.${result.proxyFile ? `\nProxy configuration: ${result.proxyFile}\nEnable the proxy, DNS, and HTTPS through your server setup.` : ''}${result.startupError ? `\nStartup needs attention: ${result.startupError}` : ''}` };
   } catch (error) {
     throw new Error(`${error.message}\nProject files were kept at ${directory}. To retry, run:\ncd ${shellQuote(directory)}\nnpm install\nnpm run setup`);
   } finally { if (temporaryZip) await fs.rm(temporaryZip, { force: true }); }

@@ -24,6 +24,7 @@ These examples assume the `lumasite` command is linked with `npm link`; `node /p
 lumasite status --data-dir /srv/lumasite/data
 lumasite health --data-dir /srv/lumasite/data
 lumasite doctor --data-dir /srv/lumasite/data
+lumasite detect
 lumasite logs --lines 200 --data-dir /srv/lumasite/data
 lumasite logs --follow --data-dir /srv/lumasite/data
 lumasite restart --data-dir /srv/lumasite/data
@@ -102,6 +103,20 @@ caddy validate --config ./Caddyfile
 Caddy can issue HTTPS certificates after DNS points to the server and ports 80/443 are reachable. Review the file and install it using your existing Caddy service workflow. The CLI only generates configuration; it does not mutate the server or claim certificates have been issued.
 
 The platform's `publicUrl` must be its final HTTPS studio origin so the generated MCP/admin links are usable remotely. Configure it during initialization with `--public-url https://studio.example.com`. Set `--site-url https://preview.example.com` for the isolated public origin used for signed previews, local-path website links, and media. The proxy generator includes this hostname automatically. Adding a project domain does not change either platform URL.
+
+## Traefik deployment and server detection
+
+Run `lumasite detect` (or `npm run detect` in a generated v0.6+ project) for a read-only report of installed/running proxies, Docker networking, and ports 80/443. Server-mode setup uses this report to suggest an existing proxy; it does not activate or reload one.
+
+```sh
+lumasite proxy --format traefik \
+  --traefik-entrypoint websecure \
+  --traefik-cert-resolver existing-resolver \
+  --output ./lumasite-dynamic.yml \
+  --data-dir /srv/lumasite/data
+```
+
+Replace the entrypoint/resolver names with those already defined in your Traefik installation. Load the generated dynamic YAML through the existing file provider. A Docker proxy needs a backend address reachable from its own network; `127.0.0.1` refers to the container. [The detection and Traefik guide](server-detection.md) explains the files, flags, Docker setup, and verification limits.
 
 ## Docker supervision
 

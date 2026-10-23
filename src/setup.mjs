@@ -3,7 +3,8 @@ import { promises as fs } from 'node:fs';
 import net from 'node:net';
 import path from 'node:path';
 import { prepareConfiguration } from './configure.mjs';
-import { generateProxyConfig } from './proxy.mjs';
+import { generateProxyConfig, proxyHost, validateTraefikName } from './proxy.mjs';
+import { detectServer, formatDetection } from './server-detection.mjs';
 import { inspectProjectArchive, MIGRATION_LIMITS } from './migration.mjs';
 
 export const shellQuote = value => `'${String(value).replaceAll("'", "'\\''")}'`;
@@ -51,7 +52,7 @@ export function validateSetupPlan(values) {
   });
   const domain = checked.project?.domain || '';
   const proxy = values.proxy || (mode === 'server' ? 'apache' : 'none');
-  if (!['apache', 'caddy', 'none'].includes(proxy)) throw new Error('Proxy must be apache, caddy or none.');
+  if (!['apache', 'caddy', 'traefik', 'none'].includes(proxy)) throw new Error('Proxy must be apache, caddy, traefik or none.');
   if (mode === 'local' && proxy !== 'none') throw new Error('Choose server mode to generate a reverse proxy configuration.');
   if (mode === 'server') {
     if (!domain || !domain.includes('.') || domain.endsWith('.local')) throw new Error('Server setup requires a production domain, such as example.com.');
@@ -61,11 +62,19 @@ export function validateSetupPlan(values) {
   }
   const dataDir = path.resolve(values.dataDir);
   if (/[\u0000-\u001f\u007f]/.test(dataDir)) throw new Error('The data directory must not contain control characters.');
+  const upstreamHost = proxyHost(values.upstreamHost || (base.host === '::1' ? '::1' : '127.0.0.1'));
+  if (proxy !== 'none' && !['127.0.0.1', 'localhost', '::1'].includes(upstreamHost) && base.host !== '0.0.0.0') throw new Error('A proxy on another network cannot reach a loopback-only listener. Use --host 0.0.0.0 with restricted backend access, or use host networking and a loopback backend.');
+  const traefikEntryPoint = values.traefikEntryPoint || 'websecure', traefikCertResolver = values.traefikCertResolver || '';
+  if (proxy === 'traefik') {
+    validateTraefikName(traefikEntryPoint, 'Traefik entrypoint');
+    if (traefikCertResolver) validateTraefikName(traefikCertResolver, 'Traefik certificate resolver');
+  }
   const proxyConfig = proxy === 'none' ? null : generateProxyConfig({
     format: proxy, adminDomain: new URL(checked.instance.publicUrl).hostname, domain,
     siteDomain: new URL(checked.instance.sitePublicUrl).hostname, port, sitePort,
+    upstreamHost, traefikEntryPoint, traefikCertResolver,
   });
-  return { ...values, mode, name, slug, domain, dataDir, proxy, proxyConfig, ...checked.instance };
+  return { ...values, mode, name, slug, domain, dataDir, proxy, proxyConfig, upstreamHost, traefikEntryPoint, traefikCertResolver, ...checked.instance };
 }
 
 async function emptyInstance(dataDir) {
@@ -75,7 +84,7 @@ async function emptyInstance(dataDir) {
   } catch (error) { if (error.code !== 'ENOENT') throw error; }
 }
 
-export async function prepareSetup(options, { input = process.stdin, output = process.stdout, env = process.env, cwd = process.cwd() } = {}) {
+export async function prepareSetup(options, { input = process.stdin, output = process.stdout, env = process.env, cwd = process.cwd(), detect = detectServer } = {}) {
   const interactive = !options.yes;
   if (interactive && (!input.isTTY || !output.isTTY || options.json)) throw new Error('Interactive setup needs a terminal. For automation use setup --yes --name "My website" (or --file website.zip), plus your settings.');
   if (options.yes && !options.name && !options.file) throw new Error('Non-interactive setup requires --name or --file.');
@@ -116,7 +125,7 @@ export async function prepareSetup(options, { input = process.stdin, output = pr
     }
     const name = options.name || await ask('Website name', imported?.project.name || options.defaultName || 'My website', value => { if (!value.trim() || value.length > 100) throw new Error('Use 1–100 characters.'); });
     const domain = options.domain ?? await ask('Website domain (hostname only)', mode === 'server' ? imported?.project.domain || '' : '');
-    const host = options.host || '127.0.0.1';
+    let host = options.host || '127.0.0.1';
     const defaults = await suggestedPorts(host, options);
     const checkPort = value => {
       if (!/^\d+$/.test(String(value)) || Number(value) < 1024 || Number(value) > 65535) throw new Error('Choose a port between 1024 and 65535.');
@@ -128,12 +137,40 @@ export async function prepareSetup(options, { input = process.stdin, output = pr
     const stem = domain.replace(/^https?:\/\//, '').replace(/\/$/, '').replace(/^www\./, '');
     const publicUrl = options['public-url'] || await ask('Studio URL', mode === 'server' ? `https://studio.${stem}` : `http://localhost:${port}`);
     const sitePublicUrl = options['site-url'] || await ask('Preview URL', mode === 'server' ? `https://preview.${stem}` : `http://localhost:${sitePort}`);
-    const proxy = options.proxy || (mode === 'server' ? await ask('Reverse proxy: apache/caddy/none', 'apache', value => { if (!['apache', 'caddy', 'none'].includes(value)) throw new Error('Enter apache, caddy or none.'); }) : 'none');
+    let detection = null, proxy = options.proxy;
+    if (mode === 'server' && (!proxy || proxy === 'auto')) {
+      detection = await detect();
+      if (interactive) output.write(`\n${formatDetection(detection)}\n\n`);
+      if (!interactive && detection.recommendation.requiresChoice) throw new Error(`${detection.recommendation.reason} Run lumasite detect --json, then supply --proxy apache|caddy|traefik|none.`);
+      proxy = interactive ? await ask('Reverse proxy: apache/caddy/traefik/none', detection.recommendation.proxy || 'none', value => { if (!['apache', 'caddy', 'traefik', 'none'].includes(value)) throw new Error('Enter apache, caddy, traefik or none.'); }) : detection.recommendation.proxy;
+    }
+    if (mode === 'local' && proxy === 'auto') proxy = 'none';
+    proxy ||= 'none';
+    let upstreamHost = proxyHost(options['proxy-host'] || (host === '::1' ? '::1' : '127.0.0.1'));
+    const selected = detection?.proxies.find(item => item.id === proxy);
+    const bridgedProxy = proxy !== 'none' && selected?.containers.some(container => container.networkMode !== 'host');
+    if (bridgedProxy) {
+      if (interactive) output.write('\nThe selected proxy is in Docker. Its loopback address belongs to the container.\nSupply a backend hostname/IP reachable from that container. Restrict backend ports to the proxy network.\n');
+      if (!options['proxy-host']) {
+        if (!interactive) throw new Error('A containerized proxy was detected. Supply --proxy-host with a backend hostname/IP reachable from that container and --host 0.0.0.0, or choose the proxy explicitly after checking host networking.');
+        upstreamHost = proxyHost(await ask('Backend hostname/IP reachable from the proxy container', '', value => { if (!value) throw new Error('Enter the host gateway address or a configured backend hostname.'); if (['127.0.0.1', 'localhost', '::1'].includes(proxyHost(value))) throw new Error('Use a reachable host address; container loopback is not the native LumaSite server.'); }));
+      }
+      if (['127.0.0.1', 'localhost', '::1'].includes(upstreamHost)) throw new Error('The detected Docker proxy is not using host networking. A loopback backend would point to the container, not LumaSite. Supply --proxy-host and a reachable listener.');
+      if (!options.host) {
+        if (!interactive) throw new Error('A bridged Docker proxy requires an explicit --host 0.0.0.0 as well as --proxy-host. Restrict backend access to the proxy network.');
+        host = await ask('LumaSite listener host (restrict backend access to the proxy)', '0.0.0.0', value => { if (value !== '0.0.0.0') throw new Error('For this native server behind a bridged proxy, use 0.0.0.0 and restrict backend access, or reconfigure proxy networking.'); });
+      }
+    }
+    let traefikEntryPoint = options['traefik-entrypoint'] || 'websecure', traefikCertResolver = options['traefik-cert-resolver'] || '';
+    if (proxy === 'traefik') {
+      if (!options['traefik-entrypoint']) traefikEntryPoint = await ask('Existing Traefik HTTPS entrypoint', 'websecure', value => validateTraefikName(value, 'Traefik entrypoint'));
+      if (!options['traefik-cert-resolver']) traefikCertResolver = await ask('Existing Traefik certificate resolver (empty for existing certificates)', '', value => { if (value) validateTraefikName(value, 'Traefik certificate resolver'); });
+    }
     const startAnswer = options['no-start'] ? 'n' : await ask('Start LumaSite after setup? y/n', 'y', value => { if (!/^(y|yes|n|no)$/i.test(value)) throw new Error('Enter y or n.'); });
-    const plan = validateSetupPlan({ mode, dataDir, name, slug: options.slug || imported?.project.slug, domain, host, port, sitePort, publicUrl, sitePublicUrl, proxy, start: /^y(es)?$/i.test(startAnswer), archive });
+    const plan = validateSetupPlan({ mode, dataDir, name, slug: options.slug || imported?.project.slug, domain, host, port, sitePort, publicUrl, sitePublicUrl, proxy, upstreamHost, traefikEntryPoint, traefikCertResolver, detection, start: /^y(es)?$/i.test(startAnswer), archive });
     await assertSetupPorts(plan);
     if (interactive) {
-      output.write(`\nWebsite: ${plan.name}${plan.domain ? ` — ${plan.domain}` : ''}\nData: ${plan.dataDir}\nStudio: ${plan.publicUrl}/admin\nPreview: ${plan.sitePublicUrl}\nPorts: ${plan.port} / ${plan.sitePort}\n${imported ? `Import: ${imported.pages} pages, ${imported.assets} media files\n` : 'New website: starter homepage draft\n'}Proxy: ${plan.proxy}\n\n`);
+      output.write(`\nWebsite: ${plan.name}${plan.domain ? ` — ${plan.domain}` : ''}\nData: ${plan.dataDir}\nStudio: ${plan.publicUrl}/admin\nPreview: ${plan.sitePublicUrl}\nListeners: ${plan.host}:${plan.port} / ${plan.host}:${plan.sitePort}\n${imported ? `Import: ${imported.pages} pages, ${imported.assets} media files\n` : 'New website: starter homepage draft\n'}Proxy: ${plan.proxy}${plan.proxy !== 'none' ? ` → ${plan.upstreamHost}` : ''}\n${plan.proxy === 'traefik' ? `Traefik HTTPS entrypoint: ${plan.traefikEntryPoint}\nCertificate resolver: ${plan.traefikCertResolver || 'existing certificates (no ACME resolver selected)'}\n` : ''}\n`);
       const confirmation = await ask('Create this instance? y/n', 'y', value => { if (!/^(y|yes|n|no)$/i.test(value)) throw new Error('Enter y or n.'); });
       if (!/^y(es)?$/i.test(confirmation)) return null;
     }
@@ -152,13 +189,25 @@ export async function writeSetupFiles(plan) {
   await fs.mkdir(directory, { recursive: true, mode: 0o700 });
   let proxyFile = null;
   if (plan.proxyConfig) {
-    proxyFile = path.join(directory, plan.proxy === 'apache' ? 'apache.conf' : 'Caddyfile');
+    proxyFile = path.join(directory, plan.proxy === 'apache' ? 'apache.conf' : plan.proxy === 'traefik' ? 'traefik-dynamic.yml' : 'Caddyfile');
     await fs.writeFile(proxyFile, plan.proxyConfig, { flag: 'wx', mode: 0o600 });
   }
   const suffix = `--data-dir ${shellQuote(plan.dataDir)}`;
   const commands = Object.fromEntries(['start', 'status', 'health', 'doctor', 'logs --follow', 'restart', 'stop', 'credentials', 'project list'].map(command => [command, `lumasite ${command} ${suffix}`]));
+  commands.detect = 'lumasite detect';
   const next = `# LumaSite setup\n\nWebsite: ${plan.name}${plan.domain ? ` (${plan.domain})` : ''}\nStudio: ${plan.publicUrl}/admin\nPreview: ${plan.sitePublicUrl}\nAdmin/API/MCP: ${plan.host}:${plan.port}\nWebsite/media: ${plan.host}:${plan.sitePort}\n\n${plan.mode === 'server' ? `Point your website, Studio, and preview DNS records to this server.\n${proxyFile ? `Review the generated proxy configuration at ${proxyFile}.\nInstall it through your server's existing configuration workflow and enable HTTPS.\n` : 'Configure your reverse proxy and HTTPS for these origins.\n'}Native start runs in the background; configure a process supervisor for startup after reboot.\n\n` : ''}${plan.archive ? 'The ZIP retains published pages and drafts; its project gets a new MCP token.\n' : 'The starter homepage is a draft. Publish it in Studio or through MCP to make it public.\n'}\n${Object.values(commands).join('\n')}\n\nAdministrator credentials and project tokens are stored privately in credentials.json.\nApplication updates use npm; websites and media stay in this data directory.\n`;
   const instructions = path.join(directory, 'NEXT-STEPS.txt');
-  await fs.writeFile(instructions, next, { flag: 'wx', mode: 0o600 });
-  return { proxyFile, instructions, commands };
+  const proxyNotes = plan.proxy === 'traefik' ? `\nTraefik: load the generated YAML through the existing file provider.\nUse the existing ${plan.traefikEntryPoint} HTTPS entrypoint and ${plan.traefikCertResolver ? `${plan.traefikCertResolver} certificate resolver` : 'TLS certificates/defaults; no ACME resolver was selected'}.\nThe generated file does not create entrypoints, certificate resolvers, or HTTP-to-HTTPS redirects.\n` : '';
+  const backendNotes = plan.proxy !== 'none' ? `\nProxy backend host: ${plan.upstreamHost || '127.0.0.1'}\nContainer proxies must be able to reach these backends from their own network.\n${plan.host === '0.0.0.0' ? 'Restrict backend ports to the proxy network; public traffic should enter through the HTTPS proxy.\n' : ''}` : '';
+  const detectionReport = await writeDetectionReport(plan);
+  await fs.writeFile(instructions, next + proxyNotes + backendNotes + (detectionReport ? `\n${formatDetection(plan.detection)}\nDetection report: ${detectionReport}\n` : ''), { flag: 'wx', mode: 0o600 });
+  return { proxyFile, instructions, commands, detectionReport };
+}
+
+export async function writeDetectionReport(plan) {
+  if (!plan.detection) return null;
+  const file = path.join(plan.dataDir, 'deployment/server-detection.json');
+  await fs.mkdir(path.dirname(file), { recursive: true, mode: 0o700 });
+  await fs.writeFile(file, JSON.stringify(plan.detection, null, 2) + '\n', { flag: 'wx', mode: 0o600 });
+  return file;
 }

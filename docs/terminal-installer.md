@@ -9,13 +9,13 @@ For illustrated example answers, generated URLs, Apache routing, additional webs
 With Git authenticated to the private repository, run:
 
 ```sh
-npx --yes "git+https://github.com/arrrrniii/lumasite.git#v0.5.0" create
+npx --yes "git+https://github.com/arrrrniii/lumasite.git#v0.6.0" create
 ```
 
 It asks **What is your project named?**, followed by the setup questions below. Review everything before it creates files. To supply a directory in advance:
 
 ```sh
-npx --yes "git+https://github.com/arrrrniii/lumasite.git#v0.5.0" create my-website
+npx --yes "git+https://github.com/arrrrniii/lumasite.git#v0.6.0" create my-website
 ```
 
 The creator makes a new directory, installs a pinned LumaSite dependency, and initializes a website using its installed runtime. Its server is launched from that project's `node_modules/lumasite` rather than the temporary npx cache. The project continues working after the installer is removed. It does not overwrite an existing directory. Declining the settings review creates no project directory; an interrupted dependency installation retains the new folder for recovery.
@@ -50,11 +50,11 @@ npm stop
 For automation, supply a directory and `--yes` after `create`; add `--no-start` when preparing data for a supervisor. The outer `npx --yes` accepts npm's package download prompt; the inner `create ... --yes` accepts the creator's settings. For example:
 
 ```sh
-npx --yes "git+https://github.com/arrrrniii/lumasite.git#v0.5.0" create my-website \
+npx --yes "git+https://github.com/arrrrniii/lumasite.git#v0.6.0" create my-website \
   --yes --no-start --name "My website"
 ```
 
-The package also includes a `create-lumasite` executable, usable with `npx --package="git+https://github.com/arrrrniii/lumasite.git#v0.5.0" create-lumasite`. The short public-registry command `npx create-lumasite@latest` is reserved for a future intentional npm publication; it has not been published.
+The package also includes a `create-lumasite` executable, usable with `npx --package="git+https://github.com/arrrrniii/lumasite.git#v0.6.0" create-lumasite`. The short public-registry command `npx create-lumasite@latest` is reserved for a future intentional npm publication; it has not been published.
 
 ## Install directly from the private GitHub repository
 
@@ -92,7 +92,7 @@ The wizard asks for:
 4. Website name and domain.
 5. Admin/API/MCP and public website ports. Available defaults are selected without stopping existing services.
 6. Studio and preview URLs.
-7. Apache, Caddy, or manual proxy configuration in server mode.
+7. Server detection and a choice of Apache, Caddy, Traefik, or manual proxy configuration. Docker proxies may require a reachable backend address and listener bind; Traefik asks for its existing HTTPS entrypoint and optional certificate resolver.
 8. Whether to start the application, followed by a settings review.
 
 It generates an administrator password and a project-scoped MCP token and prints the connection URLs. Save the displayed credentials privately. They are also in the private `credentials.json` file in the chosen data directory. The `deployment/NEXT-STEPS.txt` file lists the matching start, status, health, doctor, logs, restart, stop, and credential-retrieval commands. These notes contain no access credentials.
@@ -109,11 +109,13 @@ lumasite setup --mode server --data-dir /srv/lumasite/data
 
 For `example.com`, suggested origins are `https://studio.example.com` and `https://preview.example.com`. Listeners bind to `127.0.0.1` by default. Server origins require HTTPS and separate administration/public hostnames.
 
-The wizard writes `/srv/lumasite/data/deployment/apache.conf` or `Caddyfile`. It generates configuration text; it does not install Apache, modify existing virtual hosts, issue certificates, change DNS, or install a boot service. Point DNS to the server, review and enable the generated proxy through the existing server workflow, and configure HTTPS before remote login/MCP use. Native start runs as a background process; use a process supervisor for restart after reboot. See [production transfer and Apache setup](production-transfer.md).
+The wizard writes `/srv/lumasite/data/deployment/apache.conf`, `Caddyfile`, or `traefik-dynamic.yml`. It generates configuration text; it does not install a proxy, modify existing virtual hosts, issue certificates, change DNS, or install a boot service. Point DNS to the server, review and enable the generated proxy through the existing server workflow, and configure HTTPS before remote login/MCP use. Native start runs as a background process; use a process supervisor for restart after reboot. See [server detection](server-detection.md) and [production transfer and Apache setup](production-transfer.md).
 
 ## Automated setup
 
 No terminal prompts run when `--yes` is supplied. Use `--no-start` to prepare data for a supervisor, and `--json` for machine-readable results. Successful JSON output includes newly generated credentials, so do not publish it as a build artifact or public log.
+
+Server mode defaults to `--proxy auto`: inspect the server and suggest its existing proxy. Ambiguous detection fails before initialization in unattended mode. An explicit `--proxy apache|caddy|traefik|none` bypasses detection and is useful for a known deployment. Advanced flags: `--proxy-host HOST`, `--traefik-entrypoint NAME`, `--traefik-cert-resolver NAME`, and `--host 0.0.0.0` when a remote/container proxy needs a non-loopback listener. Restrict those backend ports to the proxy network. Run `lumasite detect --json` separately without initializing a project.
 
 ```sh
 lumasite setup --yes --no-start \

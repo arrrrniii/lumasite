@@ -1,6 +1,6 @@
 {
   "name": "lumasite",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "An independent, self-hosted website studio with native LumaFX and MCP authoring.",
   "private": true,
   "license": "UNLICENSED",
@@ -30,7 +30,9 @@
     "test:marketing": "node tests/marketing-browser.mjs",
     "publish:marketing": "node marketing/publish.mjs",
     "test:seo": "node tests/seo-browser.mjs",
-    "test:package": "node scripts/test-package-install.mjs"
+    "test:package": "node scripts/test-package-install.mjs",
+    "detect": "node bin/lumasite.mjs detect",
+    "test:traefik": "node scripts/test-traefik.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.30.0",
@@ -40,7 +42,8 @@
     "zod": "4.3.6"
   },
   "devDependencies": {
-    "playwright": "1.61.1"
+    "playwright": "1.61.1",
+    "yaml": "2.9.1"
   },
   "repository": {
     "type": "git",
