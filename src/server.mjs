@@ -11,6 +11,7 @@ import { handleMcp } from './mcp.mjs';
 import { exportProject, importProject } from './migration.mjs';
 import { deleteProject } from './project-lifecycle.mjs';
 import { listProjectBackups, readProjectBackup } from './project-backups.mjs';
+import { createOAuthService } from './oauth.mjs';
 import { productionHost, pageNoindex, sitemapXml, robotsTxt, feedXml, renderBlogBlocks } from './seo.mjs';
 import { VERSION, fail, tokenMatches, passwordMatches, publicInstance, publicProject, initializeInstance, createProject, requireProject, requirePage, getProjectUrls, updateProject, createPage, updatePage, publishPage, restorePage, rotateProjectToken, uploadAsset, getLibrary, getPreviewUrl, verifyPreviewToken, renderDocument } from './service.mjs';
 
@@ -56,6 +57,7 @@ export async function startServers({ dataDir, store: suppliedStore } = {}) {
     return null;
   }
   const admin = express(), publicApp = express();
+  const oauth = await createOAuthService(store, config.publicUrl);
   admin.disable('x-powered-by'); publicApp.disable('x-powered-by');
   let ready = false;
   const health = () => ({ status: 'ok', version: VERSION, instanceId: store.read().instance?.id || null, pid: process.pid, port: config.port, sitePort: config.sitePort, uptime: Math.floor(process.uptime()) });
@@ -64,7 +66,8 @@ export async function startServers({ dataDir, store: suppliedStore } = {}) {
     res.set({ 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'same-origin', 'Cache-Control': 'no-store', 'X-Robots-Tag': 'noindex,nofollow' });
     const hostname = req.hostname;
     if (!new Set(['localhost', '127.0.0.1', '[::1]', new URL(config.publicUrl).hostname]).has(hostname)) return res.status(403).json({ error: 'Unrecognized admin hostname. Configure the instance public URL.' });
-    if (req.headers.origin && !allowedOrigins().has(req.headers.origin)) return res.status(403).json({ error: 'This origin cannot access the admin or MCP API.' });
+    const publicOAuth = ['/authorize', '/token', '/register', '/revoke', '/.well-known/oauth-authorization-server'].includes(req.path) || req.path.startsWith('/.well-known/oauth-protected-resource');
+    if (req.headers.origin && !allowedOrigins().has(req.headers.origin) && !publicOAuth) return res.status(403).json({ error: 'This origin cannot access the admin or MCP API.' });
     const started = performance.now();
     res.once('finish', () => log('request', { method: req.method, path: req.originalUrl.split('?')[0], status: res.statusCode, durationMs: Math.round(performance.now() - started) }));
     next();
@@ -72,6 +75,7 @@ export async function startServers({ dataDir, store: suppliedStore } = {}) {
   admin.get('/health', (_req, res) => res.json(health()));
   admin.get('/ready', async (_req, res) => { await access(store.dataDir, constants.W_OK); res.status(ready ? 200 : 503).json({ status: ready ? 'ready' : 'starting' }); });
   admin.get('/robots.txt', (_req, res) => res.type('text').send('User-agent: *\nDisallow: /\n'));
+  admin.use(oauth.router);
   admin.use(express.json({ limit: '72mb' }));
   function setSession(res) {
     const token = randomBytes(32).toString('base64url');
@@ -80,9 +84,9 @@ export async function startServers({ dataDir, store: suppliedStore } = {}) {
   }
   function authenticated(req) {
     const token = req.headers.authorization?.match(/^Bearer (.+)$/i)?.[1];
-    if (tokenMatches(token, store.read().instance?.adminTokenHash)) return true;
+    if (tokenMatches(token, store.read().instance?.adminTokenHash)) return `admin:${hash(token)}`;
     const cookie = (req.headers.cookie || '').split(';').map(v => v.trim()).find(v => v.startsWith('lumasite_session='))?.slice(17);
-    return cookie && (sessions.get(hash(cookie)) || 0) > Date.now();
+    return cookie && (sessions.get(hash(cookie)) || 0) > Date.now() ? `session:${hash(cookie)}` : null;
   }
   admin.get('/api/setup', (_req, res) => res.json({ configured: !!store.read().instance, version: VERSION, port: config.port, sitePort: config.sitePort }));
   admin.post('/api/setup', async (req, res) => {
@@ -104,7 +108,13 @@ export async function startServers({ dataDir, store: suppliedStore } = {}) {
   admin.all('/mcp/:projectId', async (req, res) => {
     const project = requireProject(store.read(), req.params.projectId);
     const token = req.headers.authorization?.match(/^Bearer (.+)$/i)?.[1];
-    if (!tokenMatches(token, project.tokenHash)) return res.status(401).set('WWW-Authenticate', 'Bearer realm="LumaSite project"').json({ error: 'Use this project’s MCP bearer token. Create or rotate it in Connections.' });
+    if (!tokenMatches(token, project.tokenHash)) {
+      let authorized = false;
+      if (typeof token === 'string' && token.startsWith('ls_oauth_')) {
+        try { const auth = await oauth.provider.verifyAccessToken(token); authorized = auth.extra.projectId === project.id; } catch { /* Challenge invalid OAuth tokens. */ }
+      }
+      if (!authorized) return res.status(401).set('WWW-Authenticate', oauth.challenge(project.id)).json({ error: 'Connect with OAuth in ChatGPT, or use this website’s Bearer token in a client that supports custom headers.' });
+    }
     await handleMcp(req, res, store, project.id);
   });
   admin.use('/api', (req, res, next) => {
@@ -113,6 +123,10 @@ export async function startServers({ dataDir, store: suppliedStore } = {}) {
     next();
   });
   admin.get('/api/session', (_req, res) => res.json({ authenticated: true, instance: publicInstance(store.read().instance) }));
+  admin.get('/api/oauth/requests/:id', (req, res) => res.json(oauth.requestDetails(req.params.id, authenticated(req))));
+  admin.post('/api/oauth/requests/:id/decision', async (req, res) => res.json(await oauth.decide(req.params.id, authenticated(req), req.body)));
+  admin.get('/api/projects/:id/connections', (req, res) => res.json({ connections: oauth.listConnections(req.params.id) }));
+  admin.post('/api/projects/:id/connections/:connectionId/revoke', async (req, res) => res.json(await oauth.revokeConnection(req.params.id, req.params.connectionId)));
   admin.get('/api/projects', (_req, res) => { const state = store.read(); res.json({ projects: state.projects.map(p => ({ ...publicProject(p), urls: getProjectUrls(state, p) })) }); });
   admin.post('/api/projects', async (req, res) => res.status(201).json(await createProject(store, req.body)));
   admin.post('/api/projects/import', (req, _res, next) => {
@@ -167,6 +181,10 @@ export async function startServers({ dataDir, store: suppliedStore } = {}) {
   });
   admin.use('/admin-assets', express.static(path.join(root, 'public'), { fallthrough: false, index: false }));
   admin.use('/runtime/lumafx', express.static(path.join(root, 'vendor/lumafx'), { index: false, maxAge: '1h' }));
+  admin.get('/oauth/consent', (_req, res) => {
+    res.set('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'");
+    res.sendFile(path.join(root, 'public/oauth.html'));
+  });
   // Media is read-only on admin; source pages themselves never execute here.
   admin.get('/media/:projectId/:filename', async (req, res, next) => {
     if (!authenticated(req)) return res.status(401).end();

@@ -77,7 +77,7 @@ async function decodeArchive(buffer){
  if(expected.size!==files.size||[...files.keys()].some(k=>!expected.has(k)))fail(400,'ZIP contains entries absent from its manifest.');const payload=graph(parsed(payloadSchema,json(files.get('project.json'),'project'),'project schema'));
  if(files.size!==payload.assets.length+2)fail(400,'Project media entries do not match the asset catalog.');for(const a of payload.assets)if(files.get(`media/${a.filename}`)?.length!==a.size)fail(400,'Missing media file or invalid media size.');rejectTokens(files.get('project.json').toString());return{payload,files};
 }
-function rejectTokens(content){if(/\bls_(?:admin|project)_[A-Za-z0-9_-]{40,}\b/.test(content))fail(400,'Project source contains a live access credential. Remove it before transferring the project.');}
+function rejectTokens(content){if(/\bls_(?:admin|project|oauth|refresh|code)_[A-Za-z0-9_-]{40,}\b/.test(content))fail(400,'Project source contains a live access credential. Remove it before transferring the project.');}
 export async function inspectProjectArchive(buffer){
  const {payload}=await decodeArchive(buffer);
  return{project:pick(payload.project,['name','slug','domain']),pages:payload.pages.length,assets:payload.assets.length,revisions:payload.revisions.length};
@@ -88,6 +88,8 @@ export async function exportProject(store,projectId){
  const payload=graph(parsed(payloadSchema,{schemaVersion:1,project:pick(p,['id','name','slug','domain','theme','seo','createdAt','updatedAt']),pages:state.pages.filter(p=>p.projectId===projectId).map(p=>pick(p,pageKeys)),revisions:state.revisions.filter(r=>r.projectId===projectId).map(r=>({...pick(r,['id','projectId','pageId','createdAt','number','theme','compiledCss']),page:pick(r.page,pageKeys)})),assets:state.assets.filter(a=>a.projectId===projectId).map(a=>pick(a,['id','projectId','name','filename','mime','size','createdAt','url']))},'project data'));
  const content=Buffer.from(JSON.stringify(payload));rejectTokens(content.toString());if(content.length>MIGRATION_LIMITS.json)fail(413,'Project content exceeds the 128 MiB JSON limit.');
  let credentials={};try{credentials=JSON.parse(await readFile(path.join(store.dataDir,'credentials.json'),'utf8'));}catch(e){if(e.code!=='ENOENT')throw e;}
+ let oauth={};try{oauth=JSON.parse(await readFile(path.join(store.dataDir,'oauth.json'),'utf8'));}catch(e){if(e.code!=='ENOENT')throw e;}
+ for(const client of oauth.clients||[])if(client.client_secret&&content.includes(Buffer.from(client.client_secret)))fail(400,'Project source contains an OAuth client credential. Remove it before exporting.');
  for(const secret of [credentials.adminPassword,credentials.adminToken,...Object.values(credentials.projectTokens||{}),state.instance?.passwordHash,state.instance?.adminTokenHash,p.tokenHash])if(typeof secret==='string'&&secret.length>=12&&content.includes(Buffer.from(secret)))fail(400,'Project source contains an instance credential. Remove it before exporting.');
  const files=new Map([['project.json',content]]);let expanded=content.length;for(const a of payload.assets){expanded+=a.size;if(expanded>MIGRATION_LIMITS.expanded)fail(413,'Project media exceeds the 250 MiB transfer limit.');files.set(`media/${a.filename}`,await readMedia(store,a));}
  files.set('manifest.json',Buffer.from(JSON.stringify({format:'lumasite-project',version:1,createdAt:new Date().toISOString(),projectFile:'project.json',files:[...files].map(([file,bytes])=>({path:file,size:bytes.length,sha256:digest(bytes)}))})));

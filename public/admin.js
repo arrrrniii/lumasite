@@ -9,7 +9,7 @@
     port: 4310, sitePort: 4311, projects: [], project: null, urls: null,
     pages: [], page: null, baseline: '', dirty: false, view: 'projects',
     sourceTab: 'html', device: 'desktop', previewUrl: '', previewError: '',
-    library: null, libraryTab: 'components', assets: [], revisions: [],
+    library: null, libraryTab: 'components', assets: [], revisions: [], connections: [],
     diagnostics: null, health: null, readiness: null, modal: null,
     formError: '', projectTokens: new Map(), importFile: null, importMode: 'create', backups: [], menuOpen: false,
   };
@@ -388,12 +388,21 @@
   function connectionsView() {
     const urls = state.urls || {};
     const token = state.projectTokens.get(state.project.id);
+    const oauthOrigin = urls.mcp ? new URL(urls.mcp).origin : window.location.origin;
     return `<div class="page-heading"><div><span class="eyebrow">Website settings</span><h1>Connections</h1><p>Every address, connection, and search setting for ${escape(state.project.name)}.</p></div><button class="btn" type="button" data-action="project-export-zip">${icon('download')}Export ZIP</button></div>
       <section class="surface website-addresses"><div class="surface-header"><div><h2>Website links</h2><p>Open a resource or copy its full URL.</p></div><span class="pill">${icon('globe')}${escape(state.project.slug)}</span></div><div class="environment-grid">${environmentLinks()}${environmentLinks(true)}</div><p class="hint links-footnote">Preview URLs stay out of search results. Production links use your configured domain; DNS, reverse proxy, and HTTPS must point to this installation.</p></section>
-      <div class="view-columns connections-columns"><div><section class="surface"><div class="surface-header"><div><span class="eyebrow">Agent access</span><h2>MCP connection</h2><p>Create, edit, and publish with your own tools.</p></div><span class="panel-icon">${icon('connect')}</span></div><div class="stack"><div class="field-group"><span>Server URL</span>${copyField(urls.mcp || '')}</div><div class="field-group"><span>Project access token</span>${token ? `${copyField(token, 'Copy', true)}<p class="hint">Saved privately on your server. Keep this token with your MCP client credentials.</p>` : '<p class="hint">Tokens are only shown when created or rotated. Retrieve the saved token with the server credentials command, or generate a new one.</p>'}</div><div><button class="btn small" type="button" data-action="rotate-token">${icon('refresh')}Generate new token</button></div><div class="info-note">${icon('lock')}<span>Connect with a <strong>Bearer token</strong> using Streamable HTTP. Access is limited to this website.</span></div></div></section>
+      <div class="view-columns connections-columns"><div><section class="surface"><div class="surface-header"><div><span class="eyebrow">Agent access</span><h2>MCP connection</h2><p>Create, edit, and publish with your own tools.</p></div><span class="panel-icon">${icon('connect')}</span></div><div class="stack"><div class="field-group"><span>Server URL</span>${copyField(urls.mcp || '')}</div><div class="info-note">${icon('connect')}<span><strong>Connect ChatGPT with OAuth.</strong> Paste the Server URL above into your custom MCP connection and choose OAuth. Sign in to this Studio, then approve access to this website. No manual token is needed.</span></div><details><summary>OAuth discovery URLs</summary>${addressRow(`${oauthOrigin}/.well-known/oauth-authorization-server`, 'Authorization server metadata', 'connect')}${addressRow(`${oauthOrigin}/.well-known/oauth-protected-resource/mcp/${state.project.id}`, 'Website resource metadata', 'connect')}</details><div class="field-group"><span>Manual Bearer token</span>${token ? `${copyField(token, 'Copy', true)}<p class="hint">Saved privately on your server. Keep this token with your MCP client credentials.</p>` : '<p class="hint">Tokens are only shown when created or rotated. Retrieve the saved token with the server credentials command, or generate a new one.</p>'}</div><div><button class="btn small" type="button" data-action="rotate-token">${icon('refresh')}Generate new token</button></div><div class="info-note">${icon('lock')}<span>Connect with a <strong>Bearer token</strong> using Streamable HTTP. Access is limited to this website.</span></div></div></section>
       <section class="surface"><div class="surface-header"><div><h2>Studio & draft preview</h2><p>Private tools for managing this website.</p></div></div>${addressRow(urls.admin, 'Website studio', 'lock')}<div class="draft-link-panel"><div><strong>Private draft link</strong><p class="hint">${escape(state.page?.title || 'No page selected')} · A signed link to the saved draft. Anyone with the link can view it until it expires.</p></div>${state.page ? `<button class="btn small" type="button" data-action="draft-link">${icon('eye')}${state.dirty ? 'Save & get draft link' : 'Get draft link'}</button>` : ''}<div class="row draft-external-links">${draftLinks()}</div>${state.previewError ? `<p class="form-error">${escape(state.previewError)}</p>` : ''}</div></section></div>
       <div><section class="surface"><div class="surface-header"><div><h2>Website settings</h2><p>Your name and production domain.</p></div>${icon('globe')}</div><form class="stack" data-form="project-settings"><label>Website name<input name="name" required maxlength="100" value="${escape(state.project.name)}"></label><label>Production domain<input name="domain" value="${escape(state.project.domain || '')}" placeholder="example.com" spellcheck="false"><small>Point DNS to your server and configure HTTPS with the CLI proxy command.</small></label><div><button class="btn" type="submit">Save settings</button></div></form></section>
-      <section class="surface"><div class="surface-header"><div><h2>Installation ports</h2><p>One studio, separate website runtime.</p></div></div><div class="stack"><div class="check-row"><span>Admin, API & MCP</span><code class="port-number">${escape(state.port)}</code></div><div class="check-row"><span>Websites & media</span><code class="port-number">${escape(state.sitePort)}</code></div><button class="btn small" type="button" data-action="navigate" data-view="runtime">${icon('pulse')}Health, logs & commands${icon('arrow')}</button></div></section></div></div>${projectSeoForm()}${websiteManagement()}`;
+      <section class="surface"><div class="surface-header"><div><h2>Installation ports</h2><p>One studio, separate website runtime.</p></div></div><div class="stack"><div class="check-row"><span>Admin, API & MCP</span><code class="port-number">${escape(state.port)}</code></div><div class="check-row"><span>Websites & media</span><code class="port-number">${escape(state.sitePort)}</code></div><button class="btn small" type="button" data-action="navigate" data-view="runtime">${icon('pulse')}Health, logs & commands${icon('arrow')}</button></div></section></div></div>${connectedApps()}${projectSeoForm()}${websiteManagement()}`;
+  }
+
+  function connectedApps() {
+    return `<section class="surface"><div class="surface-header"><div><h2>Connected apps</h2><p>OAuth access to this website. Revoking an app disconnects its access and refresh tokens.</p></div><button class="btn small" type="button" data-action="refresh-connections">${icon('refresh')}Refresh connections</button></div><div>${state.connections.length ? state.connections.map(connection => `<div class="management-row"><div><h3>${escape(connection.clientName)}</h3><p>Website access · Connected ${escape(formatDate(connection.createdAt))} · Expires ${escape(formatDate(connection.expiresAt * 1000))}</p></div><button class="btn danger small" type="button" data-action="revoke-connection" data-id="${escape(connection.id)}">Revoke access</button></div>`).join('') : '<p class="hint">No apps connected yet. Add this website’s MCP URL in ChatGPT and choose OAuth.</p>'}</div></section>`;
+  }
+
+  async function loadConnections() {
+    if (state.project) state.connections = (await api(projectPath('/connections'))).connections || [];
   }
 
   function runtimeValue(value, fallback = 'Unavailable') {
@@ -554,6 +563,7 @@
     updateProjectCollection();
     if (view === 'media') await loadAssets();
     if (view === 'library') await loadLibrary();
+    if (view === 'connections') await loadConnections();
     render();
     if (state.page && view === 'pages') await refreshPreview();
   }
@@ -626,6 +636,7 @@
     }
     if (view === 'media') await loadAssets();
     if (view === 'library') await loadLibrary();
+    if (view === 'connections') await loadConnections();
     if (view === 'runtime') await loadRuntime();
     state.menuOpen = false;
     state.view = view;
@@ -784,10 +795,13 @@
       await refreshPreview();
       toast('Revision restored to your draft. Publish to make it live.');
     },
+    'refresh-connections': async () => { await loadConnections(); render(); },
+    'revoke-connection': async element => { await api(projectPath(`/connections/${encodeURIComponent(element.dataset.id)}/revoke`), { method: 'POST', body: {} }); await loadConnections(); render(); toast('App access revoked. Reconnect through OAuth to allow access again.'); },
     'rotate-token': async () => {
-      if (!window.confirm('Generate a new project token? The current token will stop working, so existing MCP clients will need the new one.')) return;
+      if (!window.confirm('Generate a new project token? Existing Bearer tokens and OAuth app connections will stop working. MCP clients will need to reconnect.')) return;
       const response = await api(projectPath('/token'), { method: 'POST' });
       state.projectTokens.set(state.project.id, response.token);
+      await loadConnections();
       render();
       toast('New token generated. Copy it into your MCP client.');
     },

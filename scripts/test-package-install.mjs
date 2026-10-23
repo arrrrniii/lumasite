@@ -7,6 +7,7 @@ import net from 'node:net';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
+import { randomBytes, createHash } from 'node:crypto';
 const exec = promisify(execFile), source = fileURLToPath(new URL('..', import.meta.url));
 const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'lumasite-package-'));
 const prefix = path.join(directory, 'installed'), dataDir = path.join(directory, 'websites');
@@ -24,8 +25,8 @@ async function ports() {
 try {
   const [archive] = JSON.parse((await run(npm, ['pack', '--json', '--pack-destination', directory], source)).stdout);
   const files = archive.files.map(file => file.path);
-  for (const needed of ['bin/lumasite.mjs', 'bin/create-lumasite.mjs', 'src/create.mjs', 'src/setup.mjs', 'src/bootstrap.mjs', 'src/server.mjs', 'src/project-backups.mjs', 'src/project-lifecycle.mjs', 'src/server-detection.mjs', 'public/admin.html', 'public/fonts/dmsansvariable.woff2', 'public/fonts/soravariable.woff2', 'public/fonts/DMSans-OFL.txt', 'public/fonts/Sora-OFL.txt', 'vendor/lumafx/lumafx.global.js', 'vendor/lumafx/LICENSE']) assert.ok(files.includes(needed), `Missing package file: ${needed}`);
-  assert.equal(files.some(file => /(^|\/)(?:\.lumasite|node_modules|marketing|test-results|\.env|credentials\.json|state\.json)(?:\/|$)/.test(file) || /\.(zip|log|pem|key)$/.test(file)), false);
+  for (const needed of ['bin/lumasite.mjs', 'bin/create-lumasite.mjs', 'src/create.mjs', 'src/setup.mjs', 'src/bootstrap.mjs', 'src/server.mjs', 'src/oauth.mjs', 'public/oauth.html', 'public/oauth.css', 'public/oauth.js', 'src/project-backups.mjs', 'src/project-lifecycle.mjs', 'src/server-detection.mjs', 'public/admin.html', 'public/fonts/dmsansvariable.woff2', 'public/fonts/soravariable.woff2', 'public/fonts/DMSans-OFL.txt', 'public/fonts/Sora-OFL.txt', 'vendor/lumafx/lumafx.global.js', 'vendor/lumafx/LICENSE']) assert.ok(files.includes(needed), `Missing package file: ${needed}`);
+  assert.equal(files.some(file => /(^|\/)(?:\.lumasite|node_modules|marketing|test-results|\.env|credentials\.json|oauth\.json|state\.json)(?:\/|$)/.test(file) || /\.(zip|log|pem|key)$/.test(file)), false);
   await run(npm, ['install', '--global', '--prefix', prefix, '--omit=dev', '--ignore-scripts', '--no-audit', '--no-fund', path.join(directory, archive.filename)]);
   assert.match((await run(bin, ['--help'])).stdout, /Guided terminal installer/);
   assert.equal((await run(bin, ['--version'])).stdout.trim(), archive.version);
@@ -34,11 +35,31 @@ try {
   const [port, sitePort] = await ports();
   const setup = JSON.parse((await run(bin, ['setup', '--yes', '--name', 'Installed package', '--port', String(port), '--site-port', String(sitePort), '--data-dir', dataDir, '--json'])).stdout);
   assert.equal(setup.healthy, true); assert.equal(setup.managed, true);
-  for (const route of ['/admin', '/admin-assets/admin.js', '/admin-assets/admin.css', '/admin-assets/fonts/dmsansvariable.woff2', '/admin-assets/fonts/soravariable.woff2', '/runtime/lumafx/lumafx.global.js']) assert.equal((await fetch(`http://127.0.0.1:${port}${route}`)).status, 200, route);
+  for (const route of ['/admin', '/admin-assets/admin.js', '/admin-assets/admin.css', '/admin-assets/fonts/dmsansvariable.woff2', '/admin-assets/fonts/soravariable.woff2', '/runtime/lumafx/lumafx.global.js', '/oauth/consent', '/admin-assets/oauth.js', '/admin-assets/oauth.css', '/.well-known/oauth-authorization-server']) assert.equal((await fetch(`http://127.0.0.1:${port}${route}`)).status, 200, route);
   const projectId = setup.projects[0].id;
+  const metadata = await fetch(`http://127.0.0.1:${port}/.well-known/oauth-protected-resource/mcp/${projectId}`);
+  assert.equal(metadata.status, 200); assert.match((await metadata.json()).resource, new RegExp(`/mcp/${projectId}$`));
   const auth = { Authorization: `Bearer ${setup.projects[0].token}` };
   const credentials = JSON.parse(await fs.readFile(path.join(dataDir, 'credentials.json')));
   const headers = { Authorization: `Bearer ${credentials.adminToken}` };
+  // Exercise OAuth through the installed package, including consent and a real
+  // MCP request, so omitted server handlers/assets cannot hide behind source tests.
+  const adminOrigin = `http://127.0.0.1:${port}`;
+  const clientResponse = await fetch(`${adminOrigin}/register`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ client_name: 'Installed OAuth test', redirect_uris: ['https://chatgpt.com/connector_platform_oauth_redirect'], token_endpoint_auth_method: 'none' }) });
+  assert.equal(clientResponse.status, 201); const oauthClient = await clientResponse.json();
+  const verifier = randomBytes(32).toString('base64url');
+  const authorization = new URL('authorize', setup.admin);
+  const resourceMetadata = await (await fetch(`${adminOrigin}/.well-known/oauth-protected-resource/mcp/${projectId}`)).json();
+  authorization.search = new URLSearchParams({ client_id: oauthClient.client_id, redirect_uri: oauthClient.redirect_uris[0], response_type: 'code', code_challenge_method: 'S256', code_challenge: createHash('sha256').update(verifier).digest('base64url'), resource: resourceMetadata.resource });
+  const started = await fetch(authorization, { redirect: 'manual' }); assert.equal(started.status, 303);
+  const requestId = new URL(started.headers.get('location'), authorization).searchParams.get('request');
+  const consent = await (await fetch(`${adminOrigin}/api/oauth/requests/${requestId}`, { headers })).json();
+  const approval = await fetch(`${adminOrigin}/api/oauth/requests/${requestId}/decision`, { method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' }, body: JSON.stringify({ decision: 'allow', csrfToken: consent.csrfToken }) });
+  assert.equal(approval.status, 200); const callback = new URL((await approval.json()).redirect);
+  const tokenResponse = await fetch(`${adminOrigin}/token`, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ grant_type: 'authorization_code', client_id: oauthClient.client_id, redirect_uri: oauthClient.redirect_uris[0], code: callback.searchParams.get('code'), code_verifier: verifier, resource: resourceMetadata.resource }) });
+  assert.equal(tokenResponse.status, 200); const oauthTokens = await tokenResponse.json();
+  const oauthMcp = await fetch(`${adminOrigin}/mcp/${projectId}`, { method: 'POST', headers: { Authorization: `Bearer ${oauthTokens.access_token}`, 'Content-Type': 'application/json', Accept: 'application/json, text/event-stream' }, body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'initialize', params: { protocolVersion: '2025-03-26', capabilities: {}, clientInfo: { name: 'installed-oauth-test', version: '1' } } }) });
+  assert.equal(oauthMcp.status, 200); await oauthMcp.body.cancel();
   const pageResponse = await fetch(`http://127.0.0.1:${port}/api/projects/${projectId}/pages`, { headers });
   assert.equal(pageResponse.status, 200); const page = (await pageResponse.json()).pages[0];
   const publish = await fetch(`http://127.0.0.1:${port}/api/projects/${projectId}/pages/${page.id}/publish`, { method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' }, body: '{}' });
@@ -76,7 +97,7 @@ try {
   assert.equal((await fetch(`http://127.0.0.1:${appPort}/admin`)).status, 200);
   assert.equal((await fetch(`http://127.0.0.1:${appSitePort}/sites/${created.projects[0].slug}/`)).status, 200, 'Creator imports published website revisions');
   assert.equal(JSON.parse((await run(process.execPath, [path.join(app, 'lumasite.mjs'), 'detect', '--json'])).stdout).ports.length, 2);
-  console.log(JSON.stringify({ package: archive.name, version: archive.version, files: files.length, bytes: archive.size, globalInstall: 'passed', setup: 'passed', studio: 'passed', publish: 'passed', mcp: 'passed', update: 'passed', delete: 'passed', recovery: 'passed', create: 'passed', independentRuntime: 'passed' }));
+  console.log(JSON.stringify({ package: archive.name, version: archive.version, files: files.length, bytes: archive.size, globalInstall: 'passed', setup: 'passed', studio: 'passed', publish: 'passed', mcp: 'passed', oauth: 'passed', update: 'passed', delete: 'passed', recovery: 'passed', create: 'passed', independentRuntime: 'passed' }));
 } finally {
   await run(process.execPath, [path.join(app, 'lumasite.mjs'), 'stop', '--json']).catch(() => {});
   await run(bin, ['stop', '--data-dir', dataDir, '--json']).catch(() => {});

@@ -15,7 +15,7 @@ Sign in at your installation's `/admin` address. Choose a website to open its Ov
 
 Preview addresses use the instance's website origin, separate from administration. These are published-page previews and stay noindex. Production addresses use the saved project domain. Configure DNS, your reverse proxy, and HTTPS on the destination server before using them publicly. Saving a domain does not verify that setup.
 
-The Studio address and project MCP endpoint are in Connections. MCP requires the project's Bearer token and a Streamable HTTP client. Tokens appear only when created or rotated. Generating a new token invalidates the previous one.
+The Studio address and website MCP endpoint are in Connections. In ChatGPT, choose OAuth, sign in to Studio, and approve the requested website. Connections → Connected apps lists active OAuth grants and lets you revoke them. Clients with custom-header support can also use the website’s manual Bearer token. Tokens appear when created or rotated; rotating a project token also invalidates its existing OAuth connections. See [OAuth setup](oauth.md).
 
 ## Preview a draft
 

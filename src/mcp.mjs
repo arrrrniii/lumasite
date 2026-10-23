@@ -7,7 +7,7 @@ import { VERSION, requireProject, requirePage, publicProject, getProjectUrls, up
 export async function handleMcp(req, res, store, projectId) {
   const server = new McpServer({ name: 'LumaSite', version: VERSION }, { instructions: 'Edit native HTML/CSS/browser JavaScript in this authorized project. Read pages and revision before updating. A save changes the draft; call page_publish to update the live page. LumaFX data-fx attributes are available natively; inspect library_list. Never put access tokens or admin credentials in website code.' });
   function register(name, description, inputSchema, fn, readOnlyHint = false) {
-    server.registerTool(name, { description, inputSchema, annotations: { readOnlyHint, destructiveHint: false, idempotentHint: readOnlyHint, openWorldHint: false } }, async args => {
+    server.registerTool(name, { description, inputSchema, _meta: { securitySchemes: [{ type: 'oauth2', scopes: ['website:manage'] }] }, annotations: { readOnlyHint, destructiveHint: false, idempotentHint: readOnlyHint, openWorldHint: false } }, async args => {
       try {
         requireProject(store.read(), projectId);
         const data = await fn(args);

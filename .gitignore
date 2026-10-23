@@ -21,3 +21,4 @@ run.json
 marketing/published.json
 marketing/preview.json
 !package-lock.json
+oauth.json

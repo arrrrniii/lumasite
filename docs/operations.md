@@ -7,6 +7,7 @@ Use an absolute `--data-dir` for scripts and services. A typical directory conta
 ```text
 state.json          Instance, projects, drafts, and published revisions
 credentials.json    Private administrator password/API token and project tokens
+oauth.json          Private OAuth client credentials and hashed grants/tokens
 media/              Uploaded originals grouped by project
 project-backups/    Private recovery ZIPs from website updates and deletions
 logs/server.log     Native CLI server stdout and stderr
@@ -164,3 +165,7 @@ For maximum certainty, stop the instance before a full operational backup. Resto
 ## Website updates and deletion
 
 Studio → Connections → Manage website supports replacement imports, deletion with slug confirmation, and recovery ZIP downloads. See [Website management](website-management.md). Recovery ZIPs live in the private data directory; they are never served by the public website listener. Keep them within your storage and backup policy.
+
+## OAuth connections
+
+From 0.8.0, ChatGPT can connect with OAuth. Discovery, registration, and consent run on the Studio origin. App access is limited to one website and revocable under Connections → Connected apps. Keep `oauth.json` with private full-instance backups; project ZIPs exclude it. See [OAuth setup and Apache routing](oauth.md).
