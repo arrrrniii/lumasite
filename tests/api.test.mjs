@@ -256,3 +256,46 @@ test('HTTP authoring: authentication, immutable publishing, revisions, media and
     }
   });
 });
+
+test('HTTP ZIP update/delete: stable MCP identity, private recovery, removal of stale public assets and safe confirmation',async t=>{
+  const f=await fixture(t);
+  const create=async(slug,html,js)=>{
+    const {data}=await f.request('/api/projects',{method:'POST',body:{name:slug,slug}});
+    const page=f.store.read().pages.find(p=>p.projectId===data.project.id),base=`/api/projects/${data.project.id}/pages/${page.id}`;
+    await f.request(base,{method:'PUT',body:{html,js}});await f.request(`${base}/publish`,{method:'POST'});return data;
+  };
+  const source=await create('source','<h1>Imported public version</h1>','window.newVersion=true;');
+  const target=await create('target','<h1>Original target version</h1>','window.oldVersion=true;');
+  const id=target.project.id,oldPage=f.store.read().pages.find(p=>p.projectId===id),targetPath=`/sites/target/`;
+  const oldHtml=await (await fetch(`${f.site}${targetPath}`)).text(),oldJs=extractAsset(oldHtml,'js');
+  assert.equal((await fetch(`${f.site}${oldJs}`)).status,200);
+  const archive=Buffer.from(await (await fetch(`${f.admin}/api/projects/${source.project.id}/export`,{headers:f.auth})).arrayBuffer());
+  const query=new URLSearchParams({mode:'update',projectId:id,confirmSlug:'target'}),options={method:'POST',raw:true,body:archive,headers:{'content-type':'application/zip'}};
+  assert.equal((await f.request(`/api/projects/import?${query}`,{...options,authenticated:false})).response.status,401);
+  query.set('confirmSlug','wrong');assert.equal((await f.request(`/api/projects/import?${query}`,options)).response.status,400);
+  query.set('confirmSlug','target');const updated=await f.request(`/api/projects/import?${query}`,options);
+  assert.equal(updated.response.status,200);assert.equal(updated.data.project.id,id);assert.equal(updated.data.token,undefined);assert.equal(f.store.read().projects.length,2);
+  assert.match(await (await fetch(`${f.site}${targetPath}`)).text(),/Imported public version/);
+  assert.equal((await fetch(`${f.site}${oldJs}`)).status,404);
+  assert.equal((await f.request(`/api/projects/${id}/pages/${oldPage.id}`,{method:'PUT',body:{html:'Stale editor'}})).response.status,404);
+  // Existing project token still passes the MCP authentication layer.
+  const mcp=await fetch(`${f.admin}/mcp/${id}`,{method:'POST',headers:{authorization:`Bearer ${target.token}`,'content-type':'application/json',accept:'application/json, text/event-stream'},body:JSON.stringify({jsonrpc:'2.0',id:1,method:'initialize',params:{protocolVersion:'2025-03-26',capabilities:{},clientInfo:{name:'test',version:'1'}}})});
+  assert.equal(mcp.status,200);await mcp.text();
+  const list=await f.request('/api/project-backups');assert.equal(list.data.backups.length,1);
+  const backupUrl=updated.data.backup.download;
+  assert.equal((await fetch(`${f.admin}${backupUrl}`)).status,401);
+  assert.equal((await fetch(`${f.site}${backupUrl}`,{headers:f.auth})).status,404);
+  const backup=await fetch(`${f.admin}${backupUrl}`,{headers:f.auth});assert.equal(backup.status,200);assert.match(backup.headers.get('cache-control'),/no-store/);assert.match(backup.headers.get('content-type'),/zip/);await backup.arrayBuffer();
+  assert.equal((await f.request(`/api/projects/${id}/delete`,{method:'POST',authenticated:false,body:{confirmSlug:'target'}})).response.status,401);
+  assert.equal((await f.request(`/api/projects/${id}/delete`,{method:'POST',body:{confirmSlug:'wrong'}})).response.status,400);
+  assert.equal((await f.request(`/api/projects/${id}/delete`,{method:'POST',body:{confirmSlug:'target'},headers:{authorization:`Bearer ${target.token}`}})).response.status,401);
+  const currentHtml=await(await fetch(`${f.site}${targetPath}`)).text(),currentJs=extractAsset(currentHtml,'js');
+  const deleted=await f.request(`/api/projects/${id}/delete`,{method:'POST',body:{confirmSlug:'target'}});
+  assert.equal(deleted.response.status,200);assert.equal(deleted.data.status,'deleted');assert.equal((await f.request('/api/project-backups')).data.backups.length,2);
+  assert.equal((await fetch(`${f.site}${targetPath}`)).status,404);
+  assert.equal((await fetch(`${f.admin}/mcp/${id}`,{headers:{authorization:`Bearer ${target.token}`}})).status,404);
+  // Shared source assets remain available; only removed content disappears.
+  assert.equal((await fetch(`${f.site}${currentJs}`)).status,200);
+  assert.equal((await fetch(`${f.site}/sites/source/`)).status,200);
+  assert.equal((await fetch(`${f.admin}${deleted.data.backup.download}`,{headers:f.auth})).status,200);
+});

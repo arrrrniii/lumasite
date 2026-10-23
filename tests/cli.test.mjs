@@ -142,3 +142,22 @@ test('proxy generation isolates admin origin and rejects configuration injection
   assert.throws(() => generateProxyConfig({ adminDomain: 'example.com', domain: 'example.com', port: 4310, sitePort: 4311 }), /different hostnames/);
   assert.throws(() => generateProxyConfig({ adminDomain: 'studio.example.com', domain: 'example.com\nInclude evil', port: 4310, sitePort: 4311 }), /hostname/);
 });
+
+test('ZIP update and website deletion work through the running API and offline with exact slug confirmation',async t=>{
+  const f=await fixture(t),archive=path.join(f.dataDir,'copy.zip'),id=f.initialized.projects[0].id,slug=f.initialized.projects[0].slug;
+  assert.equal((await f.command('export','--project',id,'--output',archive)).code,0);
+  await f.command('start');
+  const missing=await f.command('import','--file',archive,'--mode','update','--project',id);assert.notEqual(missing.code,0);assert.match(missing.stderr,/slug/);
+  const updated=await f.command('import','--file',archive,'--mode','update','--project',id,'--confirm',slug);
+  assert.equal(updated.code,0,updated.stderr);assert.equal(updated.data.status,'updated');assert.equal(updated.data.projects[0].id,id);assert.ok(updated.data.backup.id);
+  assert.equal((await f.command('project','list')).data.projects.length,1);
+  const wrong=await f.command('project','delete','--project',slug,'--confirm','wrong');assert.notEqual(wrong.code,0);
+  const deleted=await f.command('project','delete','--project',slug,'--confirm',slug);assert.equal(deleted.code,0,deleted.stderr);assert.equal(deleted.data.status,'deleted');assert.ok(deleted.data.backup.id);
+  assert.equal((await f.command('project','list')).data.projects.length,0);
+  await f.command('stop');
+  const imported=await f.command('import','--file',archive);assert.equal(imported.code,0,imported.stderr);
+  const offlineUpdated=await f.command('import','--file',archive,'--mode','update','--project',slug,'--confirm',slug);assert.equal(offlineUpdated.code,0,offlineUpdated.stderr);
+  assert.equal(offlineUpdated.data.projects[0].id,imported.data.projects[0].id);
+  const offlineDeleted=await f.command('project','delete','--project',slug,'--confirm',slug);assert.equal(offlineDeleted.code,0,offlineDeleted.stderr);
+  const state=JSON.parse(await fs.readFile(path.join(f.dataDir,'state.json')));assert.equal(state.projects.length,0);assert.equal(state.projectBackups.length,4);
+});

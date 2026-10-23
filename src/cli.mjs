@@ -9,12 +9,13 @@ import { initializeInstance, createProject, getProjectUrls, VERSION } from './se
 import { generateProxyConfig, proxyHost } from './proxy.mjs';
 import { prepareConfiguration, applyConfiguration } from './configure.mjs';
 import { exportProject, importProject } from './migration.mjs';
+import { deleteProject } from './project-lifecycle.mjs';
 import { prepareSetup, assertSetupPorts, writeSetupFiles } from './setup.mjs';
 import { createWebsite } from './create.mjs';
 import { detectServer, formatDetection } from './server-detection.mjs';
 
 const serverPath = fileURLToPath(new URL('./server.mjs', import.meta.url));
-const valuedOptions = new Set(['data-dir', 'name', 'domain', 'slug', 'port', 'site-port', 'host', 'public-url', 'site-url', 'password', 'project', 'format', 'admin-domain', 'output', 'lines', 'file', 'link-mode', 'mode', 'proxy', 'proxy-host', 'traefik-entrypoint', 'traefik-cert-resolver']);
+const valuedOptions = new Set(['data-dir', 'name', 'domain', 'slug', 'port', 'site-port', 'host', 'public-url', 'site-url', 'password', 'project', 'confirm', 'format', 'admin-domain', 'output', 'lines', 'file', 'link-mode', 'mode', 'proxy', 'proxy-host', 'traefik-entrypoint', 'traefik-cert-resolver']);
 const booleanOptions = new Set(['help', 'version', 'json', 'follow', 'yes', 'no-start']);
 const help = `LumaSite — editable websites through MCP
 
@@ -28,6 +29,7 @@ Usage: lumasite <command> [options]
   configure    Change a stopped instance’s URLs, listener host/ports or project domain
   project create --name NAME --domain DOMAIN    Create another project
   project list                                 List project URLs
+  project delete --project ID_OR_SLUG --confirm SLUG    Save recovery ZIP and delete
   start        Start both listeners in the background
   status       Show process identity, ports, URLs, and data path
   health       Check both listeners and readiness
@@ -39,7 +41,7 @@ Usage: lumasite <command> [options]
   proxy        Generate Apache, Caddy or Traefik configuration
   backup       Save a private snapshot (--output DIRECTORY)
   export       Export one portable project ZIP (--project ID_OR_SLUG --output FILE.zip)
-  import       Import a project ZIP (--file FILE.zip)
+  import       Import a new website, or --mode update --project ID_OR_SLUG --confirm SLUG
 
 All commands accept --data-dir DIRECTORY and --json.
 Default data directory: $LUMASITE_DATA_DIR or ./.lumasite
@@ -57,6 +59,7 @@ Examples:
   lumasite proxy --format caddy --admin-domain studio.example.com --domain example.com
   lumasite export --project sendmailos --output ./sendmailos.zip
   lumasite import --file ./sendmailos.zip --domain www.example.com --link-mode domain
+  lumasite import --file ./sendmailos.zip --mode update --project sendmailos --confirm sendmailos
 
 Init options: --port 4310 --site-port 4311 --host 127.0.0.1
               --public-url https://studio.example.com
@@ -413,10 +416,10 @@ async function migrationContext(dataDir) {
   return context;
 }
 
-async function migrationApi(context, route, { method = 'GET', body } = {}) {
+async function migrationApi(context, route, { method = 'GET', body, contentType = 'application/zip' } = {}) {
   const response = await fetch(`${context.base}${route}`, {
     method, body, signal: AbortSignal.timeout(120000),
-    headers: { Authorization: `Bearer ${context.token}`, ...(body ? { 'Content-Type': 'application/zip' } : {}) },
+    headers: { Authorization: `Bearer ${context.token}`, ...(body ? { 'Content-Type': contentType } : {}) },
   });
   if (!response.ok) {
     const error = await response.json().catch(() => ({}));
@@ -470,7 +473,11 @@ async function importZip(dataDir, options) {
     buffer = await handle.readFile();
   } finally { await handle.close(); }
   const context = await migrationContext(dataDir);
-  const settings = { name: options.name, slug: options.slug, domain: options.domain, linkMode: options['link-mode'] };
+  const settings = { mode: options.mode, name: options.name, slug: options.slug, domain: options.domain, linkMode: options['link-mode'] };
+  if (options.mode === 'update') {
+    const project = await migrationProject(context, options.project);
+    settings.projectId = project.id; settings.confirmSlug = options.confirm;
+  } else if (options.project || options.confirm) throw new Error('--project and --confirm require --mode update.');
   let result;
   if (context.base) {
     const query = new URLSearchParams(Object.entries(settings).filter(([, value]) => value !== undefined));
@@ -478,10 +485,25 @@ async function importZip(dataDir, options) {
   } else result = await importProject(context.store, buffer, settings);
   const project = result.project;
   return {
-    status: 'imported', file, pages: result.pages, assets: result.assets, revisions: result.revisions,
+    status: result.mode === 'update' ? 'updated' : 'imported', file, pages: result.pages, assets: result.assets, revisions: result.revisions, backup: result.backup, warnings: result.warnings,
     projects: [{ id: project.id, name: project.name, slug: project.slug, domain: project.domain, ...result.urls }],
-    message: 'Imported as a new project. Its new MCP token is saved privately in credentials.json; use lumasite credentials only when you need to retrieve it.',
+    message: result.mode === 'update' ? 'Website content replaced. Its identity and MCP connection are preserved. Download the previous copy from Studio → Recovery ZIPs.' : 'Imported as a new project. Its new MCP token is saved privately in credentials.json; use lumasite credentials only when you need to retrieve it.',
   };
+}
+
+async function migrationProject(context, identifier) {
+  if (!identifier) throw new Error('Choose --project ID_OR_SLUG from lumasite project list.');
+  const projects = context.base ? (await (await migrationApi(context, '/api/projects')).json()).projects : context.state.projects;
+  const project = projects.find(p => p.id === identifier) || projects.find(p => p.slug === identifier);
+  if (!project) throw new Error('Project not found. Use its exact ID or slug from lumasite project list.');
+  return project;
+}
+
+async function deleteWebsite(dataDir, options) {
+  const context = await migrationContext(dataDir), project = await migrationProject(context, options.project);
+  const settings = { confirmSlug: options.confirm };
+  const result = context.base ? await (await migrationApi(context, `/api/projects/${project.id}/delete`, { method: 'POST', body: JSON.stringify(settings), contentType: 'application/json' })).json() : await deleteProject(context.store, project.id, settings);
+  return { status: result.status, backup: result.backup, warnings: result.warnings, message: `Deleted ${project.name} (${project.slug}). Recovery ZIP saved; download it from Studio → Recovery ZIPs.` };
 }
 
 function print(value, opts, stdout) {
@@ -496,6 +518,8 @@ function print(value, opts, stdout) {
   if (value.log) stdout.write(`Logs: ${value.log}\n`);
   if (value.file) stdout.write(`ZIP: ${value.file}\n`);
   if (value.bytes !== undefined) stdout.write(`Archive size: ${value.bytes} bytes\n`);
+  if (value.backup) stdout.write(`Recovery ZIP: ${value.backup.filename}\nDownload in Studio → Recovery ZIPs\n`);
+  for (const warning of value.warnings || []) stdout.write(`Warning: ${warning}\n`);
   if (value.pages !== undefined) stdout.write(`Pages: ${value.pages}; media: ${value.assets}; revisions: ${value.revisions}\n`);
   if (value.password) stdout.write(`Administrator password: ${value.password}\n`);
   if (value.adminToken) stdout.write(`Administrator API token: ${value.adminToken}\n`);
@@ -522,9 +546,9 @@ export async function runCli(args, { stdin = process.stdin, stdout = process.std
       setup: ['name', 'domain', 'slug', 'port', 'site-port', 'host', 'public-url', 'site-url', 'mode', 'proxy', 'proxy-host', 'traefik-entrypoint', 'traefik-cert-resolver', 'file', 'yes', 'no-start'],
       init: ['name', 'domain', 'slug', 'port', 'site-port', 'host', 'public-url', 'site-url', 'password'],
       configure: ['public-url', 'site-url', 'host', 'port', 'site-port', 'domain', 'project'],
-      project: subcommand === 'create' ? ['name', 'domain', 'slug'] : [],
+      project: subcommand === 'create' ? ['name', 'domain', 'slug'] : subcommand === 'delete' ? ['project', 'confirm'] : [],
       logs: ['lines', 'follow'], proxy: ['format', 'admin-domain', 'domain', 'project', 'output', 'proxy-host', 'traefik-entrypoint', 'traefik-cert-resolver'], backup: ['output'],
-      export: ['project', 'output'], import: ['file', 'name', 'slug', 'domain', 'link-mode'],
+      export: ['project', 'output'], import: ['file', 'name', 'slug', 'domain', 'link-mode', 'mode', 'project', 'confirm'],
     }[command] || [];
     for (const key of Object.keys(opts)) {
       if (!['data-dir', 'json'].includes(key) && !allowed.includes(key)) throw new Error(`--${key} is not supported by ${command}. Run lumasite ${command} --help.`);
@@ -591,6 +615,9 @@ export async function runCli(args, { stdin = process.stdin, stdout = process.std
       print(result, opts, stdout); return 0;
     }
     if (command === 'project') {
+      if (subcommand === 'delete') {
+        print(await withControlLock(dataDir, () => deleteWebsite(dataDir, opts)), opts, stdout); return 0;
+      }
       const { store, state } = await instanceState(dataDir);
       const check = await health(state.instance);
       if (subcommand === 'list') {
@@ -620,7 +647,7 @@ export async function runCli(args, { stdin = process.stdin, stdout = process.std
           const result = await createProject(store, { name: opts.name, domain: opts.domain, slug: opts.slug });
           print({ status: 'created', projects: [{ ...displayProject(store.read(), result.project), token: result.token }] }, opts, stdout);
         }
-      } else throw new Error('Use project create or project list.');
+      } else throw new Error('Use project create, project list, or project delete.');
       return 0;
     }
     if (command === 'start' || command === 'stop' || command === 'restart') {

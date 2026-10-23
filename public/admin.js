@@ -11,7 +11,7 @@
     sourceTab: 'html', device: 'desktop', previewUrl: '', previewError: '',
     library: null, libraryTab: 'components', assets: [], revisions: [],
     diagnostics: null, health: null, readiness: null, modal: null,
-    formError: '', projectTokens: new Map(), importFile: null, menuOpen: false,
+    formError: '', projectTokens: new Map(), importFile: null, importMode: 'create', backups: [], menuOpen: false,
   };
   let toastTimer;
   let previewResizeObserver;
@@ -219,7 +219,7 @@
       const errorSlot = document.getElementById('form-error');
       if (errorSlot) { errorSlot.hidden = false; errorSlot.textContent = error.message; }
       toast(error.message, true);
-    } finally { state.busy = false; applyBusyUI(); }
+    } finally { state.busy = false; applyBusyUI(); updateImportSummary(); updateDeleteConfirmation(); }
   }
 
   function discardDraft() {
@@ -310,7 +310,7 @@
   }
 
   function projectsView() {
-    return `<div class="page-heading"><div><h1>Your websites</h1><p>Each website gets its own pages, media library, and MCP connection.</p></div>${state.projects.length ? '<button class="btn primary" data-action="new-project" type="button">' + icon('plus') + 'New website</button>' : ''}</div>
+    return `<div class="page-heading"><div><h1>Your websites</h1><p>Each website gets its own pages, media library, and MCP connection.</p></div><div class="heading-actions"><button class="btn" data-action="recovery-zips" type="button">${icon('history')}Recovery ZIPs</button>${state.projects.length ? '<button class="btn primary" data-action="new-project" type="button">' + icon('plus') + 'New website</button>' : ''}</div></div>
       ${!state.projects.length ? `<section class="first-project"><div class="first-project-copy"><span class="brand-symbol" aria-hidden="true">L</span><h2>A new home for your next idea.</h2><p>Give your website a name. LumaSite will prepare a homepage, its own address, and your MCP connection.</p><span class="pill violet">${icon('sparkle')}LumaFX included</span></div><div class="first-project-form"><h2>Create your first website</h2>${projectForm()}</div></section>` : `<section class="project-card-list" aria-label="Your websites">${state.projects.map((project) => `<button class="project-card" type="button" data-action="select-project" data-id="${escape(project.id)}"><span class="project-avatar">${escape(project.name?.slice(0, 1).toUpperCase() || 'W')}</span><div><h3>${escape(project.name)}</h3><p>${escape(project.domain || project.urls?.site || project.slug)}</p></div>${icon('arrow')}</button>`).join('')}</section>`}`;
   }
 
@@ -393,7 +393,7 @@
       <div class="view-columns connections-columns"><div><section class="surface"><div class="surface-header"><div><span class="eyebrow">Agent access</span><h2>MCP connection</h2><p>Create, edit, and publish with your own tools.</p></div><span class="panel-icon">${icon('connect')}</span></div><div class="stack"><div class="field-group"><span>Server URL</span>${copyField(urls.mcp || '')}</div><div class="field-group"><span>Project access token</span>${token ? `${copyField(token, 'Copy', true)}<p class="hint">Saved privately on your server. Keep this token with your MCP client credentials.</p>` : '<p class="hint">Tokens are only shown when created or rotated. Retrieve the saved token with the server credentials command, or generate a new one.</p>'}</div><div><button class="btn small" type="button" data-action="rotate-token">${icon('refresh')}Generate new token</button></div><div class="info-note">${icon('lock')}<span>Connect with a <strong>Bearer token</strong> using Streamable HTTP. Access is limited to this website.</span></div></div></section>
       <section class="surface"><div class="surface-header"><div><h2>Studio & draft preview</h2><p>Private tools for managing this website.</p></div></div>${addressRow(urls.admin, 'Website studio', 'lock')}<div class="draft-link-panel"><div><strong>Private draft link</strong><p class="hint">${escape(state.page?.title || 'No page selected')} · A signed link to the saved draft. Anyone with the link can view it until it expires.</p></div>${state.page ? `<button class="btn small" type="button" data-action="draft-link">${icon('eye')}${state.dirty ? 'Save & get draft link' : 'Get draft link'}</button>` : ''}<div class="row draft-external-links">${draftLinks()}</div>${state.previewError ? `<p class="form-error">${escape(state.previewError)}</p>` : ''}</div></section></div>
       <div><section class="surface"><div class="surface-header"><div><h2>Website settings</h2><p>Your name and production domain.</p></div>${icon('globe')}</div><form class="stack" data-form="project-settings"><label>Website name<input name="name" required maxlength="100" value="${escape(state.project.name)}"></label><label>Production domain<input name="domain" value="${escape(state.project.domain || '')}" placeholder="example.com" spellcheck="false"><small>Point DNS to your server and configure HTTPS with the CLI proxy command.</small></label><div><button class="btn" type="submit">Save settings</button></div></form></section>
-      <section class="surface"><div class="surface-header"><div><h2>Installation ports</h2><p>One studio, separate website runtime.</p></div></div><div class="stack"><div class="check-row"><span>Admin, API & MCP</span><code class="port-number">${escape(state.port)}</code></div><div class="check-row"><span>Websites & media</span><code class="port-number">${escape(state.sitePort)}</code></div><button class="btn small" type="button" data-action="navigate" data-view="runtime">${icon('pulse')}Health, logs & commands${icon('arrow')}</button></div></section></div></div>${projectSeoForm()}`;
+      <section class="surface"><div class="surface-header"><div><h2>Installation ports</h2><p>One studio, separate website runtime.</p></div></div><div class="stack"><div class="check-row"><span>Admin, API & MCP</span><code class="port-number">${escape(state.port)}</code></div><div class="check-row"><span>Websites & media</span><code class="port-number">${escape(state.sitePort)}</code></div><button class="btn small" type="button" data-action="navigate" data-view="runtime">${icon('pulse')}Health, logs & commands${icon('arrow')}</button></div></section></div></div>${projectSeoForm()}${websiteManagement()}`;
   }
 
   function runtimeValue(value, fallback = 'Unavailable') {
@@ -437,27 +437,73 @@
     catch { return String(value || 'Unknown date'); }
   }
 
+  function websiteManagement() {
+    return `<section class="surface website-management"><div class="surface-header"><div><h2>Manage website</h2><p>Move content between installations, recover a previous copy, or remove this website.</p></div></div><div class="management-row"><div><h3>Update from ZIP</h3><p>Replace pages, media, theme, and SEO. Keep this website’s name, domain, URL, and MCP connection.</p></div><button class="btn" type="button" data-action="update-zip">${icon('upload')}Update from ZIP</button></div><div class="management-row"><div><h3>Recovery ZIPs</h3><p>A private ZIP is saved before each update or deletion. Download it to import again.</p></div><button class="btn" type="button" data-action="recovery-zips">${icon('history')}View recovery ZIPs</button></div><div class="management-row"><div><h3>Delete website</h3><p>Remove this website, its pages, media, and MCP access from this installation.</p></div><button class="btn danger" type="button" data-action="delete-website">Delete website</button></div></section>`;
+  }
+
   function importModal() {
-    return `<dialog class="dialog wide import-dialog" aria-labelledby="dialog-title"><div class="dialog-header"><h2 id="dialog-title">Import a website</h2><button class="btn icon-only" data-action="close-modal" type="button" aria-label="Close">${icon('close')}</button></div><p>Move a LumaSite website to this installation. The ZIP becomes a new website with its own connection.</p><form data-form="import-zip"><div id="form-error" class="form-error" role="alert" hidden></div><label class="import-file-label">Website ZIP<input id="import-zip-file" name="archive" type="file" accept=".zip,application/zip,application/x-zip-compressed" required><small id="import-file-detail">Choose a LumaSite export, up to 100 MB.</small></label><div class="grid-fields"><label>Website name<input name="name" maxlength="100" placeholder="Use the name in the ZIP" autocomplete="off"><small>Leave empty to keep the exported name.</small></label><label>Project URL slug<input name="slug" maxlength="100" placeholder="Use the slug in the ZIP" autocapitalize="off" spellcheck="false" autocomplete="off"><small>Choose an unused slug, such as sendmailos-copy.</small></label></div><label>Website links<select name="linkMode"><option value="project">Use this server’s project URL</option><option value="domain">Use a production domain</option></select><small>Local project URLs work immediately. Production domains need DNS and HTTPS on this server.</small></label><label><span>Destination domain <small class="optional-label" id="import-domain-optional">(optional)</small></span><input name="domain" placeholder="example.com" autocapitalize="off" spellcheck="false" autocomplete="off"><small>The original website’s domain is never connected automatically.</small></label><section class="import-review" aria-labelledby="import-summary-title"><h3 id="import-summary-title">Import summary</h3><dl><div><dt>Archive</dt><dd id="import-summary-file">No ZIP selected</dd></div><div><dt>New website</dt><dd id="import-summary-name">Name from the ZIP</dd></div><div><dt>Website links</dt><dd id="import-summary-links">This server’s project URL</dd></div><div><dt>Domain</dt><dd id="import-summary-domain">No domain connected</dd></div></dl><p>Pages, saved drafts, published versions, and media are restored. Your existing websites stay unchanged. A new MCP connection is created.</p></section><div class="dialog-actions"><button class="btn" type="button" data-action="close-modal">Cancel</button><button id="import-submit" class="btn primary" type="submit" disabled>${icon('upload')}Import website</button></div></form></dialog>`;
+    return `<dialog class="dialog wide import-dialog" aria-labelledby="dialog-title"><div class="dialog-header"><h2 id="dialog-title">Import a website</h2><button class="btn icon-only" data-action="close-modal" type="button" aria-label="Close">${icon('close')}</button></div><p>Create a separate website or replace the content of one you already manage.</p><form data-form="import-zip"><div id="form-error" class="form-error" role="alert" hidden></div>
+      <label>Import action<select name="mode"><option value="create" ${state.importMode === 'create' ? 'selected' : ''}>Create a new website</option><option value="update" ${state.importMode === 'update' ? 'selected' : ''} ${!state.projects.length ? 'disabled' : ''}>Update an existing website</option></select></label>
+      <fieldset id="import-target" class="import-fields" hidden><label>Website to update<select name="projectId">${state.projects.map(project => `<option value="${escape(project.id)}" ${project.id === state.project?.id ? 'selected' : ''}>${escape(project.name)} · ${escape(project.domain || project.slug)} (${escape(project.slug)})</option>`).join('')}</select></label><p class="info-note">The ZIP replaces all pages, drafts, published versions, media, theme, and SEO settings. Published content in the ZIP becomes live immediately. A recovery ZIP is saved first.</p><label><span id="import-confirm-label">Confirm website slug</span><input name="confirmSlug" autocomplete="off" autocapitalize="off" spellcheck="false" aria-describedby="import-preserved"><small id="import-preserved"></small></label></fieldset>
+      <label class="import-file-label">Website ZIP<input id="import-zip-file" name="archive" type="file" accept=".zip,application/zip,application/x-zip-compressed" required><small id="import-file-detail">Choose a LumaSite export, up to 100 MB.</small></label>
+      <fieldset id="import-identity" class="import-fields"><div class="grid-fields"><label>Website name<input name="name" maxlength="100" placeholder="Use the name in the ZIP" autocomplete="off"><small>Leave empty to keep the exported name.</small></label><label>Project URL slug<input name="slug" aria-label="Project URL slug" maxlength="80" placeholder="Use the slug in the ZIP" autocapitalize="off" spellcheck="false" autocomplete="off"><small>Choose an unused slug, or select Update above.</small></label></div><label><span>Destination domain <small class="optional-label" id="import-domain-optional">(optional)</small></span><input name="domain" placeholder="example.com" autocapitalize="off" spellcheck="false" autocomplete="off"><small>The original website’s domain is never connected automatically.</small></label></fieldset>
+      <label>Website links<select name="linkMode" aria-label="Website links"><option value="project">Use this server’s project URL</option><option value="domain">Use a production domain</option></select><small>Production domains need DNS and HTTPS on this server.</small></label>
+      <section class="import-review" aria-labelledby="import-summary-title"><h3 id="import-summary-title">Import summary</h3><dl><div><dt>Archive</dt><dd id="import-summary-file">No ZIP selected</dd></div><div><dt id="import-summary-label">New website</dt><dd id="import-summary-name">Name from the ZIP</dd></div><div><dt>Website links</dt><dd id="import-summary-links"></dd></div><div><dt>Domain</dt><dd id="import-summary-domain"></dd></div></dl><p id="import-summary-note"></p></section><div class="dialog-actions"><button class="btn" type="button" data-action="close-modal">Cancel</button><button id="import-submit" class="btn primary" type="submit" disabled>${icon('upload')}Import website</button></div></form></dialog>`;
   }
 
   function updateImportSummary() {
     const form = document.querySelector('[data-form="import-zip"]');
     if (!form) return;
-    const name = form.elements.name.value.trim(), slug = form.elements.slug.value.trim();
-    const domain = form.elements.domain.value.trim(), domainLinks = form.elements.linkMode.value === 'domain';
-    form.elements.domain.required = domainLinks;
+    const updating = form.elements.mode.value === 'update';
+    const target = state.projects.find(project => project.id === form.elements.projectId.value);
+    const changedTarget = form.dataset.target !== target?.id || form.dataset.mode !== form.elements.mode.value;
+    if (changedTarget) {
+      form.elements.confirmSlug.value = '';
+      state.formError = ''; document.getElementById('form-error').hidden = true;
+      form.elements.linkMode.value = updating && target?.domain ? 'domain' : 'project';
+      form.dataset.target = target?.id || ''; form.dataset.mode = form.elements.mode.value;
+    }
+    document.getElementById('import-target').hidden = !updating;
+    document.getElementById('import-target').disabled = !updating;
+    document.getElementById('import-identity').hidden = updating;
+    document.getElementById('import-identity').disabled = updating;
+    form.elements.confirmSlug.required = updating;
+    document.getElementById('import-confirm-label').textContent = `Type ${target?.slug || 'the website slug'} to confirm`;
+    document.getElementById('import-preserved').textContent = `Keep ${target?.name || ''}, ${target?.domain || 'no domain'}, /sites/${target?.slug || ''}/, and the existing MCP connection.`;
+    const name = updating ? target?.name : form.elements.name.value.trim(), slug = updating ? target?.slug : form.elements.slug.value.trim();
+    const domain = updating ? target?.domain || '' : form.elements.domain.value.trim(), domainLinks = form.elements.linkMode.value === 'domain';
+    form.elements.domain.required = !updating && domainLinks;
     document.getElementById('import-domain-optional').hidden = domainLinks;
     document.getElementById('import-summary-file').textContent = state.importFile ? `${state.importFile.name} · ${formatBytes(state.importFile.size)}` : 'No ZIP selected';
+    document.getElementById('import-summary-label').textContent = updating ? 'Update website' : 'New website';
     document.getElementById('import-summary-name').textContent = name || 'Name from the ZIP';
-    document.getElementById('import-summary-links').textContent = domainLinks ? (domain ? `https://${domain}` : 'Enter a destination domain') : `/sites/${slug || '[slug from ZIP]'}/ on this server`;
+    document.getElementById('import-summary-links').textContent = domainLinks ? (domain ? `https://${domain}` : 'This website needs a production domain') : `/sites/${slug || '[slug from ZIP]'}/ on this server`;
     document.getElementById('import-summary-domain').textContent = domain || 'No domain connected';
-    document.getElementById('import-submit').disabled = !state.importFile;
+    document.getElementById('import-summary-note').textContent = updating ? 'Replace all website content with the ZIP. Identity and MCP access stay the same. A private recovery ZIP is saved first.' : 'Restore pages, drafts, published versions, and media as a separate website with a new MCP connection.';
+    const submit = document.getElementById('import-submit');
+    submit.innerHTML = icon('upload') + (updating ? 'Update website' : 'Import website');
+    submit.disabled = state.busy || !state.importFile || (domainLinks && !domain) || (updating && (!target || form.elements.confirmSlug.value !== target.slug));
+  }
+
+  function deleteWebsiteModal() {
+    const project = state.project;
+    return `<dialog class="dialog wide" aria-labelledby="dialog-title"><div class="dialog-header"><h2 id="dialog-title">Delete ${escape(project.name)}?</h2><button class="btn icon-only" data-action="close-modal" type="button" aria-label="Close">${icon('close')}</button></div><p>Remove this website and disable its MCP connection. Its domain becomes available for another website; DNS and proxy configuration stay on your server.</p><form data-form="delete-website"><div id="form-error" class="form-error" role="alert" hidden></div><section class="import-review"><h3>${escape(project.name)}</h3><p>${escape(project.domain || 'No production domain')} · /sites/${escape(project.slug)}/ · ${state.pages.length} pages</p><p>A private recovery ZIP of pages, media, theme, SEO, and history is saved first. Find it under Your websites → Recovery ZIPs. Restore by importing it; restoration creates new MCP credentials.</p></section><label>Type ${escape(project.slug)} to confirm<input name="confirmSlug" autocomplete="off" autocapitalize="off" spellcheck="false" required></label><div class="dialog-actions"><button class="btn" type="button" data-action="close-modal">Cancel</button><button class="btn danger" id="delete-submit" type="submit" disabled>Delete website</button></div></form></dialog>`;
+  }
+
+  function updateDeleteConfirmation() {
+    const form = document.querySelector('[data-form="delete-website"]');
+    if (form) document.getElementById('delete-submit').disabled = state.busy || form.elements.confirmSlug.value !== state.project?.slug;
+  }
+
+  function recoveryModal() {
+    return `<dialog class="dialog wide" aria-labelledby="dialog-title"><div class="dialog-header"><h2 id="dialog-title">Recovery ZIPs</h2><button class="btn icon-only" data-action="close-modal" type="button" aria-label="Close">${icon('close')}</button></div><p>Private snapshots saved before website updates and deletions. Download a ZIP, then import it as a new website or update an existing one. Passwords and MCP tokens are excluded.</p><div class="recovery-list">${state.backups.length ? state.backups.map(backup => `<article class="recovery-item"><div><h3>${escape(backup.name)} <span class="pill">Before ${escape(backup.reason)}</span></h3><p>${escape(backup.domain || backup.slug)} · ${escape(formatDate(backup.createdAt))} · ${formatBytes(backup.bytes)}</p></div><a class="btn small" href="/api/project-backups/${encodeURIComponent(backup.id)}/download" download>${icon('download')}Download ZIP</a></article>`).join('') : '<p class="muted">No recovery ZIPs yet. Your first update or deletion will save one here.</p>'}</div></dialog>`;
   }
 
   function modalView() {
     if (!state.modal) return '';
     if (state.modal === 'import') return importModal();
+    if (state.modal === 'delete-website') return deleteWebsiteModal();
+    if (state.modal === 'recovery-zips') return recoveryModal();
     if (state.modal === 'project') return `<dialog class="dialog" aria-labelledby="dialog-title"><div class="dialog-header"><h2 id="dialog-title">Create a website</h2><button class="btn icon-only" data-action="close-modal" type="button" aria-label="Close">${icon('close')}</button></div><p>A name and a domain. Your studio handles the rest.</p>${projectForm()}</dialog>`;
     if (state.modal === 'page') return `<dialog class="dialog" aria-labelledby="dialog-title"><div class="dialog-header"><h2 id="dialog-title">Create a page</h2><button class="btn icon-only" data-action="close-modal" type="button" aria-label="Close">${icon('close')}</button></div><p>Add a new page to ${escape(state.project?.name)}.</p><form data-form="page"><div id="form-error" class="form-error" hidden></div><label>Page title<input name="title" required maxlength="200" placeholder="About us" autofocus></label><label>URL path<input name="slug" spellcheck="false" placeholder="about"><small>Leave empty for the homepage. Existing paths must be unique.</small></label><div class="dialog-actions"><button class="btn" type="button" data-action="close-modal">Cancel</button><button class="btn primary" type="submit">Create page</button></div></form></dialog>`;
     if (state.modal === 'revisions') return `<dialog class="dialog wide" aria-labelledby="dialog-title"><div class="dialog-header"><h2 id="dialog-title">Published revisions</h2><button class="btn icon-only" data-action="close-modal" type="button" aria-label="Close">${icon('close')}</button></div><p>Restore a previous version of ${escape(state.page?.title)} to your draft. Publish it when you’re ready to make it live.</p><div class="revision-list">${state.revisions.length ? state.revisions.map((revision, index) => `<div class="revision-item"><div><p>${escape(revision.title || `Published revision ${state.revisions.length - index}`)}${revision.id === state.page?.publishedRevisionId ? '<span class="pill success">Live</span>' : ''}</p><small>${escape(formatDate(revision.createdAt))} · ${escape(revision.id?.slice(0, 8) || '')}</small></div><button class="btn small" type="button" data-action="restore" data-id="${escape(revision.id)}">Restore draft</button></div>`).join('') : '<div class="empty-state">' + icon('history') + '<h2>No published revisions yet.</h2><p>Each publish saves a revision that you can return to.</p></div>'}</div></dialog>`;
@@ -646,7 +692,10 @@
     home: () => navigate('projects'),
     navigate: (element) => navigate(element.dataset.view),
     'new-project': () => { state.modal = 'project'; render(); },
-    'import-zip': () => { state.importFile = null; state.modal = 'import'; render(); updateImportSummary(); },
+    'import-zip': () => { state.importFile = null; state.importMode = 'create'; state.modal = 'import'; render(); updateImportSummary(); },
+    'update-zip': () => { state.importFile = null; state.importMode = 'update'; state.modal = 'import'; render(); updateImportSummary(); },
+    'delete-website': () => { state.modal = 'delete-website'; render(); },
+    'recovery-zips': async () => { state.backups = (await api('/api/project-backups')).backups; state.modal = 'recovery-zips'; render(); },
     'project-export-zip': exportWebsite,
     'new-page': () => { state.modal = 'page'; render(); },
     'close-modal': () => { state.modal = null; state.importFile = null; render(); },
@@ -747,7 +796,7 @@
 
   // These actions only change local UI state; running them outside the network
   // lock preserves keyboard focus and keeps file picker activation synchronous.
-  const localActions = new Set(['toggle-menu', 'new-project', 'import-zip', 'new-page', 'close-modal', 'source-tab', 'device', 'library-tab', 'apply-snippet', 'choose-files']);
+  const localActions = new Set(['toggle-menu', 'new-project', 'import-zip', 'update-zip', 'delete-website', 'new-page', 'close-modal', 'source-tab', 'device', 'library-tab', 'apply-snippet', 'choose-files']);
 
   app.addEventListener('click', (event) => {
     const element = event.target.closest('[data-action]');
@@ -792,16 +841,27 @@
         if (state.dirty) await persistDraft({ notify: false });
         if (!state.importFile) throw new Error('Choose a LumaSite ZIP to import.');
         const query = new URLSearchParams();
-        for (const key of ['name', 'slug', 'domain', 'linkMode']) {
+        const updating = values.mode === 'update';
+        for (const key of updating ? ['mode', 'projectId', 'confirmSlug', 'linkMode'] : ['mode', 'name', 'slug', 'domain', 'linkMode']) {
           const value = String(values[key] || '').trim();
           if (value || key === 'domain') query.set(key, value);
         }
         const response = await api(`/api/projects/import?${query}`, { method: 'POST', headers: { 'Content-Type': 'application/zip' }, body: state.importFile });
-        state.projectTokens.set(response.project.id, response.token);
+        if (response.token) state.projectTokens.set(response.project.id, response.token);
         state.importFile = null;
         await loadProjects();
         await selectProject(response.project.id, { view: 'connections', checkDirty: false });
-        toast(`Website imported: ${response.pages} page${response.pages === 1 ? '' : 's'} and ${response.assets} media file${response.assets === 1 ? '' : 's'}. Your new MCP connection is ready.`);
+        toast(updating ? `Website updated: ${response.pages} pages. MCP connection preserved. Recovery ZIP saved.` : `Website imported: ${response.pages} page${response.pages === 1 ? '' : 's'} and ${response.assets} media file${response.assets === 1 ? '' : 's'}. Your new MCP connection is ready.`);
+        if (response.warnings?.length) toast(response.warnings.join(' '), true);
+        return;
+      }
+      if (form.dataset.form === 'delete-website') {
+        const id = state.project.id;
+        const response = await api(projectPath('/delete'), { method: 'POST', body: { confirmSlug: values.confirmSlug } });
+        state.projectTokens.delete(id); state.modal = null; state.project = null; state.page = null; state.pages = []; state.urls = null;
+        markClean(); await loadProjects(); await navigate('projects');
+        toast('Website deleted. Its recovery ZIP is available under Recovery ZIPs.');
+        if (response.warnings?.length) toast(response.warnings.join(' '), true);
         return;
       }
       if (form.dataset.form === 'page') {
@@ -848,6 +908,7 @@
     if (seoField && state.page) { state.page.seo ||= {}; state.page.seo[seoField] = event.target.type === 'checkbox' ? event.target.checked : event.target.value; updateDirty(); }
     if (event.target.hasAttribute('data-seo-json') && state.page) { state.page._seoJson = event.target.value; updateDirty(); }
     if (event.target.closest('[data-form="import-zip"]') && event.target.type !== 'file') updateImportSummary();
+    if (event.target.closest('[data-form="delete-website"]')) updateDeleteConfirmation();
   });
 
   app.addEventListener('change', (event) => {
@@ -860,7 +921,7 @@
       document.getElementById('import-file-detail').textContent = file && !error ? `${file.name} · ${formatBytes(file.size)}` : 'Choose a LumaSite export, up to 100 MB.';
       updateImportSummary();
     }
-    if (event.target.name === 'linkMode' && event.target.closest('[data-form="import-zip"]')) updateImportSummary();
+    if (event.target.closest('[data-form="import-zip"]') && ['linkMode', 'mode', 'projectId'].includes(event.target.name)) updateImportSummary();
     if (event.target.id === 'project-select') {
       const id = event.target.value;
       run(async () => {

@@ -1,5 +1,5 @@
 import {randomUUID,randomBytes,createHash} from 'node:crypto';
-import {mkdir,open,rename,rm,readFile} from 'node:fs/promises';
+import {mkdir,open,rename,rm,readFile,copyFile,lstat} from 'node:fs/promises';
 import {constants} from 'node:fs';
 import path from 'node:path';
 import {inflateRaw,crc32} from 'node:zlib';
@@ -8,6 +8,7 @@ import {zip} from 'fflate';
 import {z} from 'zod';
 import {pageSeoSchema,projectSeoSchema,siteBase} from './seo.mjs';
 import {fail,tokenHash,publicProject,getProjectUrls,getPreviewUrl,rememberProjectToken} from './service.mjs';
+import {confirmProject,projectFingerprint,assertUnchanged,saveProjectBackup,discardProjectBackup,backupSummary} from './project-backups.mjs';
 
 export const MIGRATION_LIMITS=Object.freeze({archive:100*1024*1024,expanded:250*1024*1024,media:50*1024*1024,json:128*1024*1024,entries:2000});
 const inflate=promisify(inflateRaw),digest=v=>createHash('sha256').update(v).digest('hex');
@@ -26,7 +27,7 @@ const projectSchema=z.object({id,name:name(100),slug,domain,theme,seo:projectSeo
 const payloadSchema=z.object({schemaVersion:z.literal(1),project:projectSchema,pages:z.array(pageSchema).max(1000),revisions:z.array(revisionSchema).max(5000),assets:z.array(assetSchema).max(MIGRATION_LIMITS.entries-2)}).strict();
 const fileSchema=z.object({path:z.string().max(100),size:z.number().int().min(0).max(MIGRATION_LIMITS.json),sha256:z.string().regex(/^[a-f0-9]{64}$/)}).strict();
 const manifestSchema=z.object({format:z.literal('lumasite-project'),version:z.literal(1),createdAt:stamp,projectFile:z.literal('project.json'),files:z.array(fileSchema).min(1).max(MIGRATION_LIMITS.entries-1)}).strict();
-const optionsSchema=z.object({name:name(100).optional(),slug:slug.optional(),domain:domain.optional(),linkMode:z.enum(['project','domain']).optional()}).strict();
+const optionsSchema=z.object({mode:z.enum(['create','update']).optional(),projectId:id.optional(),confirmSlug:slug.optional(),name:name(100).optional(),slug:slug.optional(),domain:domain.optional(),linkMode:z.enum(['project','domain']).optional()}).strict();
 function parsed(schema,value,label){const r=schema.safeParse(value);if(!r.success)fail(400,`Invalid ${label}: ${r.error.issues[0]?.path.join('.')||'schema'}.`);return r.data;}
 function json(bytes,label){try{return JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(bytes));}catch{fail(400,`Invalid ${label} JSON.`);}}
 const pick=(object,keys)=>Object.fromEntries(keys.map(key=>[key,object[key]]));
@@ -112,13 +113,18 @@ function rewriter(payload,next,project,ids){
  };
 }
 export async function importProject(store,buffer,options={}){
- const state=store.read();if(!state.instance)fail(409,'Initialize the destination instance before importing a project.');options=parsed(optionsSchema,options,'import options');const{payload,files}=await decodeArchive(buffer);
- const selectedSlug=options.slug??payload.project.slug,selectedDomain=options.domain??'';if(options.linkMode==='domain'&&!selectedDomain)fail(400,'Domain link mode requires an explicit destination domain.');
- const collision=s=>{if(s.projects.some(p=>p.slug===selectedSlug))fail(409,'That project slug already exists. Choose another slug before importing.');if(selectedDomain&&s.projects.some(p=>p.domain===selectedDomain))fail(409,'That domain already belongs to another project. Choose another domain.');};collision(state);
- const ids=new Map(),taken=new Set([state.instance.id,...state.projects.map(p=>p.id),...state.pages.map(p=>p.id),...state.revisions.map(r=>r.id),...state.assets.map(a=>a.id)]);for(const item of[payload.project,...payload.pages,...payload.revisions,...payload.assets]){let fresh;do{fresh=randomUUID();}while(taken.has(fresh));taken.add(fresh);ids.set(item.id,fresh);}
- const token=`ls_project_${randomBytes(32).toString('base64url')}`,project={...payload.project,id:ids.get(payload.project.id),name:options.name??payload.project.name,slug:selectedSlug,domain:selectedDomain,tokenHash:tokenHash(token)};
+ const state=store.read();if(!state.instance)fail(409,'Initialize the destination instance before importing a project.');options=parsed(optionsSchema,options,'import options');
+ const updating=options.mode==='update';
+ if(updating&&['name','slug','domain'].some(key=>options[key]!==undefined))fail(400,'Update preserves the existing website name, slug and domain. Do not pass identity overrides.');
+ if(!updating&&(options.projectId!==undefined||options.confirmSlug!==undefined))fail(400,'A target project and confirmation require update mode.');
+ const existing=updating?confirmProject(state,options.projectId,options.confirmSlug):null,fingerprint=updating?projectFingerprint(state,existing.id):null;
+ const{payload,files}=await decodeArchive(buffer);
+ const selectedSlug=existing?.slug??options.slug??payload.project.slug,selectedDomain=existing?.domain??options.domain??'',linkMode=options.linkMode??(updating&&selectedDomain?'domain':'project');if(linkMode==='domain'&&!selectedDomain)fail(400,'Domain link mode requires an explicit destination domain.');
+ const collision=s=>{if(updating){assertUnchanged(s,existing.id,fingerprint);return;}if(s.projects.some(p=>p.slug===selectedSlug))fail(409,'That project slug already exists. Choose another slug or update the existing website.');if(selectedDomain&&s.projects.some(p=>p.domain===selectedDomain))fail(409,'That domain already belongs to another project. Choose another domain or update that website.');};collision(state);
+ const ids=new Map(),taken=new Set([state.instance.id,...state.projects.map(p=>p.id),...state.pages.map(p=>p.id),...state.revisions.map(r=>r.id),...state.assets.map(a=>a.id)]);for(const item of[payload.project,...payload.pages,...payload.revisions,...payload.assets]){let fresh;do{fresh=randomUUID();}while(taken.has(fresh));taken.add(fresh);ids.set(item.id,fresh);}if(updating)ids.set(payload.project.id,existing.id);
+ const token=updating?null:`ls_project_${randomBytes(32).toString('base64url')}`,project={...payload.project,id:ids.get(payload.project.id),name:existing?.name??options.name??payload.project.name,slug:selectedSlug,domain:selectedDomain,tokenHash:existing?.tokenHash??tokenHash(token),...(updating?{createdAt:existing.createdAt,updatedAt:new Date().toISOString()}: {})};
  const remapPage=p=>({...p,id:ids.get(p.id),projectId:project.id,publishedRevisionId:p.publishedRevisionId?ids.get(p.publishedRevisionId):null}),pages=payload.pages.map(remapPage),revisions=payload.revisions.map(r=>({...r,id:ids.get(r.id),projectId:project.id,pageId:ids.get(r.pageId),page:remapPage(r.page)})),assets=payload.assets.map(a=>({...a,id:ids.get(a.id),projectId:project.id,filename:`${ids.get(a.id)}.${extensions.get(a.mime)}`,url:`/media/${project.id}/${ids.get(a.id)}.${extensions.get(a.mime)}`}));
- const virtual={...state,projects:[...state.projects,project],pages:[...state.pages,...pages]},rewrite=rewriter(payload,virtual,{...project,linkMode:options.linkMode??'project'},ids);
+ const virtual={...state,projects:[...state.projects.filter(p=>p.id!==project.id),project],pages:[...state.pages.filter(p=>p.projectId!==project.id),...pages]},rewrite=rewriter(payload,virtual,{...project,linkMode},ids);
  for(const p of [...pages,...revisions.map(r=>r.page)])for(const field of['html','css','js'])p[field]=rewrite(p[field]);for(const r of revisions)r.compiledCss=rewrite(r.compiledCss);
  const rewriteSeo=(value,key='')=>{
   if(typeof value==='string'){
@@ -136,11 +142,24 @@ export async function importProject(store,buffer,options={}){
  for(const p of [...pages,...revisions.map(r=>r.page)])if(p.seo)p.seo=rewriteSeo(p.seo);
 
  graph(parsed(payloadSchema,{schemaVersion:1,project:publicProject(project),pages,revisions,assets},'remapped project'));
- const stage=path.join(store.dataDir,'.imports',randomUUID()),media=path.join(stage,'media'),target=path.join(store.dataDir,'media',project.id);let attemptedToken=false,moved=false,committed=false;
+ const stage=path.join(store.dataDir,'.imports',randomUUID()),media=path.join(stage,'media'),target=path.join(store.dataDir,'media',project.id);let attemptedToken=false,moved=false,committed=false,backup=null,createdTarget=false;const copied=[];
  try{
   await mkdir(media,{recursive:true,mode:0o700});for(let i=0;i<assets.length;i++){const handle=await open(path.join(media,assets[i].filename),'wx',0o600);try{await handle.writeFile(files.get(`media/${payload.assets[i].filename}`));await handle.sync();}finally{await handle.close();}}
-  await store.mutate(async next=>{collision(next);attemptedToken=true;await rememberProjectToken(store,project.id,token);await mkdir(path.dirname(target),{recursive:true,mode:0o700});await rename(media,target);moved=true;next.projects.push(project);next.pages.push(...pages);next.revisions.push(...revisions);next.assets.push(...assets);});committed=true;
-  return{project:publicProject(project),token,urls:getProjectUrls(store.read(),project),pages:pages.length,assets:assets.length,revisions:revisions.length};
- }catch(error){if(!committed){if(moved)await rm(target,{recursive:true,force:true});if(attemptedToken)await rememberProjectToken(store,project.id,null);}throw error;}
+  if(updating)backup=await saveProjectBackup(store,existing,await exportProject(store,existing.id),'update');
+  await store.mutate(async next=>{
+   collision(next);await mkdir(path.dirname(target),{recursive:true,mode:0o700});
+   if(updating){
+    try{await mkdir(target,{mode:0o700});createdTarget=true;}catch(error){if(error.code!=='EEXIST')throw error;if(!(await lstat(target)).isDirectory())fail(409,'Website media directory is not a regular directory.');}
+    for(const asset of assets){const file=path.join(target,asset.filename);await copyFile(path.join(media,asset.filename),file,constants.COPYFILE_EXCL);copied.push(file);}
+    next.projects[next.projects.findIndex(p=>p.id===project.id)]=project;
+    for(const key of['pages','revisions','assets'])next[key]=next[key].filter(item=>item.projectId!==project.id);
+    (next.projectBackups||=[]).push(backup);
+   }else{attemptedToken=true;await rememberProjectToken(store,project.id,token);await rename(media,target);moved=true;next.projects.push(project);}
+   next.pages.push(...pages);next.revisions.push(...revisions);next.assets.push(...assets);
+  });committed=true;
+  const warnings=[];
+  if(updating)for(const asset of state.assets.filter(a=>a.projectId===project.id))try{await rm(path.join(target,asset.filename),{force:true});}catch{warnings.push('Old media cleanup needs attention; these files are no longer served.');break;}
+  return{mode:updating?'update':'create',project:publicProject(project),...(token?{token}:{}),...(backup?{backup:backupSummary(backup)}:{}),warnings,urls:getProjectUrls(store.read(),project),pages:pages.length,assets:assets.length,revisions:revisions.length};
+ }catch(error){if(!committed){for(const file of copied)await rm(file,{force:true});if(moved||createdTarget)await rm(target,{recursive:true,force:true});if(attemptedToken)await rememberProjectToken(store,project.id,null);if(backup)await discardProjectBackup(store,backup);}throw error;}
  finally{await rm(stage,{recursive:true,force:true});}
 }

@@ -5,7 +5,7 @@
 A self-hosted website studio for creating, editing, and publishing through MCP or your browser. Change the page structure, HTML, Tailwind classes, CSS, browser JavaScript, images, and LumaFX animations, then publish a revision without redeploying the Studio application.
 
 [![Tests](https://github.com/arrrrniii/lumasite/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/arrrrniii/lumasite/actions/workflows/ci.yml)
-[Version 0.6.1](https://github.com/arrrrniii/lumasite/tree/v0.6.1) · Node.js 24+ · Native LumaFX · Streamable HTTP MCP
+[Version 0.7.0](https://github.com/arrrrniii/lumasite/tree/v0.7.0) · Node.js 24+ · Native LumaFX · Streamable HTTP MCP
 
 ![LumaSite Studio showing the SendMailOS example, published pages, sitemap, robots.txt and RSS links](docs/images/studio-overview.png)
 
@@ -19,21 +19,28 @@ A self-hosted website studio for creating, editing, and publishing through MCP o
 | --- | --- |
 | Design and edit | Native HTML, Tailwind, CSS, browser JavaScript, and reusable sections |
 | Add motion | Vendored LumaFX runtime and an animation recipe library |
-| Manage websites | Multiple named projects, domains, pages, and media in one Studio |
+| Manage websites | Multiple projects and domains; update an existing website from ZIP or delete it with confirmation |
 | Work with agents | A project-specific MCP endpoint and Bearer token |
 | Publish carefully | Save drafts, open signed previews, publish revisions, restore previous versions |
 | Prepare for search | Server-generated metadata, canonical URLs, JSON-LD, sitemap, robots.txt, and RSS |
 | Move to another server | Export a website ZIP and import it into another LumaSite installation |
+| Recover website content | Private recovery ZIP saved before each update or deletion |
 | Operate the runtime | Proxy detection, ports, status, health, diagnostics, logs, restart, stop, and backups |
 
 Publishing compiles the page's Tailwind CSS and records a published revision. It does not run a new Studio application build or restart the server. Application code, dependencies, TypeScript, JSX, or bundler-specific imports still require the normal development and deployment workflow. LumaSite publishes browser-ready page code.
+
+## Update or delete an existing website
+
+In Studio, open **Connections → Manage website**. Choose **Update from ZIP** to replace website content while preserving its name, domain, slug, project ID, and MCP credentials. The import dialog also supports creating a separate website. **Delete website** removes the selected website and disables its MCP connection. Both actions require typing its exact slug and save a private recovery ZIP first.
+
+See the [update, delete, and recovery guide](docs/website-management.md) for the CLI, restoration steps, and production upgrade commands.
 
 ## Start with the wizard
 
 You need **Node.js 24+, npm, and Git**. The GitHub repository is public: HTTPS installation does not require a GitHub account, token, or server login. This is a GitHub installation, not an npm registry publication.
 
 ```sh
-npx --yes --package="git+https://github.com/arrrrniii/lumasite.git#v0.6.1" lumasite create
+npx --yes --package="git+https://github.com/arrrrniii/lumasite.git#v0.7.0" lumasite create
 ```
 
 The first question is **What is your project named?** Choose a new folder such as `my-website`. The wizard then asks for local/server mode, a new website or ZIP import, website name/domain, ports, URLs, and whether to start the app. Server mode also asks about the reverse proxy. Review the summary before it writes the project.
@@ -183,7 +190,7 @@ npm run import -- --file /private/imports/my-website.zip --slug another-website
 A global CLI is optional:
 
 ```sh
-npm install --global "git+https://github.com/arrrrniii/lumasite.git#v0.6.1"
+npm install --global "git+https://github.com/arrrrniii/lumasite.git#v0.7.0"
 lumasite setup
 ```
 

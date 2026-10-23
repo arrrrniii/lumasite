@@ -70,6 +70,19 @@ Import works before starting the destination or through its healthy running API.
 
 Without `--domain`, the source domain is cleared. The default `--link-mode project` rewrites internal links for `/sites/<imported-slug>/` local/project-path use. `--link-mode domain` requires a domain and rewrites the project's internal navigation for clean root paths such as `/campaigns`. Import retains which revisions were published, so those pages are available immediately. It does not require another marketing-source publication merely to transfer the website. Compressed ZIP uploads are limited to 100 MiB, with additional archive-entry and expanded-size checks.
 
+### Update an existing destination instead
+
+If the destination already has the website, use Studio → Import ZIP → **Update an existing website**, select it, and type its exact slug. From the CLI:
+
+```sh
+node bin/lumasite.mjs import \
+  --data-dir /srv/lumasite/data \
+  --file /private/import/sendmailos.zip \
+  --mode update --project sendmailos --confirm sendmailos
+```
+
+This preserves the destination project ID, name, slug, domain, and MCP credentials while replacing all pages, media, theme, SEO, and revision history. It saves a recovery ZIP first. Published revisions in the imported ZIP become live immediately. With a configured domain, update defaults to clean domain links; otherwise it uses project paths. Do not pass `--name`, `--slug`, or `--domain` when updating. See [Website management](website-management.md) for deletion and recovery.
+
 ### 4. Start, connect the domain, and verify
 
 ```sh

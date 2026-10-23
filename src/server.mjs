@@ -9,6 +9,8 @@ import { openStore } from './store.mjs';
 import { compilePageCss, compilerHealth } from './compiler.mjs';
 import { handleMcp } from './mcp.mjs';
 import { exportProject, importProject } from './migration.mjs';
+import { deleteProject } from './project-lifecycle.mjs';
+import { listProjectBackups, readProjectBackup } from './project-backups.mjs';
 import { productionHost, pageNoindex, sitemapXml, robotsTxt, feedXml, renderBlogBlocks } from './seo.mjs';
 import { VERSION, fail, tokenMatches, passwordMatches, publicInstance, publicProject, initializeInstance, createProject, requireProject, requirePage, getProjectUrls, updateProject, createPage, updatePage, publishPage, restorePage, rotateProjectToken, uploadAsset, getLibrary, getPreviewUrl, verifyPreviewToken, renderDocument } from './service.mjs';
 
@@ -117,14 +119,26 @@ export async function startServers({ dataDir, store: suppliedStore } = {}) {
     if (!req.is('application/zip')) fail(415, 'Upload a ZIP archive with Content-Type application/zip.');
     next();
   }, express.raw({ type: 'application/zip', limit: '100mb' }), async (req, res) => {
-    const options = {}, allowed = new Set(['name', 'slug', 'domain', 'linkMode']);
+    const options = {}, allowed = new Set(['mode', 'projectId', 'confirmSlug', 'name', 'slug', 'domain', 'linkMode']);
     for (const [key, value] of Object.entries(req.query)) {
-      if (!allowed.has(key) || typeof value !== 'string') fail(400, 'Use a single name, slug, domain, or linkMode value for import options.');
+      if (!allowed.has(key) || typeof value !== 'string') fail(400, 'Use single, supported import option values.');
       options[key] = value;
     }
     const result = await importProject(store, req.body, options);
-    log('project.imported', { projectId: result.project.id, pages: result.pages, assets: result.assets, revisions: result.revisions });
-    res.status(201).json(result);
+    if (result.mode === 'update') { contentAssets.clear(); revisionAssetUrls.clear(); cssCache.clear(); }
+    log(result.mode === 'update' ? 'project.updated-from-zip' : 'project.imported', { projectId: result.project.id, pages: result.pages, assets: result.assets, revisions: result.revisions });
+    res.status(result.mode === 'update' ? 200 : 201).json(result);
+  });
+  admin.get('/api/project-backups', (_req, res) => res.json({ backups: listProjectBackups(store) }));
+  admin.get('/api/project-backups/:id/download', async (req, res) => {
+    const result = await readProjectBackup(store, req.params.id);
+    res.attachment(result.filename).type('application/zip').set('Cache-Control', 'no-store').send(result.buffer);
+  });
+  admin.post('/api/projects/:id/delete', async (req, res) => {
+    const result = await deleteProject(store, req.params.id, req.body);
+    contentAssets.clear(); revisionAssetUrls.clear(); cssCache.clear();
+    log('project.deleted', { projectId: result.project.id, backupId: result.backup.id });
+    res.json(result);
   });
   admin.get('/api/projects/:id/export', async (req, res) => {
     const result = await exportProject(store, req.params.id);

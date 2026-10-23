@@ -8,6 +8,7 @@ Use an absolute `--data-dir` for scripts and services. A typical directory conta
 state.json          Instance, projects, drafts, and published revisions
 credentials.json    Private administrator password/API token and project tokens
 media/              Uploaded originals grouped by project
+project-backups/    Private recovery ZIPs from website updates and deletions
 logs/server.log     Native CLI server stdout and stderr
 run.json            CLI-owned process ID and instance identity
 ```
@@ -159,3 +160,7 @@ For maximum certainty, stop the instance before a full operational backup. Resto
 - Page JavaScript executes in visitors' browsers. New backend features and integrations require application development and a platform update.
 - Media storage is local. Dedicated object storage, image transformations, video transcoding, quotas, and distributed operations are future extensions.
 - Verify the reverse proxy, external HTTPS/MCP authentication, backups, and reboot behavior on the actual deployment host before operating a public service.
+
+## Website updates and deletion
+
+Studio → Connections → Manage website supports replacement imports, deletion with slug confirmation, and recovery ZIP downloads. See [Website management](website-management.md). Recovery ZIPs live in the private data directory; they are never served by the public website listener. Keep them within your storage and backup policy.

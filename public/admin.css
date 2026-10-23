@@ -331,6 +331,13 @@
   .dialog-actions { display: flex; align-items: center; justify-content: flex-end; gap: 10px; margin-top: 8px; }
   .dialog.wide { max-width: 640px; }
   .import-dialog .grid-fields { align-items: start; }
+  .import-fields { border: 0; padding: 0; margin: 0; min-width: 0; display: grid; gap: 20px; }
+  .management-row { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 24px 0; border-top: 1px solid var(--line); }
+  .management-row h3, .recovery-item h3 { font-size: 13px; margin-bottom: 8px; }
+  .management-row p, .recovery-item p { color: var(--muted); font-size: 12px; line-height: 1.8; max-width: 650px; }
+  .management-row .btn, .recovery-item .btn { flex-shrink: 0; }
+  .recovery-item { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 20px 0; border-top: 1px solid var(--line); }
+  .recovery-item > div { min-width: 0; overflow-wrap: anywhere; }
   .import-file-label input { padding: 11px; font-size: 12px; font-weight: 400; background: #f5f8fc; }
   .import-file-label input::file-selector-button { border: 1px solid #d5deeb; border-radius: 5px; padding: 7px 10px; margin-right: 10px; background: white; color: #3c4e69; cursor: pointer; font: inherit; }
   .import-review { border: 1px solid var(--line); border-radius: 10px; background: #f5f8fc; padding: 19px; }
@@ -468,6 +475,7 @@
     .dialog { padding: 23px; width: calc(100% - 24px); max-height: calc(100dvh - 24px); }
     .import-review { padding: 15px; } .import-review dl > div { grid-template-columns: 78px minmax(0, 1fr); gap: 9px; }
     .dialog-actions { flex-wrap: wrap; }
+    .management-row, .recovery-item { flex-direction: column; align-items: flex-start; gap: 15px; }
   }
   @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; } }
 }

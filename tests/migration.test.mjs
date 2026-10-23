@@ -8,6 +8,8 @@ import {zipSync,unzipSync} from 'fflate';
 import {openStore} from '../src/store.mjs';
 import {initializeInstance,createProject,createPage,updatePage,publishPage,uploadAsset,updateProject,getPreviewUrl,tokenMatches,verifyPreviewToken} from '../src/service.mjs';
 import {exportProject,importProject,MIGRATION_LIMITS} from '../src/migration.mjs';
+import {deleteProject} from '../src/project-lifecycle.mjs';
+import {listProjectBackups,readProjectBackup} from '../src/project-backups.mjs';
 
 const sha=bytes=>createHash('sha256').update(bytes).digest('hex');
 const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Wl6PtQAAAAASUVORK5CYII=','base64');
@@ -123,4 +125,118 @@ test('project JSON larger than the old 30 MiB cap transfers without recompiling 
   const f=await fixture(t);
   await f.source.store.mutate(state=>{const first=state.revisions.find(r=>r.projectId===f.project.id);for(let i=0;i<5;i++)state.revisions.push({...structuredClone(first),id:randomUUID(),number:i+3,compiledCss:('/* retained CSS snapshot */\n').repeat(260000)});});
   const archive=await exportProject(f.source.store,f.project.id),projectBytes=unpack(archive.buffer)['project.json'];assert.ok(projectBytes.length>30*1024*1024);assert.equal(MIGRATION_LIMITS.json,128*1024*1024);const imported=await importProject(f.target.store,archive.buffer);assert.equal(imported.revisions,7);const oldCss=f.source.store.read().revisions.find(r=>r.number===7).compiledCss,newCss=f.target.store.read().revisions.find(r=>r.projectId===imported.project.id&&r.number===7).compiledCss;assert.equal(newCss,oldCss);
+});
+
+test('update ZIP replaces content in place, preserves identity and MCP access, and creates a restorable private ZIP',async t=>{
+  const f=await fixture(t),target=f.target.store,id=f.existing.project.id;
+  await updateProject(target,id,{domain:'live.example.test'});
+  const oldPage=target.read().pages.find(p=>p.projectId===id);
+  await updatePage(target,id,oldPage.id,{html:'<h1>Before update</h1>'});
+  await publishPage(target,id,oldPage.id);
+  const oldAsset=await uploadAsset(target,id,{name:'before.png',mime:'image/png',data:png});
+  const before=target.read(),credentials=await readFile(path.join(target.dataDir,'credentials.json'));
+  const result=await importProject(target,f.exported.buffer,{mode:'update',projectId:id,confirmSlug:'existing-site'});
+  const state=target.read(),project=state.projects.find(p=>p.id===id),home=state.pages.find(p=>p.projectId===id&&p.slug==='');
+  assert.equal(result.mode,'update');assert.equal(result.token,undefined);assert.equal(state.projects.length,before.projects.length);
+  for(const key of ['id','name','slug','domain','createdAt','tokenHash'])assert.equal(project[key],before.projects.find(p=>p.id===id)[key]);
+  assert.equal(tokenMatches(f.existing.token,project.tokenHash),true);assert.deepEqual(await readFile(path.join(target.dataDir,'credentials.json')),credentials);
+  assert.equal(state.pages.some(p=>p.id===oldPage.id),false);assert.equal(state.assets.some(a=>a.id===oldAsset.id),false);
+  assert.match(home.html,/Private newer draft/);assert.match(home.html,/href="\/about"/);assert.doesNotMatch(home.html,/\/sites\//);
+  assert.equal(state.pages.filter(p=>p.projectId===id).length,2);assert.equal(state.revisions.filter(r=>r.projectId===id).length,2);
+  assert.equal(state.pages.find(p=>p.projectId===id&&p.slug==='about').publishedRevisionId,null);
+  assert.deepEqual(project.theme,{'--site-accent':'#4f8cff'});
+  assert.deepEqual(await readdir(path.join(target.dataDir,'media',id)),state.assets.filter(a=>a.projectId===id).map(a=>a.filename));
+  const backups=listProjectBackups(target);assert.equal(backups.length,1);assert.equal(backups[0].reason,'update');
+  const backup=await readProjectBackup(target,result.backup.id),old=JSON.parse(unpack(backup.buffer)['project.json']);
+  assert.equal(old.project.id,id);assert.match(old.pages[0].html,/Before update/);assert.equal(old.assets[0].id,oldAsset.id);
+  assert.equal((await stat(path.join(target.dataDir,'project-backups',`${backup.id}.zip`))).mode&0o077,0);
+  const restored=await importProject(target,backup.buffer,{slug:'recovered',domain:''});
+  assert.match(target.read().pages.find(p=>p.projectId===restored.project.id).html,/Before update/);
+});
+
+test('update and delete require explicit target confirmation and reject identity overrides',async t=>{
+  const f=await fixture(t),store=f.target.store,id=f.existing.project.id,before=await snapshot(store);
+  for(const options of [{mode:'update',projectId:id},{mode:'update',projectId:id,confirmSlug:'wrong'},{mode:'update',projectId:id,confirmSlug:'existing-site',domain:'other.test'},{projectId:id},{mode:'create',confirmSlug:'existing-site'}]){
+    await assert.rejects(importProject(store,f.exported.buffer,options),e=>e.status===400);await unchanged(store,before);
+  }
+  for(const options of [{},{confirmSlug:'wrong'},{confirmSlug:'existing-site',unexpected:true}]){
+    await assert.rejects(deleteProject(store,id,options),e=>e.status===400);await unchanged(store,before);
+  }
+});
+
+test('update and delete refuse concurrent edits and remove uncommitted recovery ZIPs',async t=>{
+  for(const operation of ['update','delete']){
+    const f=await fixture(t),store=f.target.store,id=f.existing.project.id,mutate=store.mutate.bind(store);
+    let intercepted=false;
+    const wrapper={...store,mutate:async fn=>{if(!intercepted){intercepted=true;await mutate(next=>{next.pages.find(p=>p.projectId===id).title='Concurrent edit kept';});}return mutate(fn);}};
+    const pending=operation==='update'?importProject(wrapper,f.exported.buffer,{mode:'update',projectId:id,confirmSlug:'existing-site'}):deleteProject(wrapper,id,{confirmSlug:'existing-site'});
+    await assert.rejects(pending,e=>e.status===409&&/changed during/.test(e.message));
+    assert.equal(store.read().pages.find(p=>p.projectId===id).title,'Concurrent edit kept');
+    assert.equal(listProjectBackups(store).length,0);assert.deepEqual(await readdir(path.join(store.dataDir,'project-backups')),[]);
+    assert.equal(store.read().projects.length,1);assert.equal(store.read().assets.length,0);
+  }
+});
+
+test('update and delete roll back on final state write failure without losing current media or credentials',async t=>{
+  for(const operation of ['update','delete']){
+    const f=await fixture(t),store=f.target.store,id=f.existing.project.id;
+    const asset=await uploadAsset(store,id,{name:'retained.png',mime:'image/png',data:png}),before=await snapshot(store);
+    const file=path.join(store.dataDir,'state.json'),saved=`${file}.saved`;
+    await rename(file,saved);await mkdir(file);
+    try{
+      await assert.rejects(operation==='update'?importProject(store,f.exported.buffer,{mode:'update',projectId:id,confirmSlug:'existing-site'}):deleteProject(store,id,{confirmSlug:'existing-site'}));
+      assert.deepEqual(store.read(),before.memory);assert.deepEqual(await readFile(path.join(store.dataDir,'credentials.json')),before.credentials);
+      assert.deepEqual(await readdir(path.join(store.dataDir,'media',id)),[asset.filename]);
+      assert.deepEqual(await readFile(path.join(store.dataDir,'media',id,asset.filename)),png);
+      assert.deepEqual(await readdir(path.join(store.dataDir,'project-backups')),[]);
+    }finally{await rm(file,{recursive:true});await rename(saved,file);}
+    await unchanged(store,before);
+  }
+});
+
+test('delete removes only the selected website and its credentials; its ZIP can be imported again',async t=>{
+  const f=await fixture(t),store=f.target.store,id=f.existing.project.id;
+  const other=await createProject(store,{name:'Keep website',slug:'keep-website',domain:'keep.example.test'});
+  await updateProject(store,id,{domain:'delete.example.test'});
+  await uploadAsset(store,id,{name:'before.png',mime:'image/png',data:png});
+  const before=store.read(),result=await deleteProject(store,id,{confirmSlug:'existing-site'}),state=store.read();
+  assert.equal(result.status,'deleted');assert.deepEqual(result.warnings,[]);assert.equal(state.projects.length,1);
+  assert.deepEqual(state.projects,before.projects.filter(p=>p.id!==id));
+  for(const key of ['pages','revisions','assets'])assert.deepEqual(state[key],before[key].filter(item=>item.projectId!==id));
+  assert.equal((await readdir(path.join(store.dataDir,'media'))).includes(id),false);
+  const credentials=JSON.parse(await readFile(path.join(store.dataDir,'credentials.json')));
+  assert.equal(credentials.projectTokens[id],undefined);assert.equal(credentials.projectTokens[other.project.id],other.token);
+  const backup=await readProjectBackup(store,result.backup.id);assert.equal(backup.reason,'delete');
+  const restored=await importProject(store,backup.buffer,{domain:'delete.example.test'});
+  assert.equal(restored.project.slug,'existing-site');assert.equal(restored.project.domain,'delete.example.test');assert.notEqual(restored.project.id,id);
+  assert.notEqual(restored.token,f.existing.token);assert.equal(restored.assets,1);
+  await assert.rejects(readProjectBackup(store,'../state.json'),e=>e.status===404);
+  await writeFile(path.join(store.dataDir,'project-backups',`${backup.id}.zip`),Buffer.alloc(backup.bytes));
+  await assert.rejects(readProjectBackup(store,backup.id),e=>e.status===409);
+});
+
+test('missing recovery media prevents destructive operations before state changes',async t=>{
+  const f=await fixture(t),store=f.target.store,id=f.existing.project.id;
+  const asset=await uploadAsset(store,id,{name:'missing.png',mime:'image/png',data:png});
+  await rm(path.join(store.dataDir,'media',id,asset.filename));const before=await snapshot(store);
+  await assert.rejects(deleteProject(store,id,{confirmSlug:'existing-site'}));await unchanged(store,before);
+  await assert.rejects(importProject(store,f.exported.buffer,{mode:'update',projectId:id,confirmSlug:'existing-site'}));await unchanged(store,before);
+});
+
+test('simultaneous updates commit one replacement and one recovery ZIP',async t=>{
+  const f=await fixture(t),store=f.target.store,options={mode:'update',projectId:f.existing.project.id,confirmSlug:'existing-site'};
+  const results=await Promise.allSettled([importProject(store,f.exported.buffer,options),importProject(store,f.exported.buffer,options)]);
+  assert.equal(results.filter(r=>r.status==='fulfilled').length,1);assert.equal(results.find(r=>r.status==='rejected').reason.status,409);
+  assert.equal(store.read().projects.length,1);assert.equal(store.read().pages.length,2);assert.equal(store.read().assets.length,1);
+  assert.equal(listProjectBackups(store).length,1);assert.equal((await readdir(path.join(store.dataDir,'project-backups'))).length,1);
+  assert.deepEqual(await readdir(path.join(store.dataDir,'media',f.existing.project.id)),store.read().assets.map(a=>a.filename));
+});
+
+test('an upload racing with deletion cannot recreate an active asset or project',async t=>{
+  const f=await fixture(t),store=f.target.store,id=f.existing.project.id;
+  let intercepted=false;
+  const wrapper={...store,mutate:async fn=>{if(!intercepted){intercepted=true;await deleteProject(store,id,{confirmSlug:'existing-site'});}return store.mutate(fn);}};
+  await assert.rejects(uploadAsset(wrapper,id,{name:'racing.png',mime:'image/png',data:png}),e=>e.status===404);
+  assert.equal(store.read().projects.length,0);assert.equal(store.read().assets.length,0);
+  assert.equal((await readdir(path.join(store.dataDir,'media'))).includes(id),false);
 });

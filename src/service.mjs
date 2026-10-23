@@ -1,12 +1,12 @@
 import { randomBytes, randomUUID, createHash, timingSafeEqual, scryptSync, createHmac } from 'node:crypto';
-import { readFile, mkdir, writeFile } from 'node:fs/promises';
+import { readFile, mkdir, writeFile, rm } from 'node:fs/promises';
 import path from 'node:path';
 import { atomicWrite } from './store.mjs';
 import { compilePageCss } from './compiler.mjs';
 import { homePage, escapeHtml, components } from './templates.mjs';
 import { validateSeo, renderSeo } from './seo.mjs';
 
-export const VERSION = '0.6.1';
+export const VERSION = '0.7.0';
 export function fail(status, message) { throw Object.assign(new Error(message), { status }); }
 export const tokenHash = token => createHash('sha256').update(String(token)).digest('hex');
 export function tokenMatches(token, hash) {
@@ -234,7 +234,7 @@ export function getPreviewUrl(state, projectId, pageId) {
 }
 const mediaTypes = new Map([['image/png', 'png'], ['image/jpeg', 'jpg'], ['image/webp', 'webp'], ['image/gif', 'gif'], ['image/avif', 'avif'], ['video/mp4', 'mp4'], ['video/webm', 'webm'], ['audio/mpeg', 'mp3'], ['audio/wav', 'wav'], ['audio/ogg', 'ogg'], ['audio/mp4', 'm4a'], ['font/woff2', 'woff2']]);
 export async function uploadAsset(store, projectId, { name, mime, data }) {
-  requireProject(store.read(), projectId);
+  const project = requireProject(store.read(), projectId);
   const ext = mediaTypes.get(mime);
   if (!ext) fail(400, 'Supported uploads: PNG, JPEG, WebP, GIF, AVIF, MP4, WebM, MP3, WAV, OGG, M4A, WOFF2.');
   const bytes = Buffer.isBuffer(data) ? data : Buffer.from(data, 'base64');
@@ -243,7 +243,13 @@ export async function uploadAsset(store, projectId, { name, mime, data }) {
   await mkdir(folder, { recursive: true, mode: 0o700 });
   await writeFile(path.join(folder, filename), bytes, { flag: 'wx', mode: 0o600 });
   const asset = { id, projectId, name: String(name || filename).slice(0, 200), filename, mime, size: bytes.length, createdAt: new Date().toISOString(), url: `/media/${projectId}/${filename}` };
-  await store.mutate(state => { state.assets.push(asset); });
+  try {
+    await store.mutate(state => {
+      const current = requireProject(state, projectId);
+      if (current.updatedAt !== project.updatedAt) fail(409, 'This website changed during upload. Refresh and upload again.');
+      state.assets.push(asset);
+    });
+  } catch (error) { await rm(path.join(folder, filename), { force: true }); throw error; }
   return asset;
 }
 export async function getLibrary() {
