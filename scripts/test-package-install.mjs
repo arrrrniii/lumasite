@@ -104,7 +104,7 @@ try {
   const packageRoot = path.join(prefix, 'lib/node_modules/lumasite');
   const { createWebsite } = await import(pathToFileURL(path.join(packageRoot, 'src/create.mjs')));
   const [appPort, appSitePort] = await ports();
-  const created = await createWebsite(app, { yes: true, name: 'Created website', file: websiteZip, port: String(appPort), 'site-port': String(appSitePort), 'data-dir': 'private data' }, { packageSpec: `file:${path.join(directory, archive.filename)}`, output: { write() {} }, errors: { write() {} } });
+  const created = await createWebsite(app, { local: true, yes: true, name: 'Created website', file: websiteZip, port: String(appPort), 'site-port': String(appSitePort), 'data-dir': 'private data' }, { packageSpec: `file:${path.join(directory, archive.filename)}`, output: { write() {} }, errors: { write() {} } });
   assert.equal(created.healthy, true); assert.equal(created.projectDir, app); assert.equal(created.commands.start, 'npm start');
   const appPackage = JSON.parse(await fs.readFile(path.join(app, 'package.json'), 'utf8'));
   assert.equal(appPackage.scripts.start, 'node lumasite.mjs start');

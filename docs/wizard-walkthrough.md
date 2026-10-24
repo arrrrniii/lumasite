@@ -1,6 +1,6 @@
 # From the wizard to a working website
 
-The first-run creator makes an application folder, installs LumaSite, and prepares a website. This walkthrough matches v0.11.1's `create` command. The lower-level `setup` command also asks for a data directory; `create` uses `<project-folder>/.lumasite` by default, or an explicit `--data-dir`.
+The first-run creator makes an application folder, installs LumaSite, and prepares a website. This walkthrough matches v0.12.0's `create` command. The lower-level `setup` command also asks for a data directory; `create` uses `<project-folder>/.lumasite` by default, or an explicit `--data-dir`.
 
 ![Illustrated server wizard and the website, Studio, and MCP addresses it prepares](images/wizard-example.png)
 
@@ -8,15 +8,15 @@ The image is an illustrated example of the real prompts, not output from a produ
 
 ## 1. Install prerequisites
 
-Use Node.js 24 or later, npm, and Git. The repository is public; the HTTPS commands below do not require GitHub authentication. Updating npm does not update Node: check `node -v` and select Node 24+ before installing.
+Use Node.js 24 or later and npm. Registry installation does not require Git or a GitHub account. Updating npm does not update Node: check `node -v` and select Node 24+ before installing.
 
 Start the creator from the parent directory where you want the new project:
 
 ```sh
-npx --yes --package="git+https://github.com/arrrrniii/lumasite.git#v0.11.1" lumasite create
+npm create lumasite@latest
 ```
 
-The outer `--yes` accepts npm's download prompt. It does not skip the creator's questions. The separate `create my-website --yes ...` form is for automation.
+Accept npm's package download prompt to start the creator. Server mode is the default. For local testing use `npm create lumasite@latest -- --local`. Unattended creation uses `npx create-lumasite@0.12.0 my-website --yes ...` with explicit settings.
 
 ## 2. Answer the questions
 
@@ -25,7 +25,6 @@ This server example uses a new project folder and website called **My Website**:
 | Actual prompt | Example answer | What it controls |
 | --- | --- | --- |
 | `What is your project named?` | `my-website` | New application directory; an existing directory is refused |
-| `Run locally or on a server? local/server` | `server` | HTTPS origins and reverse-proxy setup for a server |
 | `Import a website ZIP? Leave empty for a new website` | Press Enter | Create a new starter website instead of restoring an export |
 | `Website name` | `My Website` | Name in Studio; defaults are used to derive the website slug |
 | `Website domain (hostname only)` | `example.com` | Production hostname, with no scheme, path, or port |
@@ -38,7 +37,7 @@ This server example uses a new project folder and website called **My Website**:
 | `Start LumaSite after setup? y/n` | `y` | Start the native runtime after initialization |
 | `Create this instance? y/n` | `y`, after reviewing the summary | Confirm the plan before project creation |
 
-In **local** mode, leave the domain empty and accept the available `http://localhost:<port>` origins. The reverse-proxy question is skipped. Local testing does not require a public domain, Apache, or a certificate.
+With **`--local`**, leave the domain empty and accept the available `http://localhost:<port>` origins. The reverse-proxy question is skipped. Local testing does not require a public domain, Apache, or a certificate.
 
 Server detection is read-only. It also recognizes Nginx for manual routing rather than proposing a competing proxy. If the chosen proxy runs in a bridged Docker network, the wizard asks for a backend address reachable from the container and an explicit listener bind. Traefik additionally asks for the existing HTTPS entrypoint and optionally an existing certificate resolver. See [detection details and Traefik examples](server-detection.md).
 

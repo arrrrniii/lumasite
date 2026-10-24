@@ -16,7 +16,7 @@ import { detectServer, formatDetection } from './server-detection.mjs';
 
 const serverPath = fileURLToPath(new URL('./server.mjs', import.meta.url));
 const valuedOptions = new Set(['data-dir', 'name', 'domain', 'slug', 'port', 'site-port', 'host', 'public-url', 'site-url', 'password', 'project', 'confirm', 'format', 'admin-domain', 'output', 'lines', 'file', 'link-mode', 'mode', 'proxy', 'proxy-host', 'traefik-entrypoint', 'traefik-cert-resolver']);
-const booleanOptions = new Set(['help', 'version', 'json', 'follow', 'yes', 'no-start']);
+const booleanOptions = new Set(['help', 'version', 'json', 'follow', 'yes', 'no-start', 'local']);
 const help = `LumaSite — editable websites through MCP
 
 Usage: lumasite <command> [options]
@@ -49,6 +49,7 @@ Default data directory: $LUMASITE_DATA_DIR or ./.lumasite
 Examples:
   lumasite create
   lumasite create my-website
+  lumasite create my-website --local
   lumasite setup
   lumasite setup --mode server
   lumasite setup --yes --name "My website" --no-start
@@ -66,6 +67,7 @@ Init options: --port 4310 --site-port 4311 --host 127.0.0.1
               --site-url https://preview.example.com --password PASSWORD
 Use a generated password or LUMASITE_PASSWORD to avoid shell history.
 
+Create defaults to server mode. Use --local (or --mode local) for laptop testing.
 Setup options: --mode local|server --proxy auto|apache|caddy|traefik|none --file website.zip
                --name NAME --domain DOMAIN --data-dir DIRECTORY
                --port PORT --site-port PORT --public-url ORIGIN --site-url ORIGIN
@@ -86,7 +88,7 @@ Project import options: --name NAME --slug SLUG --domain DOMAIN
                         --link-mode project|domain (default: project)
 Domain link mode requires --domain. Source domains are cleared unless supplied.
 Project ZIPs contain pages, media, theme and history, without credentials.
-Import creates a new project and private MCP token; it never replaces a project.
+Import defaults to a new project and private MCP token. Use --mode update with --project and --confirm to replace existing website content.
 `;
 
 function parseArgs(args) {
@@ -544,7 +546,7 @@ export async function runCli(args, { stdin = process.stdin, stdout = process.std
     if (opts.help || !command || command === 'help') { stdout.write(help); return 0; }
     if (extras.length || (subcommand && !['project', 'create'].includes(command))) throw new Error('Unexpected positional arguments. Run lumasite --help.');
     const allowed = {
-      create: ['name', 'domain', 'slug', 'port', 'site-port', 'host', 'public-url', 'site-url', 'mode', 'proxy', 'proxy-host', 'traefik-entrypoint', 'traefik-cert-resolver', 'file', 'yes', 'no-start'],
+      create: ['name', 'domain', 'slug', 'port', 'site-port', 'host', 'public-url', 'site-url', 'mode', 'local', 'proxy', 'proxy-host', 'traefik-entrypoint', 'traefik-cert-resolver', 'file', 'yes', 'no-start'],
       setup: ['name', 'domain', 'slug', 'port', 'site-port', 'host', 'public-url', 'site-url', 'mode', 'proxy', 'proxy-host', 'traefik-entrypoint', 'traefik-cert-resolver', 'file', 'yes', 'no-start'],
       init: ['name', 'domain', 'slug', 'port', 'site-port', 'host', 'public-url', 'site-url', 'password'],
       configure: ['public-url', 'site-url', 'host', 'port', 'site-port', 'domain', 'project'],

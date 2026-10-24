@@ -32,6 +32,29 @@ test('creator refuses unattended prompting before installing packages or creatin
   assert.deepEqual(await fs.readdir(cwd), []);
 });
 
+test('creator defaults to server mode without asking local/server and can cancel before files', { timeout: 10000 }, async t => {
+  const cwd = await fixture(t), input = new PassThrough(), output = new PassThrough();
+  input.isTTY = true; output.isTTY = true;
+  const listeners = await Promise.all([0, 1].map(() => new Promise(resolve => { const server = net.createServer(); server.listen(0, '127.0.0.1', () => resolve(server)); })));
+  const ports = listeners.map(server => server.address().port);
+  await Promise.all(listeners.map(server => new Promise(resolve => server.close(resolve))));
+  const steps = [['Import a website ZIP', ''], ['Website name', ''], ['Website domain', 'example.com'], ['Studio URL', ''], ['Preview URL', ''], ['Create this instance', 'n']];
+  let index = 0, transcript = '';
+  output.on('data', bytes => {
+    const value = bytes.toString(); transcript += value;
+    if (value.includes(steps[index]?.[0])) { const answer = steps[index++][1]; setImmediate(() => input.write(`${answer}\n`)); }
+  });
+  const result = await createWebsite('my-website', { proxy: 'none', 'no-start': true, port: String(ports[0]), 'site-port': String(ports[1]) }, { cwd, input, output });
+  assert.equal(result, null); assert.equal(index, steps.length);
+  assert.doesNotMatch(transcript, /Run locally or on a server/);
+  assert.match(transcript, /https:\/\/studio\.example\.com/);
+  assert.match(transcript, /https:\/\/preview\.example\.com/);
+  assert.deepEqual(await fs.readdir(cwd), []);
+  input.destroy(); output.destroy();
+  await assert.rejects(createWebsite('conflict', { local: true, mode: 'server' }, { cwd }), /cannot be combined/);
+  await missing(path.join(cwd, 'conflict'));
+});
+
 test('first-run creator asks the project name, collects setup answers, and cancels without files', { timeout: 10000 }, async t => {
   const cwd = await fixture(t), input = new PassThrough(), output = new PassThrough();
   input.isTTY = true; output.isTTY = true;

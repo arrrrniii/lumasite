@@ -1,6 +1,6 @@
 # Install LumaSite with npm and terminal setup
 
-LumaSite includes a first-run project creator, a packaged `lumasite` command, and an interactive terminal wizard. Node.js 24 or later, npm, and Git must already be installed. The package includes Studio, the CLI, the runtime, and native LumaFX. It excludes live data, credentials, website ZIPs, development dependencies, tests, and the optional SendMailOS marketing source/assets. The full example remains in the GitHub checkout; move an existing website with its project ZIP.
+LumaSite includes a first-run project creator, a packaged `lumasite` command, and an interactive terminal wizard. Node.js 24 or later and npm must already be installed. Registry installation does not need Git. The package includes Studio, the CLI, the runtime, and native LumaFX. It excludes live data, credentials, website ZIPs, development dependencies, tests, and the optional SendMailOS marketing source/assets. The full example remains in the GitHub checkout; move an existing website with its project ZIP.
 
 For illustrated example answers, generated URLs, Apache routing, additional websites, and troubleshooting, see [the wizard walkthrough](wizard-walkthrough.md).
 
@@ -8,27 +8,27 @@ Check `node -v` before installing. Updating npm does not update Node.js: Node 20
 
 ## Create a project with one command
 
-The repository is public. No GitHub login is needed for HTTPS installation:
+Use the public npm initializer:
 
 ```sh
-npx --yes --package="git+https://github.com/arrrrniii/lumasite.git#v0.11.1" lumasite create
+npm create lumasite@latest
 ```
 
-It asks **What is your project named?**, followed by the setup questions below. Review everything before it creates files. To supply a directory in advance:
+It asks **What is your project named?**, followed by the website/setup questions below. Server mode is the default; the creator no longer asks local/server. Use `npm create lumasite@latest -- --local` for laptop testing. Review everything before it creates files. To supply a directory in advance and pin a release:
 
 ```sh
-npx --yes --package="git+https://github.com/arrrrniii/lumasite.git#v0.11.1" lumasite create my-website
+npm create lumasite@0.12.0 my-website
 ```
 
 The creator makes a new directory, installs a pinned LumaSite dependency, and initializes a website using its installed runtime. Its server is launched from that project's `node_modules/lumasite` rather than the temporary npx cache. The project continues working after the installer is removed. It does not overwrite an existing directory. Declining the settings review creates no project directory; an interrupted dependency installation retains the new folder for recovery.
 
-The documented `--package=... lumasite create` form names the executable explicitly. To verify the launcher before opening the wizard:
+To verify the launcher before opening the wizard:
 
 ```sh
-npm exec --yes --package="git+https://github.com/arrrrniii/lumasite.git#v0.11.1" -- lumasite --version
+npx --yes create-lumasite@0.12.0 --version
 ```
 
-It should print `0.11.1`. If it produces no output, retry this version check with npm's `--loglevel=verbose` before `--package` and inspect the exit status (`echo $?`). A missing terminal produces an explicit error from LumaSite; use a real SSH terminal for the guided wizard or provide a directory and `--yes` for automation.
+It should print `0.12.0`. If it produces no output, retry with npm's `--loglevel=verbose` and inspect the exit status (`echo $?`). A missing terminal produces an explicit error from LumaSite; use a real SSH terminal for the guided wizard or provide a directory and `--yes` for automation.
 
 The generated folder has:
 
@@ -57,29 +57,33 @@ npm run restart
 npm stop
 ```
 
-For automation, supply a directory and `--yes` after `create`; add `--no-start` when preparing data for a supervisor. The outer `npx --yes` accepts npm's package download prompt; the inner `create ... --yes` accepts the creator's settings. For example:
+For automation, supply a directory and `--yes`; add `--no-start` when preparing data for a supervisor. The outer `npx --yes` accepts npm's package download prompt; the initializer's `--yes` accepts the creator's settings. This local example explicitly selects `--local`:
 
 ```sh
-npx --yes --package="git+https://github.com/arrrrniii/lumasite.git#v0.11.1" lumasite create my-website \
-  --yes --no-start --name "My website"
+npx --yes create-lumasite@0.12.0 my-website \
+  --local --yes --no-start --name "My website"
 ```
 
-The package also includes a `create-lumasite` executable, usable with `npx --package="git+https://github.com/arrrrniii/lumasite.git#v0.11.1" create-lumasite`. The short public-registry command `npx create-lumasite@latest` is reserved for a future intentional npm publication; it has not been published.
+Both `npm create lumasite@latest` and `npx create-lumasite@latest` use the public `create-lumasite` package. Its exact runtime dependency and each generated project's dependency are pinned to the matching LumaSite version. `--mode local` remains compatible; combining `--local` with `--mode server` is rejected before files are written.
 
-## Install directly from the public GitHub repository
+## Global CLI or GitHub installation
 
 A global CLI is optional:
 
 ```sh
-npm install --global "git+https://github.com/arrrrniii/lumasite.git#v0.11.1"
+npm install --global lumasite@0.12.0
 lumasite setup
 ```
 
-HTTPS installation from this public repository requires no GitHub account, token, or deploy key. Use a user-writable npm prefix and the account intended to own the application/data. Add that prefix's `bin` directory to PATH if your Node installation has not done so.
+Use a user-writable npm prefix and the account intended to own the application/data. Add that prefix's `bin` directory to PATH if your Node installation has not done so. The lower-level `lumasite setup` retains its local/server question; the standard project creator defaults to server mode.
 
-The package's `private: true` setting prevents npm registry publication; it does not make the GitHub repository private or prevent Git installation. There is no `lumasite` npm registry release. Publishing there is a separate intentional action.
+The GitHub installation remains available as an alternative and requires Git, but no GitHub login:
 
-If `npx` exits without displaying the wizard, first check Git access directly:
+```sh
+npx --yes --package="git+https://github.com/arrrrniii/lumasite.git#v0.12.0" lumasite create
+```
+
+For a failing GitHub-based install, check Git access directly:
 
 ```sh
 GIT_TERMINAL_PROMPT=0 git ls-remote https://github.com/arrrrniii/lumasite.git HEAD
@@ -90,7 +94,7 @@ A working connection prints a commit hash. The original private repository could
 `npm run detect` belongs inside a generated project folder containing its `package.json`. Before creating a project, use the packaged command instead:
 
 ```sh
-npx --yes --package="git+https://github.com/arrrrniii/lumasite.git#v0.11.1" lumasite detect
+npx --yes --package=lumasite@0.12.0 lumasite detect
 ```
 
 ## Walk through terminal setup
@@ -155,7 +159,7 @@ Keep using the same persistent data directory. Take a private backup to a new de
 ```sh
 lumasite backup --data-dir /srv/lumasite/data --output /srv/private-backups/before-update-001
 lumasite stop --data-dir /srv/lumasite/data
-npm install --global git+https://github.com/arrrrniii/lumasite.git
+npm install --global lumasite@0.12.0
 lumasite start --data-dir /srv/lumasite/data
 lumasite health --data-dir /srv/lumasite/data
 ```

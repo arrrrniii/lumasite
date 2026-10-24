@@ -1,19 +1,19 @@
-# Install LumaSite from GitHub
+# Install LumaSite
 
 The GitHub repository contains the studio, CLI, native LumaFX runtime, tests, Docker configuration, and an optional SendMailOS marketing example. Each installation creates its own credentials and project IDs. Existing websites move separately through **Export ZIP → Import ZIP**.
 
 ## Recommended: create a project with the wizard
 
-Install **Node.js 24 or later, npm, and Git**, then run:
+Install **Node.js 24 or later and npm**, then run:
 
 ```sh
-npx --yes --package="git+https://github.com/arrrrniii/lumasite.git#v0.11.1" lumasite create
+npm create lumasite@latest
 ```
 
-The repository is public. You do not need a GitHub account, access token, global CLI, or npm registry account. This is the tested GitHub package command; it explicitly selects the `lumasite` executable.
+The npm packages and GitHub repository are public. Registry installation does not need Git, a GitHub account, an access token, a global CLI, or an npm account. For laptop testing, use `npm create lumasite@latest -- --local`.
 
 1. Enter a new project folder, for example `my-website`.
-2. Choose **local** for a laptop trial, or **server** for a production installation.
+2. Server mode is the default. Use the `--local` flag for a laptop trial; the creator no longer asks local/server.
 3. Leave the ZIP question empty for a new website, or enter an exported LumaSite ZIP path.
 4. Enter the website name. Server mode also asks for the domain, Studio/preview URLs, ports, and reverse proxy.
 5. Review the settings and confirm. The wizard installs dependencies, creates private credentials and MCP access, and optionally starts the app.
@@ -58,7 +58,7 @@ See [forms and SMTP](forms-and-email.md), [global layout](global-layout.md), [in
 Use this when you want to operate a Git checkout directly. It is an alternative to the project creator, not an extra step after it. Run as the operating-system user that will own the application/data. Prepare `/srv/lumasite` with appropriate ownership first. These examples use the CLI inside the checkout rather than the generated project's `npm run` scripts.
 
 ```sh
-git clone --branch v0.11.1 --depth 1 https://github.com/arrrrniii/lumasite.git /srv/lumasite/app
+git clone --branch v0.12.0 --depth 1 https://github.com/arrrrniii/lumasite.git /srv/lumasite/app
 cd /srv/lumasite/app
 npm ci --omit=dev --ignore-scripts
 
@@ -136,13 +136,13 @@ For a project created by the wizard, run from its folder:
 ```sh
 cd /path/to/my-website
 npm stop
-node lumasite.mjs backup --output /absolute/private-backups/before-0.11.1
-npm install "lumasite@git+https://github.com/arrrrniii/lumasite.git#v0.11.1" --omit=dev --ignore-scripts
+node lumasite.mjs backup --output /absolute/private-backups/before-0.12.0
+npm install lumasite@0.12.0 --omit=dev --ignore-scripts
 npm start
 npm run health
 ```
 
-This example targets v0.11.1; select the intended version from [releases](https://github.com/arrrrniii/lumasite/releases). The direct `backup` command works with older generated folders too. New v0.11.1 projects also include `npm run backup`.
+This example targets v0.12.0; select the intended version from [releases](https://github.com/arrrrniii/lumasite/releases). The direct `backup` command works with older generated folders too. New v0.11.1 projects also include `npm run backup`.
 
 For the alternative Git-checkout installation:
 
@@ -153,7 +153,7 @@ node bin/lumasite.mjs backup \
   --data-dir /srv/lumasite/data \
   --output /srv/lumasite/backups/before-update-001
 git fetch --tags origin
-git checkout --detach v0.11.1
+git checkout --detach v0.12.0
 npm ci --omit=dev --ignore-scripts
 node bin/lumasite.mjs start --data-dir /srv/lumasite/data
 node bin/lumasite.mjs health --data-dir /srv/lumasite/data

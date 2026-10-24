@@ -5,18 +5,18 @@
 A self-hosted website studio for creating, editing, and publishing through MCP or your browser. Change the page structure, HTML, Tailwind classes, CSS, browser JavaScript, images, and LumaFX animations, then publish a revision without redeploying the Studio application.
 
 [![Tests](https://github.com/arrrrniii/lumasite/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/arrrrniii/lumasite/actions/workflows/ci.yml)
-[Version 0.11.1](https://github.com/arrrrniii/lumasite/releases/tag/v0.11.1) · Node.js 24+ · Native LumaFX · Streamable HTTP MCP
+[Version 0.12.0](https://github.com/arrrrniii/lumasite/releases/tag/v0.12.0) · Node.js 24+ · Native LumaFX · Streamable HTTP MCP
 
 ## Install in one command
 
-You need **Node.js 24 or later, npm, and Git**. Run this in a terminal on your laptop or server; no GitHub account or global LumaSite installation is needed:
+You need **Node.js 24 or later and npm**. No Git or GitHub account is needed for the standard registry installation:
 
 ```sh
-npx --yes --package="git+https://github.com/arrrrniii/lumasite.git#v0.11.1" lumasite create
+npm create lumasite@latest
 ```
 
 1. Name a new project folder, such as `my-website`.
-2. Choose **local** to try it, or **server** to enter your domain, Studio/preview URLs, and proxy choice.
+2. Enter your production domain. **Server mode is the default**; the wizard suggests Studio/preview URLs, available ports, and a proxy choice.
 3. Review the settings and confirm. Open the printed **Studio URL**, sign in with the generated password, and publish your first page.
 
 ```sh
@@ -24,6 +24,8 @@ cd my-website
 npm run status
 npm run health
 ```
+
+For local laptop testing, run `npm create lumasite@latest -- --local` instead. Pin a release with `npm create lumasite@0.12.0`.
 
 The wizard installs the application inside your project, generates private credentials and a website-scoped MCP URL, and writes a project README with your addresses and commands. A fresh installation starts with its own starter website. To bring an existing LumaSite website, select its exported ZIP during setup.
 
@@ -84,14 +86,13 @@ See the [update, delete, and recovery guide](docs/website-management.md) for the
 
 ## Start with the wizard
 
-Run the [installation command above](#install-in-one-command) from a real terminal. The first question is **What is your project named?** Choose a new folder such as `my-website`. The wizard then asks for local/server mode, a new website or ZIP import, website name/domain, ports, URLs, and whether to start the app. Server mode also asks about the reverse proxy. Review the summary before it writes the project.
+Run the [installation command above](#install-in-one-command) from a real terminal. The first question is **What is your project named?** Choose a new folder such as `my-website`. The wizard then asks for a new website or ZIP import, website name/domain, ports, URLs, and whether to start the app. Server mode is assumed unless `--local` or `--mode local` is supplied. Server mode also asks about the reverse proxy. Review the summary before it writes the project.
 
-For your first local website, choose:
+For your first local website, run `npm create lumasite@latest -- --local`, then choose:
 
 | Question | Example answer |
 | --- | --- |
 | Project folder | `my-website` |
-| Local or server | `local` |
 | Import ZIP | Press Enter for a new website |
 | Website name | `My Website` |
 | Domain | Press Enter; connect one later |
@@ -118,7 +119,7 @@ Open the printed Studio URL, sign in with the generated password, and publish th
 
 *Illustrated example using reserved `example.com` addresses. It shows the wizard's real question flow; credentials and project IDs are placeholders.*
 
-Choose `server`, enter your domain, and give the Studio and public preview separate hostnames. LumaSite checks for **Apache, Caddy, and Traefik**, distinguishes installed/running services, inspects Docker proxy networking and ports 80/443, then suggests a proxy. You can override the suggestion. Ambiguous unattended setup requires an explicit choice.
+Enter your domain, and give the Studio and public preview separate hostnames. LumaSite checks for **Apache, Caddy, and Traefik**, distinguishes installed/running services, inspects Docker proxy networking and ports 80/443, then suggests a proxy. You can override the suggestion. Ambiguous unattended setup requires an explicit choice.
 
 LumaSite generates the application, private credentials, connection addresses, and Apache/Caddy/Traefik configuration. **You enable DNS, the proxy configuration, HTTPS, and startup after reboot through your server setup.** See [server detection and Traefik setup](docs/server-detection.md), including container backend addresses and existing TLS settings.
 
@@ -235,13 +236,13 @@ npm run import -- --file /private/imports/my-website.zip --slug another-website
 A global CLI is optional:
 
 ```sh
-npm install --global "git+https://github.com/arrrrniii/lumasite.git#v0.11.1"
+npm install --global lumasite@0.12.0
 lumasite setup
 ```
 
 For development, clone the repository, run `npm ci`, then use `node bin/lumasite.mjs` as the CLI. [Install from GitHub](docs/install-from-github.md) covers a fresh server and upgrades. [Operations](docs/operations.md) covers Apache/Caddy/Traefik, Docker Compose, backups, and process management. Do not rerun first-time setup to upgrade an initialized instance.
 
-The GitHub repository is public. The package setting `private: true` only prevents accidental npm registry publication; it does not restrict GitHub installation. A future registry command such as `npx create-lumasite@latest` needs a separate intentional npm release. Website data, credentials, and project ZIPs remain private and excluded from this repository.
+The public npm packages are `lumasite` (runtime/CLI) and `create-lumasite` (initializer). GitHub holds their source, tests, documentation, and releases. The [npm publishing guide](docs/publishing-to-npm.md) covers maintainer releases. Website data, credentials, and project ZIPs remain private and excluded from these packages and this repository.
 
 ## Scope and verification
 

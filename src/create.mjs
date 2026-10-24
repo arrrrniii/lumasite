@@ -139,15 +139,17 @@ and installation guide live at [arrrrniii/lumasite](https://github.com/arrrrniii
 /** packageSpec can point at a packed release for offline/internal distribution. */
 export async function createWebsite(selected, options, {
   input = process.stdin, output = process.stdout, errors = process.stderr, env = process.env,
-  cwd = process.cwd(), packageSpec = `git+https://github.com/arrrrniii/lumasite.git#v${VERSION}`,
+  cwd = process.cwd(), packageSpec = VERSION,
 } = {}) {
+  if (options.local && options.mode && options.mode !== 'local') throw new Error('--local cannot be combined with --mode server.');
+  const mode = options.local ? 'local' : options.mode || 'server';
   const directory = await projectDirectory(selected, options, { input, output, cwd });
   const chosenData = options['data-dir'] || './.lumasite';
   const dataDir = path.resolve(directory, chosenData);
   const dependencies = path.join(directory, 'node_modules');
   if (dataDir === path.parse(dataDir).root || dataDir === directory || directory.startsWith(`${dataDir}${path.sep}`) || dataDir === dependencies || dataDir.startsWith(`${dependencies}${path.sep}`)) throw new Error('Choose a dedicated data directory outside node_modules and separate from the project root.');
   // Questions and final review happen before any project files or dependencies are written.
-  const plan = await prepareSetup({ ...options, 'data-dir': dataDir, defaultName: path.basename(directory) }, { input, output, env, cwd });
+  const plan = await prepareSetup({ ...options, mode, 'data-dir': dataDir, defaultName: path.basename(directory) }, { input, output, env, cwd });
   if (!plan) return null;
   await newDirectory(directory);
   await fs.mkdir(path.dirname(directory), { recursive: true });

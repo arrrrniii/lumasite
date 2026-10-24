@@ -8,7 +8,7 @@ import { validateSeo, renderSeo } from './seo.mjs';
 import { integrationMarkup } from './integrations.mjs';
 import { composeLayout, pageLayout, layoutModeSchema, layoutClassSchema, parseLayout } from './layout.mjs';
 
-export const VERSION = '0.11.1';
+export const VERSION = '0.12.0';
 export function fail(status, message) { throw Object.assign(new Error(message), { status }); }
 export const tokenHash = token => createHash('sha256').update(String(token)).digest('hex');
 export function tokenMatches(token, hash) {

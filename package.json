@@ -1,8 +1,7 @@
 {
   "name": "lumasite",
-  "version": "0.11.1",
+  "version": "0.12.0",
   "description": "An independent, self-hosted website studio with native LumaFX and MCP authoring.",
-  "private": true,
   "license": "UNLICENSED",
   "type": "module",
   "engines": {
@@ -39,7 +38,8 @@
     "test:oauth-apache": "node tests/oauth-apache.mjs",
     "test:integrations": "node tests/integrations-browser.mjs",
     "test:layout": "node tests/layout-browser.mjs",
-    "test:forms": "node tests/forms-browser.mjs"
+    "test:forms": "node tests/forms-browser.mjs",
+    "test:initializer": "node scripts/test-initializer-package.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.30.0",
@@ -62,5 +62,18 @@
   "homepage": "https://github.com/arrrrniii/lumasite#readme",
   "bugs": {
     "url": "https://github.com/arrrrniii/lumasite/issues"
-  }
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "keywords": [
+    "lumasite",
+    "mcp",
+    "cms",
+    "website",
+    "self-hosted",
+    "tailwind",
+    "lumafx"
+  ]
 }
