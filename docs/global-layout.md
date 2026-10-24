@@ -90,3 +90,7 @@ Review the returned page counts and shared byte counts. Repeat the same argument
 Website ZIPs include the global layout draft, its current publication, history, and page assignments. Imports remap layout version IDs, media references, and internal navigation. Updating a website from ZIP replaces its layout with the archive's layout along with its page content; destination Integrations and credentials retain their existing preservation rules.
 
 Upgrade the destination runtime to 0.10.0 or later before importing a ZIP containing global layouts. Older archives remain supported. Make a full private backup before upgrading or migrating live content. To roll back the application to a release without layout support, also restore a matching pre-layout data snapshot; old runtimes cannot render layout slots.
+
+## Language variants and menus
+
+From v0.13.0, layout_update accepts a locales map of translated header/footer overrides. Shared CSS/JS is reused, and Tailwind scans all overrides. Menu slots (`<!-- lumasite:menu:primary -->`), the language switcher (`<!-- lumasite:languages -->`) and `{{page.locale}}` render on the server. Every operation is available through MCP. See [languages and menus](languages-and-menus.md).

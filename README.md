@@ -5,7 +5,7 @@
 A self-hosted website studio for creating, editing, and publishing through MCP or your browser. Change the page structure, HTML, Tailwind classes, CSS, browser JavaScript, images, and LumaFX animations, then publish a revision without redeploying the Studio application.
 
 [![Tests](https://github.com/arrrrniii/lumasite/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/arrrrniii/lumasite/actions/workflows/ci.yml)
-[Version 0.12.0](https://github.com/arrrrniii/lumasite/releases/tag/v0.12.0) · Node.js 24+ · Native LumaFX · Streamable HTTP MCP
+[Version 0.13.0](https://github.com/arrrrniii/lumasite/releases/tag/v0.13.0) · Node.js 24+ · Native LumaFX · Streamable HTTP MCP
 
 ## Install in one command
 
@@ -25,7 +25,7 @@ npm run status
 npm run health
 ```
 
-For local laptop testing, run `npm create lumasite@latest -- --local` instead. Pin a release with `npm create lumasite@0.12.0`.
+For local laptop testing, run `npm create lumasite@latest -- --local` instead. Pin a release with `npm create lumasite@0.13.0`.
 
 The wizard installs the application inside your project, generates private credentials and a website-scoped MCP URL, and writes a project README with your addresses and commands. A fresh installation starts with its own starter website. To bring an existing LumaSite website, select its exported ZIP during setup.
 
@@ -73,6 +73,14 @@ Use `layout_get`, `layout_update`, `layout_publish`, and `layout_restore` throug
 Open **Forms & email** to create native contact/application forms and review private submissions. Configure your SMTP server, sender and fixed recipients in **SMTP settings**, then test the connection or send a test email. Submissions are saved before delivery and remain available if SMTP fails. Manage form definitions through MCP and add generated form HTML to any page. [Forms and SMTP guide](docs/forms-and-email.md).
 
 Website ZIPs carry form definitions; private submissions and SMTP credentials stay on the destination server. Full private backups include the SQLite database and its encryption key.
+
+## Languages and menus through MCP
+
+Manage the entire multilingual workflow through MCP: languages, translated pages/slugs, menus, the language switcher, and translated global header/footer source. Keep English at `/pricing`, add `/sq/cmimet` and `/it/prezzi`, and connect them with one translation key. Menus resolve published pages in their language; draft versions stay private. SEO emits per-language metadata and reciprocal `hreflang`; blog lists and RSS filter by language. ZIP transfer preserves these settings.
+
+Use `languages_get/update`, `translations_list`, `translation_upsert/delete`, `menus_get`, `menu_upsert/remove`, and `menus_publish`, alongside the existing page and layout tools. **32 MCP tools** are available. Translated text is supplied by you or your authoring agent. Existing single-language website URLs stay unchanged.
+
+[Complete MCP examples, URL rules, publication, removal and upgrade guide](docs/languages-and-menus.md).
 
 ## Website integrations
 
@@ -236,7 +244,7 @@ npm run import -- --file /private/imports/my-website.zip --slug another-website
 A global CLI is optional:
 
 ```sh
-npm install --global lumasite@0.12.0
+npm install --global lumasite@0.13.0
 lumasite setup
 ```
 

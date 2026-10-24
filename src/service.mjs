@@ -5,10 +5,11 @@ import { atomicWrite } from './store.mjs';
 import { compilePageCss } from './compiler.mjs';
 import { homePage, escapeHtml, components } from './templates.mjs';
 import { validateSeo, renderSeo } from './seo.mjs';
+import { validateTranslationSet, livePages, localizedPath } from './i18n.mjs';
 import { integrationMarkup } from './integrations.mjs';
 import { composeLayout, pageLayout, layoutModeSchema, layoutClassSchema, parseLayout } from './layout.mjs';
 
-export const VERSION = '0.12.0';
+export const VERSION = '0.13.0';
 export function fail(status, message) { throw Object.assign(new Error(message), { status }); }
 export const tokenHash = token => createHash('sha256').update(String(token)).digest('hex');
 export function tokenMatches(token, hash) {
@@ -120,7 +121,7 @@ export function getProjectUrls(state, project) {
   return { admin: `${instance.publicUrl}/admin/projects/${project.id}`, mcp: `${instance.publicUrl}/mcp/${project.id}`, site: `${publicOrigin}/sites/${project.slug}/`, production: project.domain ? `https://${project.domain}/` : null };
 }
 function newPage(projectId, data) {
-  return { id: randomUUID(), projectId, slug: pageSlug(data.slug), title: text(data.title || 'Untitled page', 'Page title'), description: String(data.description || '').slice(0, 500), seo: validateSeo(data.seo), ...(data.layoutMode !== undefined ? { layoutMode: parseLayout(layoutModeSchema, data.layoutMode), layoutClass: parseLayout(layoutClassSchema, data.layoutClass || '') } : {}), html: source(data.html || '', 'HTML'), css: source(data.css || '', 'CSS'), js: source(data.js || '', 'JavaScript'), updatedAt: new Date().toISOString(), revision: 1, publishedRevisionId: null };
+  return { id: randomUUID(), projectId, slug: pageSlug(data.slug), title: text(data.title || 'Untitled page', 'Page title'), description: String(data.description || '').slice(0, 500), seo: validateSeo(data.seo), ...(data.locale != null ? { locale: data.locale } : {}), ...(data.translationKey != null ? { translationKey: data.translationKey } : {}), ...(data.layoutMode !== undefined ? { layoutMode: parseLayout(layoutModeSchema, data.layoutMode), layoutClass: parseLayout(layoutClassSchema, data.layoutClass || '') } : {}), html: source(data.html || '', 'HTML'), css: source(data.css || '', 'CSS'), js: source(data.js || '', 'JavaScript'), updatedAt: new Date().toISOString(), revision: 1, publishedRevisionId: null };
 }
 export async function createProject(store, data) {
   const name = text(data.name, 'Project name', 100), domain = domainName(data.domain);
@@ -156,6 +157,7 @@ export async function updateProject(store, projectId, data) {
       p.theme = { ...data.theme };
     }
     if ('seo' in data) p.seo = validateSeo(data.seo, true);
+    if (p.languages && 'seo' in data && p.seo.language && p.seo.language !== p.languages.defaultLocale) fail(400, 'Use languages_update to change the default website language.');
     p.updatedAt = new Date().toISOString();
     return publicProject(p);
   });
@@ -172,6 +174,7 @@ export async function createPage(store, projectId, data) {
     const project = requireProject(state, projectId);
     const page = newPage(projectId, { ...(project.layout?.published ? { layoutMode: 'global' } : {}), ...data });
     if (state.pages.some(p => p.projectId === projectId && p.slug === page.slug)) fail(409, 'A page already uses this path.');
+    validateTranslationSet([...state.pages.filter(p => p.projectId === projectId), page], project);
     state.pages.push(page); return page;
   });
 }
@@ -187,6 +190,8 @@ export async function updatePage(store, projectId, pageId, data) {
       if (state.pages.some(other => other.projectId === projectId && other.id !== pageId && other.slug === slug)) fail(409, 'A page already uses this path.');
       p.slug = slug;
     }
+    for (const key of ['locale', 'translationKey']) if (key in data) { if (data[key] === null) delete p[key]; else p[key] = data[key]; }
+    validateTranslationSet(state.pages.filter(p => p.projectId === projectId), requireProject(state, projectId));
     if ('layoutMode' in data) p.layoutMode = parseLayout(layoutModeSchema, data.layoutMode);
     if ('layoutClass' in data) p.layoutClass = parseLayout(layoutClassSchema, data.layoutClass);
     for (const key of ['html', 'css', 'js']) if (key in data) p[key] = source(data[key], key.toUpperCase());
@@ -197,11 +202,12 @@ export async function updatePage(store, projectId, pageId, data) {
 export async function publishPage(store, projectId, pageId) {
   const state = store.read(), page = requirePage(state, projectId, pageId), project = requireProject(state, projectId);
   if (page.layoutMode === 'global' && !project.layout?.published) fail(409, 'Publish the global layout before publishing a page that uses it.');
-  composeLayout(page.html, page, pageLayout(project, page));
+  composeLayout(page.html, page, pageLayout(project, page), project);
   const compiledCss = await compilePageCss(page.html + `<div class="${escapeHtml(page.layoutClass || '')}"></div>`, page.css, page.js);
   return store.mutate(next => {
     const current = requirePage(next, projectId, pageId);
     if (current.revision !== page.revision) fail(409, 'The page changed during publishing. Publish again to include the latest changes.');
+    validateTranslationSet([...livePages(next, requireProject(next, projectId)).filter(p => p.id !== pageId), page], requireProject(next, projectId));
     const routeOwner = next.pages.find(p => p.projectId === projectId && p.id !== pageId && p.publishedRevisionId && next.revisions.find(r => r.id === p.publishedRevisionId)?.page.slug === page.slug);
     if (routeOwner) fail(409, `The live path /${page.slug} belongs to “${routeOwner.title}”. Publish that page at its new path before reusing this one.`);
     const revision = { id: randomUUID(), projectId, pageId, createdAt: new Date().toISOString(), number: next.revisions.filter(r => r.pageId === pageId).length + 1, page: structuredClone(page), theme: structuredClone(project.theme), compiledCss };
@@ -218,10 +224,20 @@ export async function restorePage(store, projectId, pageId, revisionId) {
     if (state.pages.some(other => other.projectId === projectId && other.id !== pageId && other.slug === revision.page.slug)) fail(409, 'Another draft uses the path from this revision. Change that page’s path before restoring.');
     for (const key of ['html', 'css', 'js', 'title', 'description', 'slug']) page[key] = revision.page[key];
     page.seo = structuredClone(revision.page.seo || {});
+    for (const key of ['locale', 'translationKey']) { if (revision.page[key] !== undefined) page[key] = revision.page[key]; else delete page[key]; }
+    validateTranslationSet(state.pages.filter(p => p.projectId === projectId), requireProject(state, projectId));
     page.layoutMode = revision.page.layoutMode || 'none'; page.layoutClass = revision.page.layoutClass || '';
     page.updatedAt = new Date().toISOString(); page.revision += 1;
     return page;
   });
+}
+export async function upsertTranslation(store, projectId, { pageId, locale, translationKey, path = '', ...data }) {
+  const state = store.read(), project = requireProject(state, projectId);
+  try { locale = Intl.getCanonicalLocales(locale)[0]; } catch { fail(400, 'Use a valid language code.'); }
+  const existing = pageId ? requirePage(state, projectId, pageId) : state.pages.find(p => p.projectId === projectId && p.locale === locale && p.translationKey === translationKey);
+  if (existing && data.revision === undefined) fail(409, 'Updating a translation requires its latest revision from page_get or translations_list.');
+  const values = { ...data, locale, translationKey, slug: localizedPath(project, locale, path) };
+  return { page: existing ? await updatePage(store, projectId, existing.id, values) : await createPage(store, projectId, values) };
 }
 export function previewToken(state, projectId, pageId) {
   requirePage(state, projectId, pageId);
@@ -266,22 +282,22 @@ export async function getLibrary() {
   catch (error) { if (error.code !== 'ENOENT') throw error; }
   return { components, animations, lumafx };
 }
-export function renderDocument(page, { theme = {}, revisionId, preview = false, token = '', assetUrls, project, instance, noindex = false, liveIntegrations = false, html = page.html, layoutComposed = false } = {}) {
+export function renderDocument(page, { theme = {}, revisionId, preview = false, token = '', assetUrls, project, instance, noindex = false, liveIntegrations = false, html = page.html, layoutComposed = false, alternates = [] } = {}) {
   const id = revisionId || `${page.id}-${page.revision}`;
   const prefix = preview ? `/preview-assets/${page.projectId}/${page.id}` : `/release-assets/${id}`;
   const themeCss = Object.entries(theme).map(([key, value]) => `${key}:${value}`).join(';');
-  const metadata = renderSeo(page, { project, instance, preview, noindex });
+  const metadata = renderSeo(page, { project, instance, preview, noindex, alternates });
   const query = preview ? `?token=${encodeURIComponent(token)}&revision=${page.revision}` : '';
   const cssUrl = !preview && assetUrls?.css || `${prefix}.css${query}`;
   const jsUrl = !preview && assetUrls?.js || `${prefix}.js${query}`;
   const integrations = integrationMarkup(project, liveIntegrations && !preview);
   const layout = pageLayout(project, page, preview);
-  if (!layoutComposed) html = composeLayout(html, page, layout);
+  if (!layoutComposed) html = composeLayout(html, page, layout, project);
   const layoutPrefix = preview ? `/preview-assets/${page.projectId}/${page.id}.layout` : `/layout-assets/${layout?.id}`;
   const layoutCss = layout ? `<link rel="stylesheet" href="${escapeHtml(layoutPrefix + '.css' + query)}">` : '';
   const layoutAfter = layout?.cssAfter ? `<link rel="stylesheet" href="${escapeHtml(layoutPrefix + (preview ? '-after.css' : '.after.css') + query)}">` : '';
   const formsCss = project?.forms?.length ? '<link rel="stylesheet" href="/runtime/forms.css">' : '';
   const formsJs = project?.forms?.length ? '<script defer src="/runtime/forms.js"></script>' : '';
   const layoutJs = layout?.js ? `<script type="module" src="${escapeHtml(layoutPrefix + '.js' + query)}"></script>` : '';
-  return `<!doctype html><html lang="${escapeHtml(metadata.language)}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">${integrations.head}${metadata.head}<link rel="stylesheet" href="/runtime/lumafx/lumafx.css">${layoutCss}<link rel="stylesheet" href="${escapeHtml(cssUrl)}">${layoutAfter}${formsCss}<style>:root{${themeCss}}</style><script src="/runtime/lumafx/lumafx.global.js"></script></head><body>${integrations.bodyStart}${html}${layoutJs}<script type="module" src="${escapeHtml(jsUrl)}"></script>${integrations.bodyEnd}${formsJs}</body></html>`;
+  return `<!doctype html><html lang="${escapeHtml(metadata.language)}" dir="${escapeHtml(metadata.direction)}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">${integrations.head}${metadata.head}<link rel="stylesheet" href="/runtime/lumafx/lumafx.css">${layoutCss}<link rel="stylesheet" href="${escapeHtml(cssUrl)}">${layoutAfter}${formsCss}<style>:root{${themeCss}}</style><script src="/runtime/lumafx/lumafx.global.js"></script></head><body>${integrations.bodyStart}${html}${layoutJs}<script type="module" src="${escapeHtml(jsUrl)}"></script>${integrations.bodyEnd}${formsJs}</body></html>`;
 }

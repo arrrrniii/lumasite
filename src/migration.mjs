@@ -6,6 +6,7 @@ import {inflateRaw,crc32} from 'node:zlib';
 import {promisify} from 'node:util';
 import {zip} from 'fflate';
 import {z} from 'zod';
+import {languageSettingsSchema,navigationSchema,localeCodeSchema,translationKeySchema,validateTranslationSet} from './i18n.mjs';
 import {pageSeoSchema,projectSeoSchema,siteBase} from './seo.mjs';
 import {integrationSettingsSchema} from './integrations.mjs';
 import {formSchema} from './forms-model.mjs';
@@ -23,10 +24,10 @@ const name=n=>z.string().min(1).max(n).refine(v=>!!v.trim()),code=n=>z.string().
 const theme=z.record(z.string(),z.string()).refine(v=>Object.keys(v).length<=128&&Object.entries(v).every(([k,s])=>/^--[a-z][a-z0-9-]{0,60}$/.test(k)&&s.length<=200&&!/[;{}<>]/.test(s)));
 const reserved=new Set(['health','runtime','media','release-assets','content-assets','layout-assets','forms','preview-assets','preview','sites','admin','api','mcp']);
 const route=z.string().max(300).refine(v=>!v||(/^[a-z0-9]+(?:[/-][a-z0-9]+)*$/.test(v)&&!reserved.has(v.split('/')[0])));
-const pageSchema=z.object({id,projectId:id,slug:route,title:name(200),description:z.string().max(500),seo:pageSeoSchema.optional(),layoutMode:layoutModeSchema.optional(),layoutClass:layoutClassSchema.optional(),html:source,css:source,js:source,updatedAt:stamp,revision:z.number().int().min(1).max(2147483647),publishedRevisionId:id.nullable()}).strict();
+const pageSchema=z.object({id,projectId:id,slug:route,title:name(200),description:z.string().max(500),seo:pageSeoSchema.optional(),locale:localeCodeSchema.optional(),translationKey:translationKeySchema.optional(),layoutMode:layoutModeSchema.optional(),layoutClass:layoutClassSchema.optional(),html:source,css:source,js:source,updatedAt:stamp,revision:z.number().int().min(1).max(2147483647),publishedRevisionId:id.nullable()}).strict();
 const revisionSchema=z.object({id,projectId:id,pageId:id,createdAt:stamp,number:z.number().int().min(1).max(2147483647),page:pageSchema,theme,compiledCss:code(8*1024*1024)}).strict();
 const assetSchema=z.object({id,projectId:id,name:z.string().max(200),filename:z.string().max(45),mime:z.string().refine(v=>extensions.has(v)),size:z.number().int().min(1).max(MIGRATION_LIMITS.media),createdAt:stamp,url:z.string().max(100)}).strict();
-const projectSchema=z.object({id,name:name(100),slug,domain,theme,seo:projectSeoSchema.optional(),integrations:integrationSettingsSchema.optional(),layout:layoutSchema.optional(),forms:z.array(formSchema).max(50).optional(),createdAt:stamp,updatedAt:stamp}).strict();
+const projectSchema=z.object({id,name:name(100),slug,domain,theme,seo:projectSeoSchema.optional(),integrations:integrationSettingsSchema.optional(),layout:layoutSchema.optional(),forms:z.array(formSchema).max(50).optional(),languages:languageSettingsSchema.optional(),navigation:navigationSchema.optional(),createdAt:stamp,updatedAt:stamp}).strict();
 const payloadSchema=z.object({schemaVersion:z.literal(1),project:projectSchema,pages:z.array(pageSchema).max(1000),revisions:z.array(revisionSchema).max(5000),assets:z.array(assetSchema).max(MIGRATION_LIMITS.entries-2)}).strict();
 const fileSchema=z.object({path:z.string().max(100),size:z.number().int().min(0).max(MIGRATION_LIMITS.json),sha256:z.string().regex(/^[a-f0-9]{64}$/)}).strict();
 const manifestSchema=z.object({format:z.literal('lumasite-project'),version:z.literal(1),createdAt:stamp,projectFile:z.literal('project.json'),files:z.array(fileSchema).min(1).max(MIGRATION_LIMITS.entries-1)}).strict();
@@ -34,7 +35,7 @@ const optionsSchema=z.object({mode:z.enum(['create','update']).optional(),projec
 function parsed(schema,value,label){const r=schema.safeParse(value);if(!r.success)fail(400,`Invalid ${label}: ${r.error.issues[0]?.path.join('.')||'schema'}.`);return r.data;}
 function json(bytes,label){try{return JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(bytes));}catch{fail(400,`Invalid ${label} JSON.`);}}
 const pick=(object,keys)=>Object.fromEntries(keys.map(key=>[key,object[key]]));
-const pageKeys=['id','projectId','slug','title','description','seo','layoutMode','layoutClass','html','css','js','updatedAt','revision','publishedRevisionId'];
+const pageKeys=['id','projectId','slug','title','description','seo','locale','translationKey','layoutMode','layoutClass','html','css','js','updatedAt','revision','publishedRevisionId'];
 function graph(data){
  const {project,pages,revisions,assets}=data,all=new Set([project.id]),pageIds=new Set(pages.map(p=>p.id)),byRevision=new Map(revisions.map(r=>[r.id,r]));
  const unique=(items,key,label)=>{const seen=new Set();for(const item of items){const v=key(item);if(seen.has(v))fail(400,`Duplicate ${label} in project archive.`);seen.add(v);}};
@@ -47,7 +48,10 @@ function graph(data){
  for(const a of assets)if(a.filename!==`${a.id}.${extensions.get(a.mime)}`||a.url!==`/media/${project.id}/${a.filename}`)fail(400,'Invalid project media filename or URL.');
  for(const r of revisions)if(!pageIds.has(r.pageId)||r.page.id!==r.pageId||r.page.projectId!==project.id)fail(400,'Invalid revision page reference.');
  for(const p of [...pages,...revisions.map(r=>r.page)])if(p.publishedRevisionId&&byRevision.get(p.publishedRevisionId)?.pageId!==p.id)fail(400,'Invalid published revision reference.');
- unique(pages.filter(p=>p.publishedRevisionId),p=>byRevision.get(p.publishedRevisionId).page.slug,'published page path');return data;
+ unique(pages.filter(p=>p.publishedRevisionId),p=>byRevision.get(p.publishedRevisionId).page.slug,'published page path');
+ validateTranslationSet(pages,project);validateTranslationSet(pages.filter(p=>p.publishedRevisionId).map(p=>byRevision.get(p.publishedRevisionId).page),project);
+ const menus=[...(project.navigation?.draft||[]),...(project.navigation?.published?.menus||[])];if(new Set((project.navigation?.draft||[]).map(m=>m.key+':'+m.locale)).size!==(project.navigation?.draft||[]).length||new Set((project.navigation?.published?.menus||[]).map(m=>m.key+':'+m.locale)).size!==(project.navigation?.published?.menus||[]).length)fail(400,'Duplicate localized menu.');
+ if(menus.some(m=>!project.languages?.locales.some(l=>l.code===m.locale)&&m.locale!==(project.seo?.language||'en')))fail(400,'Menu language is not enabled.');return data;
 }
 function safeEntry(v){return v==='manifest.json'||v==='project.json'||/^media\/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\.(png|jpg|webp|gif|avif|mp4|webm|mp3|wav|ogg|m4a|woff2)$/i.test(v);}
 // Preflight the central AND local records before inflation: object-based unzip
@@ -92,7 +96,7 @@ export async function inspectProjectArchive(buffer){
 async function readMedia(store,a){const file=await open(path.join(store.dataDir,'media',a.projectId,a.filename),constants.O_RDONLY|constants.O_NOFOLLOW);try{const s=await file.stat();if(!s.isFile()||s.size!==a.size||s.size>MIGRATION_LIMITS.media)fail(400,'Project media is missing, changed or exceeds the supported size.');return await file.readFile();}finally{await file.close();}}
 export async function exportProject(store,projectId){
  const state=store.read(),p=state.projects.find(p=>p.id===projectId);if(!p)fail(404,'Project not found.');
- const payload=graph(parsed(payloadSchema,{schemaVersion:1,project:pick(p,['id','name','slug','domain','theme','seo','integrations','layout','forms','createdAt','updatedAt']),pages:state.pages.filter(p=>p.projectId===projectId).map(p=>pick(p,pageKeys)),revisions:state.revisions.filter(r=>r.projectId===projectId).map(r=>({...pick(r,['id','projectId','pageId','createdAt','number','theme','compiledCss']),page:pick(r.page,pageKeys)})),assets:state.assets.filter(a=>a.projectId===projectId).map(a=>pick(a,['id','projectId','name','filename','mime','size','createdAt','url']))},'project data'));
+ const payload=graph(parsed(payloadSchema,{schemaVersion:1,project:pick(p,['id','name','slug','domain','theme','seo','integrations','layout','forms','languages','navigation','createdAt','updatedAt']),pages:state.pages.filter(p=>p.projectId===projectId).map(p=>pick(p,pageKeys)),revisions:state.revisions.filter(r=>r.projectId===projectId).map(r=>({...pick(r,['id','projectId','pageId','createdAt','number','theme','compiledCss']),page:pick(r.page,pageKeys)})),assets:state.assets.filter(a=>a.projectId===projectId).map(a=>pick(a,['id','projectId','name','filename','mime','size','createdAt','url']))},'project data'));
  const content=Buffer.from(JSON.stringify(payload));rejectTokens(content.toString());if(content.length>MIGRATION_LIMITS.json)fail(413,'Project content exceeds the 128 MiB JSON limit.');
  let credentials={};try{credentials=JSON.parse(await readFile(path.join(store.dataDir,'credentials.json'),'utf8'));}catch(e){if(e.code!=='ENOENT')throw e;}
  let oauth={};try{oauth=JSON.parse(await readFile(path.join(store.dataDir,'oauth.json'),'utf8'));}catch(e){if(e.code!=='ENOENT')throw e;}
@@ -150,9 +154,10 @@ export async function importProject(store,buffer,options={}){
  if(project.seo)project.seo=rewriteSeo(project.seo);
  if(project.forms)project.forms=project.forms.map(f=>({...f,id:ids.get(f.id),enabled:updating?f.enabled:false}));
  if(project.layout){
-  const transform=l=>({...l,...Object.fromEntries(['header','footer','css','cssAfter','js','compiledCss'].filter(k=>k in l).map(k=>[k,rewrite(l[k])])),...('id'in l?{id:ids.get(l.id)}:{})});
+  const transform=l=>({...l,...Object.fromEntries(['header','footer','css','cssAfter','js','compiledCss'].filter(k=>k in l).map(k=>[k,rewrite(l[k])])),...(l.locales?{locales:Object.fromEntries(Object.entries(l.locales).map(([code,content])=>[code,Object.fromEntries(Object.entries(content).map(([k,v])=>[k,rewrite(v)]))]))}:{}),...('id'in l?{id:ids.get(l.id)}:{})});
   project.layout={...project.layout,draft:transform(project.layout.draft),published:project.layout.published?transform(project.layout.published):null,history:project.layout.history.map(transform)};
  }
+ if(project.navigation){const transform=m=>({...m,items:m.items.map(function item(i){return {...i,...(i.href?{href:rewrite(i.href)}:{}),...(i.children?{children:i.children.map(item)}:{})};})});project.navigation={...project.navigation,draft:project.navigation.draft.map(transform),published:project.navigation.published?{...project.navigation.published,menus:project.navigation.published.menus.map(transform)}:null};}
  if(updating){if(existing.integrations)project.integrations=structuredClone(existing.integrations);else delete project.integrations;}
  else if(project.integrations)project.integrations={...project.integrations,trackingEnabled:false,googleSiteVerification:'',revision:0,updatedAt:null,customTags:project.integrations.customTags.map(tag=>({...tag,enabled:false,code:rewrite(tag.code)}))};
  for(const p of [...pages,...revisions.map(r=>r.page)])if(p.seo)p.seo=rewriteSeo(p.seo);

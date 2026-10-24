@@ -82,8 +82,8 @@ Both should return 200 with JSON. A 401 on `/mcp/PROJECT_ID` before login is exp
 ```sh
 cd /path/to/my-website
 npm stop
-node lumasite.mjs backup --output /private/backups/lumasite-before-0.12.0
-npm install lumasite@0.12.0 --omit=dev --ignore-scripts
+node lumasite.mjs backup --output /private/backups/lumasite-before-0.13.0
+npm install lumasite@0.13.0 --omit=dev --ignore-scripts
 npm start
 npm run health
 ```

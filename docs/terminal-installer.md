@@ -17,7 +17,7 @@ npm create lumasite@latest
 It asks **What is your project named?**, followed by the website/setup questions below. Server mode is the default; the creator no longer asks local/server. Use `npm create lumasite@latest -- --local` for laptop testing. Review everything before it creates files. To supply a directory in advance and pin a release:
 
 ```sh
-npm create lumasite@0.12.0 my-website
+npm create lumasite@0.13.0 my-website
 ```
 
 The creator makes a new directory, installs a pinned LumaSite dependency, and initializes a website using its installed runtime. Its server is launched from that project's `node_modules/lumasite` rather than the temporary npx cache. The project continues working after the installer is removed. It does not overwrite an existing directory. Declining the settings review creates no project directory; an interrupted dependency installation retains the new folder for recovery.
@@ -25,10 +25,10 @@ The creator makes a new directory, installs a pinned LumaSite dependency, and in
 To verify the launcher before opening the wizard:
 
 ```sh
-npx --yes create-lumasite@0.12.0 --version
+npx --yes create-lumasite@0.13.0 --version
 ```
 
-It should print `0.12.0`. If it produces no output, retry with npm's `--loglevel=verbose` and inspect the exit status (`echo $?`). A missing terminal produces an explicit error from LumaSite; use a real SSH terminal for the guided wizard or provide a directory and `--yes` for automation.
+It should print `0.13.0`. If it produces no output, retry with npm's `--loglevel=verbose` and inspect the exit status (`echo $?`). A missing terminal produces an explicit error from LumaSite; use a real SSH terminal for the guided wizard or provide a directory and `--yes` for automation.
 
 The generated folder has:
 
@@ -60,7 +60,7 @@ npm stop
 For automation, supply a directory and `--yes`; add `--no-start` when preparing data for a supervisor. The outer `npx --yes` accepts npm's package download prompt; the initializer's `--yes` accepts the creator's settings. This local example explicitly selects `--local`:
 
 ```sh
-npx --yes create-lumasite@0.12.0 my-website \
+npx --yes create-lumasite@0.13.0 my-website \
   --local --yes --no-start --name "My website"
 ```
 
@@ -71,7 +71,7 @@ Both `npm create lumasite@latest` and `npx create-lumasite@latest` use the publi
 A global CLI is optional:
 
 ```sh
-npm install --global lumasite@0.12.0
+npm install --global lumasite@0.13.0
 lumasite setup
 ```
 
@@ -80,7 +80,7 @@ Use a user-writable npm prefix and the account intended to own the application/d
 The GitHub installation remains available as an alternative and requires Git, but no GitHub login:
 
 ```sh
-npx --yes --package="git+https://github.com/arrrrniii/lumasite.git#v0.12.0" lumasite create
+npx --yes --package="git+https://github.com/arrrrniii/lumasite.git#v0.13.0" lumasite create
 ```
 
 For a failing GitHub-based install, check Git access directly:
@@ -94,7 +94,7 @@ A working connection prints a commit hash. The original private repository could
 `npm run detect` belongs inside a generated project folder containing its `package.json`. Before creating a project, use the packaged command instead:
 
 ```sh
-npx --yes --package=lumasite@0.12.0 lumasite detect
+npx --yes --package=lumasite@0.13.0 lumasite detect
 ```
 
 ## Walk through terminal setup
@@ -159,7 +159,7 @@ Keep using the same persistent data directory. Take a private backup to a new de
 ```sh
 lumasite backup --data-dir /srv/lumasite/data --output /srv/private-backups/before-update-001
 lumasite stop --data-dir /srv/lumasite/data
-npm install --global lumasite@0.12.0
+npm install --global lumasite@0.13.0
 lumasite start --data-dir /srv/lumasite/data
 lumasite health --data-dir /srv/lumasite/data
 ```

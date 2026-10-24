@@ -1,4 +1,5 @@
 import express from 'express';
+import { languagesSummary, updateLanguages, getMenus, editMenu, publishMenus, renderLocalizedNavigation, languageSettings } from './i18n.mjs';
 import { createFormsService, formClientAddress } from './forms.mjs';
 import { listForms, upsertForm, formEmbed } from './forms-model.mjs';
 import { smtpError } from './smtp.mjs';
@@ -20,8 +21,8 @@ import { projectRootPath, productionNavigation } from './public-links.mjs';
 import { getIntegrations, updateIntegrations } from './integrations.mjs';
 import { getLayout, layoutSummary, updateLayout, publishLayout, restoreLayout, composeLayout, pageLayout } from './layout.mjs';
 import { extractLayout } from './layout-extract.mjs';
-import { productionHost, pageNoindex, sitemapXml, robotsTxt, feedXml, renderBlogBlocks } from './seo.mjs';
-import { VERSION, fail, tokenMatches, passwordMatches, publicInstance, publicProject, initializeInstance, createProject, requireProject, requirePage, getProjectUrls, updateProject, createPage, updatePage, publishPage, restorePage, rotateProjectToken, uploadAsset, getLibrary, getPreviewUrl, verifyPreviewToken, renderDocument } from './service.mjs';
+import { productionHost, pageNoindex, sitemapXml, robotsTxt, feedXml, renderBlogBlocks, pageAlternates } from './seo.mjs';
+import { VERSION, fail, tokenMatches, passwordMatches, publicInstance, publicProject, initializeInstance, createProject, requireProject, requirePage, getProjectUrls, updateProject, createPage, updatePage, publishPage, restorePage, upsertTranslation, rotateProjectToken, uploadAsset, getLibrary, getPreviewUrl, verifyPreviewToken, renderDocument } from './service.mjs';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const hash = text => createHash('sha256').update(String(text)).digest('hex');
@@ -40,7 +41,7 @@ export async function startServers({ dataDir, store: suppliedStore, formsOptions
   const sessions = new Map(), loginAttempts = new Map(), cssCache = new Map();
   const contentAssets = new Map(), revisionAssetUrls = new Map(), navigationCache = new Map();
   function productionHtml(revision, project, instance, html = revision.page.html) {
-    const key = JSON.stringify([revision.id, project.domain, instance?.sitePublicUrl, project.layout?.published?.id]);
+    const key = JSON.stringify([revision.id, project.domain, instance?.sitePublicUrl, project.layout?.published?.id, project.languages?.revision]);
     if (!navigationCache.has(key)) {
       navigationCache.set(key, productionNavigation(html, project, instance));
       if (navigationCache.size > 100) navigationCache.delete(navigationCache.keys().next().value);
@@ -178,6 +179,13 @@ export async function startServers({ dataDir, store: suppliedStore, formsOptions
   admin.get('/api/projects/:id', (req, res) => { const state = store.read(), project = publicProject(requireProject(state, req.params.id)); res.json({ project, urls: getProjectUrls(state, project) }); });
   admin.patch('/api/projects/:id', async (req, res) => res.json(await updateProject(store, req.params.id, req.body)));
   const website = req => requireProject(store.read(), req.params.id);
+  admin.get('/api/projects/:id/languages', (req, res) => res.json(languagesSummary(store.read(), req.params.id)));
+  admin.patch('/api/projects/:id/languages', async (req, res) => res.json(await updateLanguages(store, req.params.id, req.body)));
+  admin.post('/api/projects/:id/translations', async (req, res) => res.json(await upsertTranslation(store, req.params.id, req.body)));
+  admin.get('/api/projects/:id/menus', (req, res) => res.json({ navigation: getMenus(website(req)) }));
+  admin.put('/api/projects/:id/menus', async (req, res) => res.json(await editMenu(store, req.params.id, req.body)));
+  admin.post('/api/projects/:id/menus/remove', async (req, res) => res.json(await editMenu(store, req.params.id, req.body, true)));
+  admin.post('/api/projects/:id/menus/publish', async (req, res) => res.json(await publishMenus(store, req.params.id, req.body)));
   admin.get('/api/projects/:id/forms', (req, res) => res.json(listForms(store.read(), req.params.id)));
   admin.post('/api/projects/:id/forms', async (req, res) => res.json(await upsertForm(store, req.params.id, req.body)));
   admin.get('/api/projects/:id/forms/:formId/embed', (req, res) => res.json(formEmbed(store.read(), req.params.id, req.params.formId)));
@@ -297,7 +305,7 @@ export async function startServers({ dataDir, store: suppliedStore, formsOptions
         return res.type('text/css').set({ 'Cache-Control': 'no-store', 'Access-Control-Allow-Origin': '*' }).send(layout.cssAfter || '');
       }
       const key = `layout:${req.params.projectId}:${getLayout(requireProject(state, req.params.projectId)).revision}`;
-      if (match[3] === 'css' && !cssCache.has(key)) { cssCache.set(key, compilePageCss(layout.header + layout.footer, layout.css, layout.js)); if (cssCache.size > 100) cssCache.delete(cssCache.keys().next().value); }
+      if (match[3] === 'css' && !cssCache.has(key)) { cssCache.set(key, compilePageCss(layout.header + layout.footer + Object.values(layout.locales || {}).map(l => (l.header || '') + (l.footer || '')).join(''), layout.css, layout.js)); if (cssCache.size > 100) cssCache.delete(cssCache.keys().next().value); }
       body = match[3] === 'css' ? await cssCache.get(key) : layout.js;
     } else if (match[3] === 'css') body = await previewCss(page);
     res.type(match[3] === 'css' ? 'text/css' : 'text/javascript').set({ 'Cache-Control': 'no-store', 'Access-Control-Allow-Origin': '*' }).send(body);
@@ -306,7 +314,9 @@ export async function startServers({ dataDir, store: suppliedStore, formsOptions
     const state = store.read();
     if (!verifyPreviewToken(state, req.query.token, req.params.projectId, req.params.pageId)) fail(403, 'This preview link is invalid or expired. Refresh the preview in the studio.');
     const page = requirePage(state, req.params.projectId, req.params.pageId), project = requireProject(state, req.params.projectId);
-    const html = renderBlogBlocks(composeLayout(page.html, page, pageLayout(project, page, true)), state, project, `/sites/${project.slug}/`, page.slug);
+    const composed = composeLayout(page.html, page, pageLayout(project, page, true), project);
+    const localized = renderLocalizedNavigation(composed, state, project, page, { basePath: `/sites/${project.slug}/`, preview: true });
+    const html = renderBlogBlocks(localized, state, project, `/sites/${project.slug}/`, page.slug);
     res.set('Cache-Control', 'no-store').type('html').send(renderDocument(page, { preview: true, theme: project.theme, token: req.query.token, project, instance: state.instance, html, layoutComposed: true }));
   });
   function servePublished(req, res, project, slug) {
@@ -319,17 +329,18 @@ export async function startServers({ dataDir, store: suppliedStore, formsOptions
     if (pageNoindex(revision.page, project, noindex)) res.set('X-Robots-Tag', 'noindex,follow');
     else res.removeHeader('X-Robots-Tag');
     const basePath = localPath ? `/sites/${project.slug}/` : '/';
-    const composed = composeLayout(revision.page.html, revision.page, pageLayout(project, revision.page));
+    const composed = composeLayout(revision.page.html, revision.page, pageLayout(project, revision.page), project);
     const source = !localPath && project.domain === req.hostname ? productionHtml(revision, project, state.instance, composed) : composed;
-    const html = renderBlogBlocks(source, state, project, basePath, revision.page.slug);
-    res.set('Cache-Control', 'no-cache').type('html').send(renderDocument(revision.page, { revisionId: revision.id, theme: revision.theme, assetUrls: publishedAssetUrls(revision), project, instance: state.instance, noindex, liveIntegrations: !noindex, html, layoutComposed: true }));
+    const localized = renderLocalizedNavigation(source, state, project, revision.page, { basePath });
+    const html = renderBlogBlocks(localized, state, project, basePath, revision.page.slug);
+    res.set('Cache-Control', 'no-cache').type('html').send(renderDocument(revision.page, { revisionId: revision.id, theme: revision.theme, assetUrls: publishedAssetUrls(revision), project, instance: state.instance, noindex, liveIntegrations: !noindex, html, layoutComposed: true, alternates: pageAlternates(state, project, revision.page) }));
   }
-  function seoResource(req, res, project, resource, localPath = false) {
+  function seoResource(req, res, project, resource, localPath = false, locale) {
     const state = store.read(), production = !localPath && productionHost(project, req.hostname);
     res.set('Cache-Control', 'no-cache');
     if (resource === 'robots.txt') return res.type('text').send(robotsTxt(project, state.instance, production));
     if (production && !project.seo?.noindex) res.removeHeader('X-Robots-Tag');
-    return res.type(resource === 'feed.xml' ? 'application/rss+xml' : 'application/xml').send(resource === 'feed.xml' ? feedXml(state, project) : sitemapXml(state, project));
+    return res.type(resource === 'feed.xml' ? 'application/rss+xml' : 'application/xml').send(resource === 'feed.xml' ? feedXml(state, project, locale) : sitemapXml(state, project));
   }
   publicApp.get(['/robots.txt', '/sitemap.xml', '/feed.xml'], (req, res) => {
     const project = store.read().projects.find(p => p.domain === req.hostname);
@@ -363,10 +374,16 @@ export async function startServers({ dataDir, store: suppliedStore, formsOptions
         return res.status(301).set({ Location: `${target}${query}`, 'Cache-Control': 'no-cache' }).end();
       }
       if (['robots.txt', 'sitemap.xml', 'feed.xml'].includes(localMatch[2])) return seoResource(req, res, project, localMatch[2], true);
+      const feedLocale = languageSettings(project).locales.find(l => l.code !== languageSettings(project).defaultLocale && localMatch[2] === `${l.code.toLowerCase()}/feed.xml`);
+      if (feedLocale) return seoResource(req, res, project, 'feed.xml', true, feedLocale.code);
       return servePublished(req, res, project, (localMatch[2] || '').replace(/\/$/, ''));
     }
     const project = store.read().projects.find(p => p.domain && p.domain === req.hostname);
-    if (project) return servePublished(req, res, project, req.path.replace(/^\/+|\/+$/g, ''));
+    if (project) {
+      const feedLocale = languageSettings(project).locales.find(l => l.code !== languageSettings(project).defaultLocale && req.path === `/${l.code.toLowerCase()}/feed.xml`);
+      if (feedLocale) return seoResource(req, res, project, 'feed.xml', false, feedLocale.code);
+      return servePublished(req, res, project, req.path.replace(/^\/+|\/+$/g, ''));
+    }
     next();
   });
   publicApp.use((_req, res) => res.status(404).json({ error: 'Public site not found. Use the site URL shown in LumaSite Connections.' }));

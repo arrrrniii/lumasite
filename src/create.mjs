@@ -132,7 +132,7 @@ An initialized instance is never reset by setup.
 
 The generated Git ignore rules exclude data, backups, credentials, and exports.
 Keep those files private when sharing your project. The reusable application source
-and installation guide live at [arrrrniii/lumasite](https://github.com/arrrrniii/lumasite).
+and multilingual MCP guide (docs/languages-and-menus.md) live at [arrrrniii/lumasite](https://github.com/arrrrniii/lumasite).
 `;
 }
 

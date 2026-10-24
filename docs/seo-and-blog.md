@@ -93,3 +93,7 @@ node scripts/build-brand-assets.mjs
 The source publisher uploads the PNG derivatives and configures the example project's SEO defaults. Its former local domain `sendmailos.local` becomes `sendmailos.com` as the intended production canonical domain. This changes local configuration only; it does not deploy the site or change the existing production server or DNS.
 
 Primary references: [Google's sitemap guide](https://developers.google.com/search/docs/crawling-indexing/sitemaps/build-sitemap), [canonical URLs](https://developers.google.com/search/docs/crawling-indexing/consolidate-duplicate-urls), [article structured data](https://developers.google.com/search/docs/appearance/structured-data/article), and [structured-data policies](https://developers.google.com/search/docs/appearance/structured-data/sd-policies).
+
+## Multilingual websites
+
+From v0.13.0, manage languages, translated slugs and menus through MCP. Published equivalents receive reciprocal hreflang and sitemap alternates; each page has its own lang, direction, canonical and metadata. Blog lists and feeds filter by language. See [the complete languages and menus guide](languages-and-menus.md).

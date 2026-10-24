@@ -63,12 +63,12 @@ create bypass tokens just to avoid the normal approval flow.
 ## Verify the public installation
 
 ```sh
-npm view lumasite@0.12.0 version
-npm view create-lumasite@0.12.0 version
-npm create lumasite@0.12.0
+npm view lumasite@0.13.0 version
+npm view create-lumasite@0.13.0 version
+npm create lumasite@0.13.0
 ```
 
-For a local disposable trial, use `npm create lumasite@0.12.0 -- --local`. Confirm
+For a local disposable trial, use `npm create lumasite@0.13.0 -- --local`. Confirm
 Studio, first-page publication, generated npm scripts, and the runtime after the
 initializer cache is removed. Server creation defaults to server mode; local tests
 must explicitly select `--local` or `--mode local`.

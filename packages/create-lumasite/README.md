@@ -39,8 +39,8 @@ initializer cache. Private website data and credentials remain in `.lumasite/`.
 The wizard generates proxy configuration; DNS, HTTPS, proxy activation, and
 startup after reboot follow your server's existing setup.
 
-[Illustrated wizard](https://github.com/arrrrniii/lumasite/blob/v0.12.0/docs/wizard-walkthrough.md)
-· [Server setup](https://github.com/arrrrniii/lumasite/blob/v0.12.0/docs/operations.md)
-· [Forms and SMTP](https://github.com/arrrrniii/lumasite/blob/v0.12.0/docs/forms-and-email.md)
+[Illustrated wizard](https://github.com/arrrrniii/lumasite/blob/v0.13.0/docs/wizard-walkthrough.md)
+· [Server setup](https://github.com/arrrrniii/lumasite/blob/v0.13.0/docs/operations.md)
+· [Forms and SMTP](https://github.com/arrrrniii/lumasite/blob/v0.13.0/docs/forms-and-email.md)
 
-For a reproducible installation, use `npm create lumasite@0.12.0`.
+For a reproducible installation, use `npm create lumasite@0.13.0`.
