@@ -97,3 +97,18 @@ Primary references: [Google's sitemap guide](https://developers.google.com/searc
 ## Multilingual websites
 
 From v0.13.0, manage languages, translated slugs and menus through MCP. Published equivalents receive reciprocal hreflang and sitemap alternates; each page has its own lang, direction, canonical and metadata. Blog lists and feeds filter by language. See [the complete languages and menus guide](languages-and-menus.md).
+
+## Published agent guide
+
+The public listener generates `/llms.txt` as UTF-8 `text/plain` from published,
+indexable, self-canonical website pages, language homepages and recent articles.
+Draft content, noindex review pages and external-canonical aliases are excluded.
+The singular `/llm.txt` redirects permanently to `/llms.txt`. Project-path previews
+remain noindex, and unknown hosts receive 404. The guide is not an access-control
+policy or a guarantee of search/AI visibility; robots rules remain independent.
+
+Public responses include `X-Request-Id`. Correlate this with `public.request` log
+entries (path, status and duration, without query strings or request bodies) and
+server `error` entries when investigating failures. Apache/Cloudflare errors
+before the Node listener still require the corresponding proxy/origin logs;
+request logging does not claim to fix an unverified transient 500 cause.

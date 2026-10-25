@@ -52,6 +52,48 @@ Language configuration applies immediately; it neither publishes drafts nor tran
 
 ## 2. Link an existing page without changing its URL
 
+### Adopt a legacy website that already has language-prefixed pages
+
+If `/sq/pricing` already exists without locale metadata, enabling languages by
+itself rejects its prefix. Supply an optional `assignments` array to
+`languages_update` in the same transaction as the language configuration:
+
+```json
+{
+  "expectedRevision": 0,
+  "defaultLocale": "en",
+  "locales": [{"code":"en","label":"English"},{"code":"sq","label":"Shqip"}],
+  "assignments": [
+    {"pageId":"EXISTING-EN-PAGE-UUID","expectedRevision":3,"locale":"en","translationKey":"pricing"},
+    {"pageId":"EXISTING-SQ-PAGE-UUID","expectedRevision":5,"locale":"sq","translationKey":"pricing"}
+  ]
+}
+```
+
+Use actual IDs/revisions from `languages_get`. Each page must belong to this
+website. Stale revisions, conflicting groups, invalid prefixes, duplicate IDs,
+or pending published-path changes reject the entire operation. The operation
+adds locale/key metadata to the draft and to a new published snapshot of the
+**existing live content**. It does not publish unrelated pending content, change
+paths, or alter historical revisions. Language homepages with an existing
+explicit self-canonical such as `/sq` remain indexable without a forced URL change.
+
+From a source checkout on the server, the included local helper builds the
+reviewable assignment plan from existing matching paths. It reads the existing
+project token privately and sends it only to the local MCP listener:
+
+```sh
+node scripts/adopt-prefixed-pages.mjs --data-dir /absolute/private/data --project WEBSITE_ID_OR_SLUG
+# Review the dry run, then use the same arguments with --apply.
+```
+
+The helper supports an existing English-default website and enables EN/SQ/IT/DE
+while preserving other configured languages. Missing default-language
+equivalents and ambiguous group keys require an explicit mapping instead. Apply
+saves a private metadata-state backup before the authenticated atomic update;
+this does not replace the full operational backup required before upgrading the
+runtime. Never publish this backup or restore state under a running process.
+
 Read the existing page and call `translation_upsert` with its actual ID and revision:
 
 ```json

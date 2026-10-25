@@ -55,6 +55,12 @@ export function pageNoindex(page, project, force = false) {
 const absolute = (value, base) => value ? new URL(value, base).href : '';
 export const jsonScript = value => JSON.stringify(value).replace(/[<>&\u2028\u2029]/g, c => `\\u${c.charCodeAt(0).toString(16).padStart(4, '0')}`);
 
+function openGraphLocale(language) {
+  const locale = new Intl.Locale(language);
+  const region = locale.region || locale.maximize().region;
+  return region ? `${locale.language}_${region}` : language.replaceAll('-', '_');
+}
+
 export function renderSeo(page, { project = { name: '', slug: '' }, instance = {}, preview = false, noindex = false, alternates = [] } = {}) {
   const seo = page.seo || {}, defaults = project.seo || {};
   const title = seo.title || page.title, description = seo.description || page.description || defaults.description || '';
@@ -86,7 +92,7 @@ export function renderSeo(page, { project = { name: '', slug: '' }, instance = {
   const custom = seo.structuredData ? (Array.isArray(seo.structuredData) ? seo.structuredData : [seo.structuredData]) : [];
   const head = `<title>${escapeHtml(title)}</title>${meta('description', description)}${meta('robots', robots)}<link rel="canonical" href="${escapeHtml(url)}">`
     + meta('og:title', title, true) + meta('og:description', description, true) + meta('og:type', seo.type === 'article' ? 'article' : 'website', true)
-    + meta('og:url', url, true) + meta('og:site_name', name, true) + meta('og:locale', language === 'en' ? 'en_US' : language.replace('-', '_'), true)
+    + meta('og:url', url, true) + meta('og:site_name', name, true) + meta('og:locale', openGraphLocale(language), true)
     + meta('og:image', imageUrl, true) + (imageUrl ? meta('og:image:alt', imageAlt, true) : '')
     + meta('twitter:card', imageUrl ? 'summary_large_image' : 'summary') + meta('twitter:title', title) + meta('twitter:description', description)
     + meta('twitter:image', imageUrl) + (imageUrl ? meta('twitter:image:alt', imageAlt) : '')
@@ -105,7 +111,14 @@ export function publishedPages(state, project) {
 }
 export function indexablePages(state, project) {
   return publishedPages(state, project).filter(r => !pageNoindex(r.page, project)
-    && pageCanonical(r.page, project, state.instance) === pageCanonical({ ...r.page, seo: {} }, project, state.instance));
+    && (() => {
+      const actual = pageCanonical(r.page, project, state.instance);
+      const expected = pageCanonical({ ...r.page, seo: {} }, project, state.instance);
+      const prefix = localePrefix(project, pageLocale(r.page, project));
+      // Both routes resolve to a language homepage. Preserve a legacy explicit
+      // /sq canonical when adopting languages rather than silently deindexing it.
+      return actual === expected || !!prefix && r.page.slug === prefix.slice(0, -1) && `${actual}/` === expected;
+    })());
 }
 export function sitemapXml(state, project) {
   const entries = indexablePages(state, project).sort((a, b) => a.page.slug.localeCompare(b.page.slug));
@@ -130,6 +143,25 @@ export function robotsTxt(project, instance, indexable) {
   return indexable && !project.seo?.noindex
     ? `User-agent: *\nAllow: /\nDisallow: /sites/\nAllow: /sites/${project.slug}/\nAllow: /sites/${project.slug}$\nDisallow: /preview/\nDisallow: /admin\nDisallow: /api/\nDisallow: /mcp/\nSitemap: ${new URL('sitemap.xml', siteBase(project, instance)).href}\n`
     : 'User-agent: *\nDisallow: /\n';
+}
+
+// Generated from published, indexable, self-canonical pages only. Draft titles,
+// private routes and review/noindex documents must never enter this guide.
+export function llmsTxt(state, project) {
+  const clean = value => String(value || '').replace(/[\r\n\t]+/g, ' ').trim().replace(/[\\`*_[\]<>#]/g, '\\$&');
+  const pages = indexablePages(state, project).map(r => r.page);
+  const settings = languageSettings(project);
+  const homes = new Set(settings.locales.filter(l => l.code !== settings.defaultLocale).map(l => localePrefix(project, l.code).replace(/\/$/, '')));
+  const line = page => `- [${clean(page.title)}](${pageCanonical(page, project, state.instance)})${page.description ? `: ${clean(page.description)}` : ''}`;
+  const sections = [
+    ['Website', pages.filter(p => !p.slug.includes('/') && !homes.has(p.slug)).sort((a, b) => a.slug.localeCompare(b.slug))],
+    ['Languages', pages.filter(p => homes.has(p.slug)).sort((a, b) => a.slug.localeCompare(b.slug))],
+    ['Articles', pages.filter(p => p.seo?.type === 'article').sort((a, b) => Date.parse(b.seo.publishedTime || b.updatedAt) - Date.parse(a.seo.publishedTime || a.updatedAt)).slice(0, 20)],
+  ];
+  return `# ${clean(project.seo?.siteName || project.name)}\n\n`
+    + (project.seo?.description ? `> ${clean(project.seo.description)}\n\n` : '')
+    + 'This guide lists published website content. Follow the linked pages for current details.\n\n'
+    + sections.filter(([, items]) => items.length).map(([title, items]) => `## ${title}\n\n${items.map(line).join('\n')}\n`).join('\n');
 }
 export function feedXml(state, project, locale = languageSettings(project).defaultLocale) {
   const base = siteBase(project, state.instance), name = project.seo?.siteName || project.name;
