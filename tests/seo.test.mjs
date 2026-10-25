@@ -31,6 +31,35 @@ async function fixture(t){
 const graph=html=>JSON.parse(html.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/)[1])['@graph'];
 const tinyPNG=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Wl6PtQAAAAASUVORK5CYII=','base64');
 
+test('llms guide serves plain text, uses the right host, and excludes draft/noindex/aliased content', async t => {
+ const f=await fixture(t);
+ await updateProject(f.store,f.project.id,{seo:{siteName:'Guided site',description:'Public documentation'}});
+ const make=async(slug,title,seo={})=>{
+  const p=await createPage(f.store,f.project.id,{slug,title,description:'Useful public guide',html:`<h1>${title}</h1>`,seo});
+  await publishPage(f.store,f.project.id,p.id);return p;
+ };
+ const p=await make('pricing','Live pricing');
+ await updatePage(f.store,f.project.id,p.id,{title:'Private unpublished title'});
+ await make('legal/review','Private legal review',{noindex:true});
+ await make('alias','Canonical alias',{canonical:'https://elsewhere.example/pricing'});
+ await createPage(f.store,f.project.id,{slug:'draft-only',title:'Private draft'});
+ let r=await f.get('/llms.txt');
+ assert.equal(r.status,200);assert.match(r.headers.get('content-type'),/^text\/plain; charset=utf-8/);
+ assert.match(r.headers.get('x-request-id'),/^[a-f0-9]{24}$/);
+ assert.equal(r.headers.get('x-robots-tag'),null);
+ const text=await r.text();
+ assert.match(text,/^# Guided site\n/);assert.match(text,/\[Live pricing\]\(https:\/\/seo.example.com\/pricing\)/);
+ assert.doesNotMatch(text,/Private unpublished|Private legal|Private draft|Canonical alias|tokenHash|credentials/);
+ r=await f.get('/llm.txt');assert.equal(r.status,301);assert.equal(r.headers.get('location'),'/llms.txt');
+ const prefix=`/sites/${f.project.slug}`;
+ r=await f.get(`${prefix}/llms.txt`,'preview.example.com');
+ assert.equal(r.status,200);assert.match(r.headers.get('x-robots-tag'),/noindex/);
+ assert.equal((await f.get('/llms.txt','unknown.example.com')).status,404);
+ await updateProject(f.store,f.project.id,{seo:{siteName:'Hidden site',noindex:true}});
+ r=await f.get('/llms.txt');assert.match(r.headers.get('x-robots-tag'),/noindex/);
+ assert.doesNotMatch(await r.text(),/Live pricing/);
+});
+
 test('SEO validation, safe JSON-LD and canonical rendering protect the document head',()=>{
  for(const seo of [{canonical:'javascript:alert(1)'},{image:'//evil.example/image.png'},{image:'data:image/svg+xml,test'},{publishedTime:'yesterday'},{noindex:'false'},{structuredData:'<script>'}])assert.throws(()=>validateSeo(seo),{status:400});
  assert.throws(()=>validateSeo({language:'en-@'},true),{status:400});

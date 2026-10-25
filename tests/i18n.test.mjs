@@ -12,6 +12,9 @@ import { initializeInstance, createProject, getPreviewUrl, restorePage } from '.
 import { startServers } from '../src/server.mjs';
 import { exportProject, importProject } from '../src/migration.mjs';
 import { renderLocalizedNavigation, menuSchema } from '../src/i18n.mjs';
+import { prefixedLanguageAssignments } from '../src/legacy-locales.mjs';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
 
 const languages = { defaultLocale: 'en', locales: [{ code: 'en', label: 'English' }, { code: 'sq', label: 'Shqip', readMoreLabel: 'Lexo artikullin' }, { code: 'it', label: 'Italiano' }], expectedRevision: 0 };
 async function fixture(t) {
@@ -34,7 +37,7 @@ async function fixture(t) {
   const translation = async (locale, translationKey, localPath, extra = {}) => (await call('translation_upsert', { locale, translationKey, path: localPath, title: `${locale} ${translationKey}`, html: `<main><h1>${locale} ${translationKey}</h1></main>`, ...extra })).page;
   const publish = p => call('page_publish', { pageId: p.id });
   const enable = () => call('languages_update', languages);
-  return { store, project, client, call, raw, get, translation, publish, enable };
+  return { dataDir: dir, store, project, client, call, raw, get, translation, publish, enable };
 }
 
 test('MCP manages languages, translated pages, localized layouts, menus and live navigation without Studio', async t => {
@@ -80,6 +83,64 @@ test('MCP manages languages, translated pages, localized layouts, menus and live
   const groups = (await f.call('translations_list', { translationKey: 'pricing' })).groups;
   assert.deepEqual(groups[0].missing, []);
   assert.equal(groups[0].translations.find(p => p.locale === 'sq').publishedPath, 'sq/cmimet');
+});
+
+test('existing prefix pages adopt language metadata atomically without publishing pending content', async t => {
+  const f = await fixture(t);
+  const en = (await f.call('page_upsert', { slug: 'pricing', title: 'Pricing', html: '<h1>Live English</h1>' })).page;
+  const sq = (await f.call('page_upsert', { slug: 'sq/pricing', title: 'Çmimet', html: '<h1>Live Albanian</h1>' })).page;
+  const sqHome = (await f.call('page_upsert', { slug: 'sq', title: 'Kryefaqja', seo: { canonical: 'https://languages.example.com/sq' }, html: '<h1>Live home</h1>' })).page;
+  for (const page of [en, sq, sqHome]) await f.publish(page);
+  const before = structuredClone(f.store.read().revisions);
+  const draft = (await f.call('page_upsert', { pageId: sq.id, revision: sq.revision, html: '<h1>Private draft</h1>' })).page;
+  const assignments = [
+    { pageId: en.id, expectedRevision: en.revision, locale: 'en', translationKey: 'pricing' },
+    { pageId: sq.id, expectedRevision: draft.revision, locale: 'sq', translationKey: 'pricing' },
+    { pageId: sqHome.id, expectedRevision: sqHome.revision, locale: 'sq', translationKey: 'home' },
+  ];
+  assert.equal((await f.raw('languages_update', languages)).isError, true, 'Old enable flow cannot reinterpret legacy prefixes');
+  const unchanged = JSON.stringify(f.store.read());
+  const stale = assignments.map(a => ({ ...a })); stale[1].expectedRevision--;
+  assert.equal((await f.raw('languages_update', { ...languages, assignments: stale })).isError, true);
+  assert.equal(JSON.stringify(f.store.read()), unchanged, 'A stale assignment rolls back every change');
+  await f.call('languages_update', { ...languages, assignments });
+  const live = (await f.get('/sq/pricing')).body;
+  assert.match(live, /<html lang="sq"/);
+  assert.match(live, /Live Albanian/); assert.doesNotMatch(live, /Private draft/);
+  assert.match(live, /hreflang="en" href="https:\/\/languages.example.com\/pricing"/);
+  assert.match(live, /hreflang="sq" href="https:\/\/languages.example.com\/sq\/pricing"/);
+  assert.match(live, /property="og:locale" content="sq_AL"/);
+  assert.match((await f.get('/sitemap.xml')).body, /<loc>https:\/\/languages.example.com\/sq<\/loc>/);
+  const state = f.store.read();
+  assert.match(state.pages.find(p => p.id === sq.id).html, /Private draft/);
+  for (const revision of before) assert.deepEqual(state.revisions.find(r => r.id === revision.id), revision, 'Published history remains immutable');
+  const count = state.revisions.length;
+  const currentAssignments = assignments.map(a => ({ ...a, expectedRevision: state.pages.find(p => p.id === a.pageId).revision }));
+  await f.call('languages_update', { ...languages, expectedRevision: 1, assignments: currentAssignments });
+  assert.equal(f.store.read().revisions.length, count, 'An already assigned page needs no extra published snapshot');
+});
+
+test('local adoption command defaults to a dry run and applies through authenticated MCP', async t => {
+  const f = await fixture(t);
+  const en = (await f.call('page_upsert', { slug: 'pricing', title: 'Pricing', html: '<h1>English</h1>' })).page;
+  const sq = (await f.call('page_upsert', { slug: 'sq/pricing', title: 'Çmimet', html: '<h1>Shqip</h1>' })).page;
+  for (const p of [en, sq]) await f.publish(p);
+  const command = [path.resolve('scripts/adopt-prefixed-pages.mjs'), '--data-dir', f.dataDir, '--project', f.project.id];
+  const before = JSON.stringify(f.store.read());
+  const dry = await promisify(execFile)(process.execPath, command);
+  assert.match(dry.stdout, /"mode": "dry-run"/);
+  assert.equal(JSON.stringify(f.store.read()), before);
+  const applied = await promisify(execFile)(process.execPath, [...command, '--apply']);
+  assert.match(applied.stdout, /"applied":true/);
+  assert.match((await f.get('/sq/pricing')).body, /<html lang="sq"/);
+  assert.equal(f.store.read().pages.find(p => p.id === sq.id).translationKey, 'pricing');
+});
+
+test('legacy assignment planning refuses missing equivalents and colliding home keys', () => {
+  const locales = [{ code: 'en' }, { code: 'sq' }];
+  const page = (id, slug) => ({ id, slug, revision: 1 });
+  assert.throws(() => prefixedLanguageAssignments([page('a','sq/missing')], locales), /No default-language equivalent/);
+  assert.throws(() => prefixedLanguageAssignments([page('a',''),page('b','sq'),page('c','home'),page('d','sq/home')], locales), /Multiple base pages/);
 });
 
 test('language and translation validation prevents stale edits, duplicate groups, invalid prefixes and cross-project changes', async t => {

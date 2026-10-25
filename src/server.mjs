@@ -21,7 +21,7 @@ import { projectRootPath, productionNavigation } from './public-links.mjs';
 import { getIntegrations, updateIntegrations } from './integrations.mjs';
 import { getLayout, layoutSummary, updateLayout, publishLayout, restoreLayout, composeLayout, pageLayout } from './layout.mjs';
 import { extractLayout } from './layout-extract.mjs';
-import { productionHost, pageNoindex, sitemapXml, robotsTxt, feedXml, renderBlogBlocks, pageAlternates } from './seo.mjs';
+import { productionHost, pageNoindex, sitemapXml, robotsTxt, llmsTxt, feedXml, renderBlogBlocks, pageAlternates } from './seo.mjs';
 import { VERSION, fail, tokenMatches, passwordMatches, publicInstance, publicProject, initializeInstance, createProject, requireProject, requirePage, getProjectUrls, updateProject, createPage, updatePage, publishPage, restorePage, upsertTranslation, rotateProjectToken, uploadAsset, getLibrary, getPreviewUrl, verifyPreviewToken, renderDocument } from './service.mjs';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
@@ -241,13 +241,19 @@ export async function startServers({ dataDir, store: suppliedStore, formsOptions
   });
   function errors(error, req, res, _next) {
     const status = error.status || (error.type === 'entity.too.large' ? 413 : 500);
-    if (status >= 500) log('error', { path: req.path, message: error.message });
+    if (status >= 500) log('error', { path: req.path, requestId: req.publicRequestId, message: error.message });
     if (!res.headersSent) res.status(status).json({ error: status >= 500 ? 'LumaSite could not complete this request. Inspect lumasite logs for details.' : error.message });
   }
   admin.use((req, res) => res.status(404).json({ error: 'Route not found.' }));
   admin.use(errors);
 
-  publicApp.use((_req, res, next) => { res.set({ 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'no-referrer', 'X-Robots-Tag': 'noindex' }); next(); });
+  publicApp.use((req, res, next) => {
+    req.publicRequestId = randomBytes(12).toString('hex');
+    res.set({ 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'no-referrer', 'X-Robots-Tag': 'noindex', 'X-Request-Id': req.publicRequestId });
+    const started = performance.now();
+    res.once('finish', () => log('public.request', { requestId: req.publicRequestId, method: req.method, path: req.path, status: res.statusCode, durationMs: Math.round(performance.now() - started) }));
+    next();
+  });
   publicApp.get('/health', (_req, res) => res.json(health()));
   publicApp.get('/runtime/integrations.js', (_req, res) => res.set('Cache-Control', 'public,max-age=3600').sendFile(path.join(root, 'public/integrations-runtime.js')));
   publicApp.get('/runtime/forms.css', (_req, res) => res.set('Cache-Control', 'public,max-age=3600').sendFile(path.join(root, 'public/forms-runtime.css')));
@@ -340,9 +346,11 @@ export async function startServers({ dataDir, store: suppliedStore, formsOptions
     res.set('Cache-Control', 'no-cache');
     if (resource === 'robots.txt') return res.type('text').send(robotsTxt(project, state.instance, production));
     if (production && !project.seo?.noindex) res.removeHeader('X-Robots-Tag');
+    if (resource === 'llm.txt') return res.redirect(301, `${localPath ? `/sites/${project.slug}` : ''}/llms.txt`);
+    if (resource === 'llms.txt') return res.type('text/plain').send(llmsTxt(state, project));
     return res.type(resource === 'feed.xml' ? 'application/rss+xml' : 'application/xml').send(resource === 'feed.xml' ? feedXml(state, project, locale) : sitemapXml(state, project));
   }
-  publicApp.get(['/robots.txt', '/sitemap.xml', '/feed.xml'], (req, res) => {
+  publicApp.get(['/robots.txt', '/sitemap.xml', '/feed.xml', '/llms.txt', '/llm.txt'], (req, res) => {
     const project = store.read().projects.find(p => p.domain === req.hostname);
     if (!project) return req.path === '/robots.txt' ? res.type('text').send('User-agent: *\nDisallow: /\n') : res.status(404).end();
     return seoResource(req, res, project, req.path.slice(1));
@@ -373,7 +381,7 @@ export async function startServers({ dataDir, store: suppliedStore, formsOptions
         res.removeHeader('X-Robots-Tag');
         return res.status(301).set({ Location: `${target}${query}`, 'Cache-Control': 'no-cache' }).end();
       }
-      if (['robots.txt', 'sitemap.xml', 'feed.xml'].includes(localMatch[2])) return seoResource(req, res, project, localMatch[2], true);
+      if (['robots.txt', 'sitemap.xml', 'feed.xml', 'llms.txt', 'llm.txt'].includes(localMatch[2])) return seoResource(req, res, project, localMatch[2], true);
       const feedLocale = languageSettings(project).locales.find(l => l.code !== languageSettings(project).defaultLocale && localMatch[2] === `${l.code.toLowerCase()}/feed.xml`);
       if (feedLocale) return seoResource(req, res, project, 'feed.xml', true, feedLocale.code);
       return servePublished(req, res, project, (localMatch[2] || '').replace(/\/$/, ''));

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { randomUUID } from 'node:crypto';
 import { parseFragment } from 'parse5';
 import { escapeHtml } from './templates.mjs';
 
@@ -13,7 +14,13 @@ const settingsContent = z.object({ defaultLocale: localeCodeSchema, locales: z.a
   if (new Set(v.locales.map(l => l.code)).size !== v.locales.length || !v.locales.some(l => l.code === v.defaultLocale)) ctx.addIssue({ code: 'custom', message: 'Languages must be unique and include the default locale.' });
 });
 export const languageSettingsSchema = settingsContent.safeExtend({ revision: z.number().int().nonnegative(), updatedAt: z.string().datetime().nullable() });
-export const languageUpdateSchema = settingsContent.safeExtend({ expectedRevision: z.number().int().nonnegative() });
+export const languageUpdateSchema = settingsContent.safeExtend({
+  expectedRevision: z.number().int().nonnegative(),
+  assignments: z.array(z.object({
+    pageId: z.string().uuid(), expectedRevision: z.number().int().positive(),
+    locale: localeCodeSchema, translationKey: key,
+  }).strict()).max(1000).optional(),
+});
 function parse(schema, value) { const r = schema.safeParse(value); if (!r.success) fail(400, r.error.issues[0].message); return r.data; }
 function projectIn(state, id) { const p = state.projects.find(p => p.id === id); if (!p) fail(404, 'Project not found.'); return p; }
 export function languageSettings(project = {}) {
@@ -60,11 +67,37 @@ export function languagesSummary(state, id) {
   return { languages: settings, enabled: !!project.languages, pages: state.pages.filter(p => p.projectId === id).map(p => ({ id: p.id, title: p.title, slug: p.slug, locale: pageLocale(p, project), translationKey: p.translationKey || null, revision: p.revision, published: !!p.publishedRevisionId })), prefixes: Object.fromEntries(settings.locales.map(l => [l.code, `/${localePrefix(project, l.code)}`])) };
 }
 export async function updateLanguages(store, id, input) {
-  const { expectedRevision, ...values } = parse(languageUpdateSchema, input);
+  const { expectedRevision, assignments = [], ...values } = parse(languageUpdateSchema, input);
   await store.mutate(state => {
     const project = projectIn(state, id);
     if (languageSettings(project).revision !== expectedRevision) fail(409, 'Languages changed. Read languages_get before saving.');
     const next = { ...project, languages: { ...values, revision: expectedRevision + 1, updatedAt: new Date().toISOString() } };
+    // Legacy sites may already use /sq/... without locale metadata. Adopt an
+    // explicitly reviewed set atomically with the language settings; enabling
+    // languages first would reject those existing default-language prefixes.
+    if (new Set(assignments.map(a => a.pageId)).size !== assignments.length) fail(400, 'Assign each page only once.');
+    for (const assignment of assignments) {
+      const page = state.pages.find(p => p.id === assignment.pageId && p.projectId === id);
+      if (!page) fail(404, 'Assignment page not found in this website.');
+      if (page.revision !== assignment.expectedRevision) fail(409, 'An assignment page changed. Read languages_get before saving.');
+      const published = page.publishedRevisionId && state.revisions.find(r => r.id === page.publishedRevisionId && r.pageId === page.id && r.projectId === id);
+      if (page.publishedRevisionId && !published) fail(409, 'Repair the missing published revision before assigning languages.');
+      if (published && published.page.slug !== page.slug) fail(409, 'Publish or undo pending path changes before assigning languages.');
+      const metadata = { locale: assignment.locale, translationKey: assignment.translationKey };
+      validatePageLanguage({ ...page, ...metadata }, next);
+      if (page.locale !== metadata.locale || page.translationKey !== metadata.translationKey) {
+        Object.assign(page, metadata, { revision: page.revision + 1, updatedAt: next.languages.updatedAt });
+      }
+      if (published && (published.page.locale !== metadata.locale || published.page.translationKey !== metadata.translationKey)) {
+        // Preserve the published content and immutable history, including when
+        // the author has unrelated unpublished HTML/CSS/JS or SEO edits.
+        const revision = { ...structuredClone(published), id: randomUUID(), createdAt: next.languages.updatedAt,
+          number: state.revisions.filter(r => r.pageId === page.id).length + 1,
+          page: { ...structuredClone(published.page), ...metadata, updatedAt: next.languages.updatedAt } };
+        state.revisions.push(revision);
+        page.publishedRevisionId = revision.id;
+      }
+    }
     validateTranslationSet(state.pages.filter(p => p.projectId === id), next);
     validateTranslationSet(livePages(state, project), next);
     for (const menu of [...(project.navigation?.draft || []), ...(project.navigation?.published?.menus || [])]) if (!values.locales.some(l => l.code === menu.locale)) fail(409, 'Remove this language’s draft and published menus before removing the language.');
